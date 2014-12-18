@@ -305,7 +305,7 @@ sub CVE_2010_2883_Detection{
 			}
 			
 			# Get the font file stream
-			if(exists($pdfObjects{$fontfile}) && exists($pdfObjects{$fontfile}->{"stream_d"}) ){
+			if(exists($pdfObjects{$fontfile}) && exists($pdfObjects{$fontfile}->{"stream_d"}) && length($pdfObjects{$fontfile}->{"stream_d"}) > 0 ){
 			
 				my $fontstream = $pdfObjects{$fontfile}->{"stream_d"};
 				#print "font stream = $fontstream\n";
@@ -329,13 +329,11 @@ sub CVE_2010_2883_Detection{
 				
 						
 			}else{
-				print "Warning :: CVE_2010_2883_Detection :: Font File Object $fontfile is not defined\n";
+				print "Warning :: CVE_2010_2883_Detection :: Font File Object $fontfile is not defined :\n" unless $DEBUG eq "no";
 			}
 			
 		}
 	}
-
-	
 
 	return 0;
 }
@@ -343,6 +341,7 @@ sub CVE_2010_2883_Detection{
 
 # This function return the number of active " potentially dangerous" contents in the pdf
 # This function return the reference of object to analyse.
+# TODO : 
 sub Active_Contents{
 	
 	my @to_analyse;
@@ -352,6 +351,7 @@ sub Active_Contents{
 	
 	foreach(@objs){
 	
+		
 		while ( (my $key, my $value) = each %{$_}){
 		
 			if($key =~ /js|javascript/){
@@ -363,6 +363,42 @@ sub Active_Contents{
 				print "Warning :: Found active content :: $value in $_->{ref}\n" unless $DEBUG eq "no";
 				$active_content ++;
 			}	
+		}
+		
+		
+		# XFA 
+		if(exists($_->{"xfa"}) ){
+			
+			# an array of object
+			my @xfas = $_->{"xfa"} =~ /\[(\d+\s\d\sR)\]/;
+			
+			foreach (@xfas){
+			
+				my $xfa = $_;
+				$xfa =~ s/R/obj/;
+				#print "found XFA obj :: $xfa\n";
+				
+				if(exists($pdfObjects{$xfa})){
+					print "found XFA obj :: $xfa\n";
+					if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
+						
+						# Search javascript content
+						# <script contentTyp='application'contentType='application/x-javascript'>
+						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
+							print "found javaScript in XFA\n";
+							$active_content ++;
+						}
+						
+					}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
+					
+						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
+							print "found javaScript in XFA\n";
+							$active_content ++;
+						}
+					}
+				}
+				
+			}
 		}
 	
 	}
@@ -1577,7 +1613,8 @@ sub GetObjectInfos{
 	#}
 
 	# Stream
-	if( $obj_content =~ /stream\s*(.*)\s*endstream/sig){
+	if( $obj_ref->{"content"} =~ /stream\s*(.*)\s*endstream/si){
+		#print "hey $1\n";
 		$obj_ref->{"stream"}= $1;
 	}
 
@@ -1622,6 +1659,8 @@ sub GetObjectInfos{
 	
 	# XFA
 	if($dico =~ /\/XFA\s*(\d+\s\d\sR)/sig){
+		$obj_ref->{"xfa"} = $1;
+	}elsif($dico =~ /\/XFA\s*(\[.*])/sig){
 		$obj_ref->{"xfa"} = $1;
 	}
 	
@@ -1766,7 +1805,8 @@ sub PrintSingleObject{
 			if(!($key =~ /stream|content|dico|ref/i)){
 				print "$key = $value\n";
 			}
-			if(($key =~ /stream_d/i) ){
+			
+			if(($key =~ /stream/i) ){
 				print "$key = $value\n";
 			}
 		}
@@ -1922,7 +1962,7 @@ sub GetPDFObjects{
 		
 		# Detect object reference collision 
 		if(! exists($pdfObjects{$obj_ref})){
-			#$pdfObjects{$obj_ref} = \%obj_tmp;
+			$pdfObjects{$obj_ref} = \%obj_tmp;
 		}else{
 			print "ERROR :: Document Structure :: Object collision :: Object $obj_ref defined more than once\n" unless $DEBUG eq "no";
 			if(exists($TESTS_CAT_1{"Object Collision"})){
@@ -1933,7 +1973,7 @@ sub GetPDFObjects{
 			
 			
 		}
-		$pdfObjects{$obj_ref} = \%obj_tmp;
+		#$pdfObjects{$obj_ref} = \%obj_tmp;
 		
 		# Put the object in the list
 		push (@pdf_objects, \%obj_tmp);
@@ -1982,8 +2022,8 @@ sub SuspiciousCoef{
 	}
 	
 	# Object Collision
-	if( exists($TESTS_CAT_1{"Object Collision"}) && $TESTS_CAT_1{"Object Collision"} eq "DETECTED"){
-		$SUSPICIOUS += 30;
+	if( exists($TESTS_CAT_1{"Object Collision"}) && $TESTS_CAT_1{"Object Collision"} > 0){
+		$SUSPICIOUS += 20;
 		
 	}
 	
@@ -2044,6 +2084,13 @@ sub SuspiciousCoef{
 		$SUSPICIOUS += 40;
 	}
 
+	# Combination tests
+	if( exists($TESTS_CAT_1{"Object Collision"}) && exists($TESTS_CAT_1{"XRef"}) ){
+	
+		if($TESTS_CAT_1{"Object Collision"} > 0 && $TESTS_CAT_1{"XRef"} ne "OK"){
+			$SUSPICIOUS += 98;
+		}
+	}
 	
 	return $SUSPICIOUS;
 	
@@ -2130,7 +2177,7 @@ sub main(){
 
 
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "no";
+	&PrintObjList unless $DEBUG eq "yes";
 
 
 	# Analyze objects...
@@ -2158,7 +2205,7 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("10 0 obj");
+	#PrintSingleObject("8 0 obj");
 	
 	&SuspiciousCoef;
 	
