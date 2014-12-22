@@ -6,6 +6,7 @@ use Compress::Zlib;
 #use IO::Uncompress::Inflate qw(inflate $InflateError);
 use Fcntl;
 use Fcntl qw(:DEFAULT :flock);
+use bytes;
 
 # VARIABLES
 
@@ -370,29 +371,31 @@ sub Active_Contents{
 		if(exists($_->{"xfa"}) ){
 			
 			# an array of object
-			my @xfas = $_->{"xfa"} =~ /\[(\d+\s\d\sR)\]/;
+			my @xfas = $_->{"xfa"} =~ /(\d+\s\d\sR)/sg;
+			
+			#print @xfas;
 			
 			foreach (@xfas){
 			
 				my $xfa = $_;
 				$xfa =~ s/R/obj/;
-				#print "found XFA obj :: $xfa\n";
+				print "found XFA obj :: $xfa\n";
 				
 				if(exists($pdfObjects{$xfa})){
-					print "found XFA obj :: $xfa\n";
+					#print "found XFA obj :: $xfa\n";
 					if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
 						
 						# Search javascript content
 						# <script contentTyp='application'contentType='application/x-javascript'>
 						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
-							print "found javaScript in XFA\n";
+							print "found javaScript in XFA : $xfa\n";
 							$active_content ++;
 						}
 						
 					}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
 					
 						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
-							print "found javaScript in XFA\n";
+							print "found javaScript in XFA :: $xfa\n";
 							$active_content ++;
 						}
 					}
@@ -532,6 +535,7 @@ sub Extract_From_Object_stream{
 		if(exists($_->{"type"}) && $_->{"type"} =~ /ObjStm/ && exists($_->{"stream_d"}) && length($_->{"stream_d"}) > 0 ){
 		
 			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "no";
+			print "Found object stream :: $_->{ref} ::\n == $_->{stream_d}";
 			#if($_->{"ref"} eq "16 0 obj"){
 			#	print $_->{"stream_d"}."\n\n\n\n";
 				
@@ -1405,7 +1409,8 @@ sub FlateDecode{
 	
 	# Inflation
 	# TODO try WindowBits => -8 ou -15
-	my ($y,$status2) = inflateInit(-BufSize => 1 ) or die "Error creating inflation stream\n";	# With use Compress::Zlib
+	#my ($y,$status2) = inflateInit(-BufSize => 1 ) or die "Error creating inflation stream\n";	# With use Compress::Zlib
+	my ($y,$status2) = inflateInit(WindowBits => 15, -BufSize => 1) or die "Error creating inflation stream\n";	# With use Compress::Zlib
 
 
 	# TODO Chech the header
@@ -1449,9 +1454,150 @@ sub GetStreamFilters{
 }
 
 
+# This function decode Xref Stream according to Predictor
+sub DecodeXRefStream{
+
+	my ($obj_ref,$stream) = @_;
+	
+	my $tmp;
+		
+	if(length($stream) <=10 ){
+		return;
+	}
+		
+	my @xref_d;
+	
+	print "stream :: $stream :: len = ".length($stream)."\n" unless $DEBUG eq "no";
+	
+	# Remove the last 10 characters of the string
+	$tmp = $stream;
+	
+	# calc the number of columns (number of byte in each row) W [1 2 1] => 1+2+1 = 4 ; 4+1 = 5
+	my $num = 0;
+	my ($byte1,$byte2,$byte3) = (0,0,0); # Size in byte of each field
+	
+	if(exists($obj_ref->{"w"})){
+		#print "$obj_ref->{w} :::\n";
+		#if($obj_ref->{w} =~ /\[(\d+)\s(\d+)\s(\d+)\]/sg){
+		if($obj_ref->{w} =~ /(\d)\s(\d)\s(\d)/){
+			$byte1 = $1;
+			$byte2 = $2;
+			$byte3 = $3;
+			$num = $1 + $2 + $3 + 1;
+		}
+	}
+	
+	
+	#print "$byte1 :: $byte2 :: $byte3 :: $num\n";
+	
+	# Split the string into rows (Remove the last 10 characters of the string)
+	my @rows;
+	for (my $i =0 ; $i < length($stream)-10 ; $i+=$num ){
+		my $str = substr ($tmp,$i,$num);
+		push @rows, $str;
+	}
+	
+	# print rows
+	# The first byte on the row will be the predictor type
+	foreach(@rows){
+		#print "-> $_\n";
+		# Strip the first byte (predictor type) of each row
+		$_ = substr($_,1);
+		#print "=> $_\n";
+	}
+	
+
+	# Initialize prev row
+	my @prev;
+	for(my $i =0 ; $i < $num-1 ; $i++){
+		#$prev[$i] = pack("C",0);
+		$prev[$i] = 0;
+		#print "$i :: $prev[$i]\n";
+	}
+	
+	
+	my @row2 ;
+	#print "size = $#rows\n";
+	
+	for (my $i =0 ; $i <= $#rows ; $i++ ){
+	
+		# convert the row byte by byte
+		@row2 = split('',$rows[$i]);
+		
+		for (my $j=0 ; $j <= $#row2 ; $j++ ){
+		
+			# Convert the byte from binary to int and add it to the same byte in the previous row (prev)
+
+			# Convert byte from binary to int					
+			my $conv_row = unpack ("C",$row2[$j]);
+			my $conv_prev  = $prev[$j];
+			
+			my $sum = $conv_row + $conv_prev;
+			#print "sum = $row2[$j]+$prev[$j] :: $conv_row + $conv_prev = $sum\n";
+			
+			# convert back integer to bytes
+			#$row2[$j] = chr ($sum);
+			#$row2[$j] = pack("I",$sum);
+			$row2[$j] = $sum;
+			#print "saved row = $row2[$j] ::$sum\n";
+			#$row2[$j] = pack ("i",$sum);
+		}
+		
+		# split in like described in W Ex [1 2 1]
+		
+		# convert int to bytes and then convert back to int
+		my $r1;
+		for(my $k= 0; $k < $byte1 ; $k++){
+			$r1 .= $row2[$k];
+		}
+		$r1 = pack("C$byte1","$r1"); #print "r1 = $r1 \n";
+		#$r1 = pack("C","$row2[0]"); print "r1 = $r1 \n";
+		$r1 = unpack("C$byte1","$r1"); #print "r1 = $r1 \n";
+		
+		
+		my $r2;
+		for(my $k= 0; $k < $byte2 ; $k++){
+			$r2 .= $row2[$k+$byte1];
+		}
+		$r2 = pack("C$byte2","$r2"); #print "r2 = $r2 \n";
+		#$r2 = pack("C2","$row2[1]$row2[2]"); print "r2 = $r2 \n";
+		$r2 = unpack("C$byte2","$r2"); #print "r2 = $r2 \n";
+		
+		
+		
+		my $r3;				
+		for(my $k= 0; $k < $byte3 ; $k++){
+			$r3 .= $row2[$k+$byte1+$byte2];
+		}
+		#$r3 = pack("C$byte3",$r3); #print "r3 = $r3 \n";
+		$r3 = pack("C$byte3",$r3); #print "r3 = $r3 \n";
+		#$r3 = pack("C","$row2[3]"); print "r3 = $r3 \n";
+		$r3 = unpack("C$byte3","$r3"); #print "r3 = $r3 \n";
+		
+		my $res_row = "r1 r2 r3";
+		print "Debug :: xref row = ".$r1."-".$r2."-".$r3."\n";
+		push (@xref_d, $res_row);
+		
+		@prev = @row2;
+				
+	}
+
+#			10) Your first column should be the Xref entry type: 0 = f. I.e. a "free" or deleted object. My reader ignores these. 1 = n. I.e. an "in use" object. You'll want to save these for the future. 2 = a compressed object. You'll also want to save these, but they'll require a little more work before they're usable.
+#			11) If our first column is 1 (an in-use object), the second column is the offset address for that object. I add it to my Xref table array.
+#			12) If our first column is 2 (a compressed object), you have to decompress the object stream to get the actual object references and offsets. See PDF Specification section 7.5.7 (page 45).
+	# Store Decoded cross reference table
+	$obj_ref->{"xref_d"} = \@xref_d;
+	
+
+
+
+}
+
+
 # Decode Object Stream using /Filters informations
 sub DecodeObjStream{
 
+	
 
 	my $obj_ref = shift;
 	my @filters;
@@ -1498,7 +1644,15 @@ sub DecodeObjStream{
 		}
 
 	}
+	
 
+	# Xref decode with predictor
+	if(exists($obj_ref->{"type"}) && $obj_ref->{"type"} eq "/XRef"){
+		&DecodeXRefStream($obj_ref,$stream);
+	}
+	
+	
+	
 	$obj_ref->{"stream_d"} = $stream;
 
 
@@ -1756,6 +1910,33 @@ sub GetObjectInfos{
 		}
 		
 		# ...
+
+	}
+	
+	# XRef stream
+	if(exists($obj_ref->{"type"}) && $obj_ref->{"type"} eq "/XRef" ){
+
+		# The number one greater than the highest objectnumber used in this section.
+		# Equivalent to the Size entry in the trailer dictionary
+		if($dico =~ /\/Size\s*(\d+)/si){
+			$obj_ref->{"size"} = $1;
+		}
+		
+		# Index: An array containing a pair of integers for each subsection in this section.
+		if($dico =~ /\/Index\s*(\[[\d\s]*\])/si){
+			$obj_ref->{"index"} = $1;
+		}
+		
+		# W: An array containing a pair of integers for each subsection in this section.
+		if($dico =~ /\/W\s*(\[\d\s\d\s\d\])/si){
+			$obj_ref->{"w"} = $1;
+		}
+		
+		# Prev: An array containing a pair of integers for each subsection in this section.
+		if($dico =~ /\/Prev\s*(\d*)/si){
+			$obj_ref->{"prev"} = $1;
+		}
+
 
 	}
 
@@ -2023,8 +2204,7 @@ sub SuspiciousCoef{
 	
 	# Object Collision
 	if( exists($TESTS_CAT_1{"Object Collision"}) && $TESTS_CAT_1{"Object Collision"} > 0){
-		$SUSPICIOUS += 20;
-		
+		$SUSPICIOUS += 10;	
 	}
 	
 	# Xref
@@ -2175,9 +2355,8 @@ sub main(){
 	}
 
 
-
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "yes";
+	&PrintObjList unless $DEBUG eq "no";
 
 
 	# Analyze objects...
@@ -2205,7 +2384,8 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("8 0 obj");
+	PrintSingleObject("44 0 obj");
+	PrintSingleObject("48 0 obj");
 	
 	&SuspiciousCoef;
 	
