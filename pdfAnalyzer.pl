@@ -2,18 +2,27 @@
 
 use strict;
 #use Compress::Raw::Zlib;
-use Compress::Zlib;
+
+
 #use IO::Uncompress::Inflate qw(inflate $InflateError);
 use Fcntl;
 use Fcntl qw(:DEFAULT :flock);
 use bytes;
 
+
+# libraries
+use lib::utils::Filters;	# Filters
+use lib::analysis::DocumentStruct;
+use lib::analysis::ObjectAnalysis;
+use lib::analysis::CVEs;
+
+
 # VARIABLES
 
 
 my @to_analyze; # Elements to analyze
-my @obj;
-my @pdf_objects; # list of pdf Objects #TODO change the list in hash table with each key represent the reference of the value;
+#my @obj;
+#my @pdf_objects; # list of pdf Objects #TODO change the list in hash table with each key represent the reference of the value;
 my @trailers;	# List of trailers
 
 my %pdfObjects;
@@ -21,6 +30,8 @@ my %pdfObjects;
 # Error codes
 my $MAGIC_OK = 0;
 my $BAD_MAGIC = -2;
+my $BAD_XREF_OFFSET = -4;
+my $BAD_OBJ_OFFSET = -3;
 
 my $pdf_version; # PDF version
 
@@ -46,29 +57,6 @@ my $SUSPICIOUS = 0; # suspicious coef
 	# The content value is the stream content.
 
 
-# Test1 files	:: unknown pattern repetition
-# 618b5fcf762bc7397a22e568753858c9
-# 6254e7e17d9796028bdc56ba81022617
-# 6bffa8f1f0155a554fcdca6a1839576e
-# 8e88d64028093d2ef6a633c83ee28e44
-# b400e8d3635f91176e1d56a38e6aa590
-# c8c39082dfca15d5ded02ca050a96112
-# de8bcc90ecd0049a1ab4e5a5087359b4
-# fa2ddb10d9184dba0f90c88b7786f6ec
-
-# Test2  files	:: shellcode or hexa insertion
-# 5c08ea688165940008949a86805ff1d0
-# 5f27adfa55628ea4674348351e241be8
-# 73b0e8c5a7e5814c723295313ce0262d
-# 75c1ae242d07bb738a5d9a9766c2a7de
-# 7bcb4c9c35e01bd985f74aec66c19876
-# 84d860a4c9e8d2baec983ef35789449a
-# ab3f72df228715e6265cb222c586254e
-# b823473c7206d64fa3ce20c4669b707d
-# d785f43c523bf36d1678da84fa84617f
-# edab6ed2809f739b67667e8fed689992
-
-
 # Test3 files	:: global object parameters or dictionaries linked to script (Ex: Author) sctring.fromCharcode
 # 779cb6dc0055bdf63cbb2c9f9f3a95cc
 # 80ac1a1642e89bb8738d85788603f5c3
@@ -88,8 +76,6 @@ my $SUSPICIOUS = 0; # suspicious coef
 # TODO See JavaScript for Acrobat API reference
 #  app.trustedFunction
 
-# TODO Check Type ObjectStm
-
 #6x<9c><8d>XÛnÜ6x<9c><8d>nÜ6x<9c><8d>XÛnÜ6
 
 # TODO Analyse recursive d'un pdf embedded
@@ -97,6 +83,10 @@ my $SUSPICIOUS = 0; # suspicious coef
 # TODO Presence de JavaScript sans formulaire
 # TODO Look for embedded files types
 ############################################################
+
+
+
+
 
 # The basic analysis consists to parse the content of object and detect all potential dangerous patterns.
 # Returns "none" - "high" - "medium" - or "low"
@@ -139,7 +129,7 @@ sub DangerousKeywordsResearch{
 		if( $content =~ /(toString|substring|split|eval|addToolButton|String\.replace|unescape|exportDataObject|StringfromChar)/si ){
 			$TESTS_CAT_2{"Dangerous Pattern Medium"} ++;
 			print "Dangerous Pattern \(Medium\) found :: $1 :: in $obj_ref->{ref} \n";
-			return "medium"
+			return "medium";
 		}
 		
 		
@@ -147,14 +137,6 @@ sub DangerousKeywordsResearch{
 			
 	#}
 
-	# LOW
-	
-	
-	# MEDIUM
-	
-	
-	# HIGH
-		
 	# javascript keywords :: 
 	# 
 	# 
@@ -167,8 +149,7 @@ sub DangerousKeywordsResearch{
 	return "none";
 }
 
-my $BAD_XREF_OFFSET = -2;
-my $BAD_OBJ_OFFSET = -3;
+
 
 
 
@@ -235,108 +216,7 @@ sub Hexa_Obfuscation_decode{
 		}
 	}
 	
-	#if( $obj_ref->{"content"} =~ /<<(.*)>>\s*stream/s ){
-	#	print "DEBUG :: $1\n";
-	#	$dico = $1;
-	#	$pre = $`;
-	#	$post = $';	
-		#print "before = $` ::\n after = $' ::\n";
-	#}
-	
-	
-	
-	#if( $obj_ref->{"content"} =~ /<<(.*)>>/s ){
-	#	print "DEBUG :: $1\n";
-	#	$dico = $1;
-	#	$pre = $`;
-	#	$post = $';	
-		#print "before = $` ::\n after = $' ::\n";
-	#}
-	
-	# Replace hexa by ascii in dico field
-#	if( $dico &&  length($dico) > 0 ){
-#	
-#		my $tmp = $dico;
-#		$dico =~ s/#([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
-#		
-#		# If the dico has been modified
-#		if( $tmp ne $dico){
 
-#			
-#			my $content_d = $pre."<<".$dico.">>".$post;
-#			$obj_ref->{"content_d"} = $content_d;
-#			print "DEBUG 3::\n";			
-#		}
-#		
-#		#my $content_d = $pre."<<".$dico.">>".$post;
-#		
-#		
-#		#if($obj_ref->{"content"} ne $content_d ){
-#			
-#		#	print "DEBUG3 :: $dico\n";
-#		#	$obj_ref->{"content_d"} = $content_d;
-#		#}
-#			
-#		#print "obj_ref_content_decoded = \n$obj_ref->{content_d}\n";
-#	}
-	
-}
-
-
-# This function detects
-sub CVE_2010_2883_Detection{
-
-	my $fontfile;
-
-	print "\n\n:::CVE_2010_2883_Detection:::\n" unless $DEBUG eq "no";
-
-	# Get font descriptors objects	
-	my @objs = values(%pdfObjects);
-	foreach(@objs){
-	
-		if( exists($_->{"type"}) && $_->{"type"} eq "/FontDescriptor" ){
-			print "Found FontDescriptor object :: $_->{ref}\n" unless $DEBUG eq "no";
-			
-			if(exists($_->{"fontfile"}) && $_->{"fontfile"} =~ /(\d+\s\d\sR)/){
-				$fontfile = $1 ;
-				$fontfile =~ s/R/obj/;
-				print "font File found :: $fontfile\n" unless $DEBUG eq "no";
-			}else{
-				next;
-			}
-			
-			# Get the font file stream
-			if(exists($pdfObjects{$fontfile}) && exists($pdfObjects{$fontfile}->{"stream_d"}) && length($pdfObjects{$fontfile}->{"stream_d"}) > 0 ){
-			
-				my $fontstream = $pdfObjects{$fontfile}->{"stream_d"};
-				#print "font stream = $fontstream\n";
-				
-				# Check the length of the decoded stream /!\
-				#my $realen = length();
-				print "Lenght1 = ".$pdfObjects{$fontfile}->{"length1"}."\n" unless ($DEBUG eq "no" or ! exists($pdfObjects{$fontfile}->{"length1"})) ;
-				print "Real length = ".length($fontstream)."\n" unless $DEBUG eq "no";
-				if(exists($pdfObjects{$fontfile}->{"length1"})  && $pdfObjects{$fontfile}->{"length1"} != length($fontstream)){
-					print "Warning :: Font File decoded stream Length is Wrong :: ".$pdfObjects{$fontfile}->{"length1"}." :: ".length($fontstream)."\n" unless $DEBUG eq "no";
-					$TESTS_CAT_3{"CVE_2010_2883"} = "BAD_FONT_FILE_LENGTH";
-				}
-				
-				# Check TrueType required tables
-				# - cmap - glyf - head - hhea - hmtx - loca - maxp - name - post
-				# Detect the SING ()Smart INdependent Glyphlets) string
-				if($fontstream =~ /SING/ ){
-					print "Warning :: Found SING (Smart INdependent Glyphlets)\n" unless $DEBUG eq "no";
-					$TESTS_CAT_3{"CVE_2010_2883"} = "DETECTED";
-				}
-				
-						
-			}else{
-				print "Warning :: CVE_2010_2883_Detection :: Font File Object $fontfile is not defined :\n" unless $DEBUG eq "no";
-			}
-			
-		}
-	}
-
-	return 0;
 }
 
 
@@ -382,6 +262,7 @@ sub Active_Contents{
 				print "found XFA obj :: $xfa\n";
 				
 				if(exists($pdfObjects{$xfa})){
+				
 					#print "found XFA obj :: $xfa\n";
 					if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
 						
@@ -406,9 +287,9 @@ sub Active_Contents{
 	
 	}
 	
-	if($active_content > 0){
-		$TESTS_CAT_1{"Active Content"} = $active_content;
-	}
+	#if($active_content > 0){
+		#$TESTS_CAT_1{"Active Content"} = $active_content;
+	#}
 
 	
 	return $active_content;
@@ -416,105 +297,7 @@ sub Active_Contents{
 
 
 
-# This function check if the pdf document is empty with only active content (js,embedded_file,openaction etc.)
-sub Empty_Doc_with_active_content_detection{
 
-	my $ret=0;
-	my $numPages =0; # Number of pages found
-	my $active_content =0; # Number of js, embedded files
-	
-	print "\n\n::: Empty Pages With Active Content detection :::\n" unless $DEBUG eq "no";
-	
-	my @objs = values(%pdfObjects);
-	foreach(@objs){
-	
-		if( exists($_->{"type"}) && $_->{"type"} eq "/Pages" ){
-		
-			#print "FOUND Pages object :: $_->{type} :: \n";
-			
-			# Get kid node pages
-			my @pages = $_->{"kids"} =~ /(\d+\s\d\sR)/sg;
-			#print @pages;
-				
-			foreach(@pages){
-				my $page_ref = $_;
-				$page_ref =~ s/R/obj/;
-				#print "page ref = $page_ref\n";
-				
-				# if the page exists and the /Content parameter is set
-				if(exists($pdfObjects{$page_ref}) && exists($pdfObjects{$page_ref}->{"pagecontent"})  ){
-				
-					# Check if it's not an empty content
-					my $p_content = $pdfObjects{$page_ref}->{"pagecontent"};
-					
-					
-					# If the Contents fiels is an array
-					my @pcontents = $p_content =~ /(\d+\s\d\sR)/sg;
-					foreach (@pcontents){
-					
-						my $contentp = $_;
-						$contentp =~ s/R/obj/;
-						
-						#print "page content = $contentp\n";
-						
-						if(exists($pdfObjects{$contentp}) && exists($pdfObjects{$contentp}->{"stream"}) && length($pdfObjects{$contentp}->{"stream"}) > 0  ){ # I could also add $pdfObjects{$p_content}->{"type"} eq "/Contents"
-							$ret ++;
-							print "Page $page_ref is not empty => OK\n"unless $DEBUG eq "no";
-						
-						}elsif(! exists($pdfObjects{$p_content})){
-							print "Warning : Content Object of page $page_ref exist\n" unless $DEBUG eq "no";
-						}else{
-							print "Warning : The Stream of the Content Object is empty\n" unless $DEBUG eq "no";
-						}	
-					
-					}
-					
-					
-					
-					#$p_content =~ s/R/obj/;
-					#print "p_content = $p_content\n";
-					
-					
-					
-				}elsif(! exists($pdfObjects{$page_ref})){
-					print "Warning : Page $page_ref does\'nt exist.\n" unless $DEBUG eq "no";
-				}else{
-					print "Warning : Page $page_ref is empty\n" unless $DEBUG eq "no";
-				}
-				
-			
-			}
-			
-		}
-		
-		# TODO Verify that the number of treated pages is the number of pages in the document.
-		
-		
-		
-	}
-	
-
-	# Look for active potentially dangerous content (js , embedded files, Names obj...)
-	$active_content = 0;
-	$active_content = &Active_Contents;
-	
-	# Summary
-	print "\n\n::Summary::\n" unless $DEBUG eq "no";
-
-	# If all pages are empty and there is active content
-	if($ret == 0 && $active_content > 0 ){
-		print "\t=> Empty PDF document with active content !!" unless $DEBUG eq "no";
-		$ret = -1;
-	}elsif($active_content > 0){
-		print "\t=> Potentially dangerous content ($active_content) found in this document !!\n" unless $DEBUG eq "no";
-		$ret = 1;
-		$SUSPICIOUS += 50;
-	}
-	
-
-	return $ret;
-	
-}
 
 
 # This function extract other object inside object stream
@@ -628,156 +411,37 @@ sub Extract_From_Object_stream{
 }
 
 
-# This function check if the xref table is conform
-# TODO return 0 if failed and 1 if sucess and the error status
-sub Check_xref{
-	
-	my ($trailer, $fh) = @_;
-	my $xref_offset;
-	my $len=4; # "xref" string length.
-	my $res;
-	my $ret = 0;
-
-	# Get the startxref offset in the trailer
-	if ($trailer =~ /startxref\s*(\d+)\s*%%EOF/){
-		$xref_offset = $1;
-	}else{
-		#return (0,$BAD_XREF_OFFSET);
-		return 0;
-	}
-	print "\nxref_offset = $xref_offset\n" unless $DEBUG eq "no";
-
-
-	# Test XRef keyword
-	seek ($fh, $xref_offset, 0); # Go to the xref offset
-	read ($fh, $res, $len) or print "Check_xref :: read failed :: $!\n";
-	print "res = $res\n" unless $DEBUG eq "no";
-
-	#if($res ne "xref"){ # TODO xref offset could be the offset of an object (ie:type Xref stream).
-	#	print "BAD xref offset !!\n";
-		#return $BAD_XREF_OFFSET;
-
-	if($res ne "xref"){ # Test for object stream reference
-		$len = 10;
-		seek ($fh, $xref_offset, 0); # Go to the xref offset
-		read ($fh, $res, $len) or print "Check_xref :: read failed :: $!\n";
-		print "res2 = $res\n" unless $DEBUG eq "no";
-
-		if($res =~ /^(\d+\s\d\sobj)/){
-			# TODO decode xref stream.
-			#print "";
-			# Tes if the object is well a XRef type object
-			my $obj_ref= $1;
-			
-			if(exists($pdfObjects{$obj_ref}) && $pdfObjects{$obj_ref}->{"type"} eq "/XRef"  ){
-				return 1;
-			}else{
-				return 0;
-			}
-			
-			
-		}else{
-			#print "BAD xref offset!!\n";
-			#return $BAD_XREF_OFFSET;
-			#return (0,$BAD_XREF_OFFSET);
-			return 0;
-		}
-
-	}
-
-	# Get xref entries
-	my $xref_content=$res;
-	my $accu;
-	#print "Offset position = ".tell($fh)."\n" unless $DEBUG eq "no";
-	my $i=5;
-	while(!( $xref_content =~ /trailer$/)){
-		
-		read ($fh, $xref_content, 1, $i) or print "Check_xref :: read failed :: $!\n";
-		$i++;	
-	}
-
-	print "$xref_content\n" unless $DEBUG eq "no";
-
-	# nnnnnnnnnn ggggg n eol
-	# nnnnnnnnnn is a 10-digit byte offset
-	# ggggg is a 5-digit generation number
-	# n is a literal keyword identifying this as an in-use entry
-	# my @xref_entries = $xref_content =~ /(\d{10}\s\d{5}\s[f|n]\n)/;
-	my $first_obj;
-	my $number_of_entries;
-	if($xref_content =~ /(\d{1,3})\s(\d{1,3})/g){
-		$first_obj = $1;
-		$number_of_entries=$2;
-		print "$first_obj :: $number_of_entries\n\n" unless $DEBUG eq "no";
-	}
-	my @xref_entries = $xref_content =~ /(\d{10}\s\d{5}\s[f|n])/g;
-
-	# @pdf_objects;
-
-	# Check object's offets
-	my $id=0;
-	foreach(@xref_entries){
-
-		if(/(\d{10})\s(\d{5})\s([f|n])/){
-
-			#print "\n$1::$2::$3\n";
-			my $off = $1;
-			my $gen = $2;
-			my $free = $3;
-
-			$len = 8; # TODO calc len en fonction du nombre d'entrées.
-			seek ($fh, $off, 0);
-			read ($fh, $res, $len) or print "Check_xref :: read failed :: off=$off :: len=$len\n";
-			chomp $res;
-			#print "res = $res\n";
-
-			if($res =~/($id\s0\sobj)/ or $free ne "n"){
-				#print "GooD obj offset\n";
-				
-				my $obj_ref = $1;	
-				
-				# save the object's offset
-				if(exists($pdfObjects{$obj_ref}) ){
-					print "object $obj_ref is at offset $off\n" unless $DEBUG eq "no";
-					$pdfObjects{$obj_ref}->{"offset"} = $off ;
-				}
-				
-			
-			}else{
-				print "WRONG Object offset :: $id $gen obj :: offset $off\n"unless $DEBUG eq "no";
-				$ret = $BAD_OBJ_OFFSET;
-				#return (0,$BAD_OBJ_OFFSET);
-				return 0;
-			}
-			$id ++;
-
-		}
-	}
-	
-
-	return 1;
-}
-
-
 # This function checks incoherences in the document format (Ex: Empty pages but only js script).
 sub Document_struct_detection{
 
 	my ($content,$fh) = @_;
 	my $result =0;
 	my $ret = 0;
-	
+	my $active_content = 0;
+	my $empty =0;
 
 	print "\n:::TEST 4 = PDF structure:::\n" unless $DEBUG eq "no";
-
-	# Check if all pages are empty and there is only js or embedded file
 	
-	$ret = &Empty_Doc_with_active_content_detection;
-	if($ret == -1){
+	
+	# Get active content (js, embedded files )
+	$active_content = &Active_Contents(\%pdfObjects);
+
+	print "DEBUG 1 ::".\%pdfObjects."\n";
+	# Check if all pages are empty and there is only js or embedded file
+	$empty = &DocumentStruct::Empty_Pages_Document_detection(\%pdfObjects);
+	
+	# If all pages are empty and there is active content
+	if($empty == 0 && $active_content > 0 ){
+		print "\t=> Empty PDF document with active content !!" unless $DEBUG eq "no";
 		$TESTS_CAT_1{"Empty Doc With Active Content"}="DETECTED";
-		$SUSPICIOUS += 99;
+	}elsif($active_content > 0){
+		print "\t=> Potentially dangerous content ($active_content) found in this document !!\n" unless $DEBUG eq "no";
+		$TESTS_CAT_1{"Active Content"} = $active_content;
+		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
 	}else{
 		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
 	}
+	
 	
 	# stream with Length = 0
 
@@ -786,9 +450,10 @@ sub Document_struct_detection{
 
 	# Check xref table or xref stream object
 	if($#trailers >=0){
+	
 		foreach(@trailers){
 			print "trailer xx = $_\n" unless $DEBUG eq "no";
-			$result+= Check_xref($_,$fh); # Good result if res > 0
+			$result+= &DocumentStruct::Check_xref($_,$fh,\%pdfObjects); # Good result if result > 0
 		}
 		
 		if($result > 0){ # test => OK
@@ -842,236 +507,15 @@ sub Object_correlation_detection{
 }
 
 
-# This function detect a shellcode or suite of hexa insertion
-sub Shellcode_Detection{
-
-	my $objcontent = shift;
-	my $res = "false";
-	my @found;
-	
-	if(!$objcontent){
-		return;
-	}
-
-	# Remove white space for a better processing
-	$objcontent =~ s/\s//g;
-
-	
-	# Shellcode detection // ou repetition de chiffres, separated by an element (,_\-...)
-
-	#print "content";
-
-	my $pat = "51/1,69/1,56/1,32/1,46/1,9/1,13/1,36/1,53/1,72/1,67/1,45/1,66/1,";
-
-	# 73b0e8c5a7e5814c723295313ce0262d
-	# 5f27adfa55628ea4674348351e241be8
-	# 5c08ea688165940008949a86805ff1d0
-	# 73b0e8c5a7e5814c723295313ce0262d
-	# 7bcb4c9c35e01bd985f74aec66c19876
-	# d785f43c523bf36d1678da84fa84617f
-	# 75c1ae242d07bb738a5d9a9766c2a7de
-	# ab3f72df228715e6265cb222c586254e
-	# b823473c7206d64fa3ce20c4669b707d
-	if( $objcontent =~ /(([\d]{1,2}[\/,%\$@^_]{1,2}){100})/ig){
-		print "\n\n:::TEST 2:::\n" unless $DEBUG eq "no";
-		print "DANGEROUS PATTERN 1 FOUND !!\n" unless $DEBUG eq "no";
-		$res = "true";
-		push @found, $1;
-		#print "$1\n";
-
-		
-		# TODO look for "split" pattern
-		
-		
-	}
-
-
-	if( $objcontent =~ /(([\d]{1,}[\/,%\$@^_-]{1,2}){100})/ig){
-		print "\n\n:::TEST 2:::\n" unless $DEBUG eq "no";
-		print "DANGEROUS PATTERN 1.1 FOUND !!\n" unless $DEBUG eq "no";
-		$res = "true";
-		push @found, $1;
-		print "$1\n" unless $DEBUG eq "no";
-
-		# TODO look for "split" pattern
-		
-	}
-
-	#pat = 9804c-9686c7351c-7254c27757c-27643c18532c-18500c32447c-32352c28309c-28201c10773c-10724c12582c-12521c
-	# 84d860a4c9e8d2baec983ef35789449a
-	#if( $objcontent =~ /([\dABCDEF\-]{100})/ig){
-	if( $objcontent =~ /(([\dABCDEF]{2,}[-]){100})/ig){
-		print "\n\n:::TEST 2:::\n" unless $DEBUG eq "no";
-		print "DANGEROUS PATTERN 2 FOUND !!\n" unless $DEBUG eq "no";
-		$res = "true";
-		push @found, $1;
-		print "$1\n" unless $DEBUG eq "no";	
-	}
-
-	# edab6ed2809f739b67667e8fed689992
-	#if( $objcontent =~ /([\d\/A-z,]{100})/ig){
-
-	if($res eq "true"){
-		$TESTS_CAT_2{"Shellcode"} = "DETECTED";
-	}
-	
-
-	return $res;
-
-}
-
-# This function detect an unknown pattern detection
-sub Unknown_Pattern_Repetition_Detection{
-
-	# test files
-	# 618b5fcf762bc7397a22e568753858c9
-	# 
-
-	my $result = 0;
-	my $objcontent = shift;
-	my %h; # hash table containing the results.
-	my $cpt=5; # number of characteres repetition to detect
-	my $rep; # The number of repetition to reach to trigger an alert
-
-	if(!$objcontent){
-		return;
-	}
-
-	# Remove a white characters for a better processing
-	$objcontent =~ s/\s//g;
-
-	# split into array
-	my @a =split('',$objcontent);
-
-	#print "\nOOOOh :::: @a\n";
-
-	for (my $i = 0 ; $i<= $#a-$cpt ; $i++){
-
-		#my $pat = $a[$i].$a[$i+1];
-		my $pat;
-
-		# generate pattern according to number of caracter
-		for (my $y=0 ; $y<$cpt ; $y++){
-			$pat .= $a[$i+$y];
-		}
-
-		# if the pattern is already in the table
-		if(exists($h{"$pat"})){
-			next;
-		}
-
-		for (my $j = $i+$cpt ; $j<= $#a-$cpt ; $j++){
-
-			my $pat2;
-			# generate pattern according to number of caracter
-			for (my $y=0 ; $y<$cpt ; $y++){
-				$pat2 .= $a[$j+$y];
-			}
-
-			if($pat eq $pat2 && $i!=$j){
-
-
-				# add in repetition hash table
-				if(exists($h{"$pat"})){ # If the pattern as already been detected
-					# add in offset array
-					# search if the offset is already in the array
-					my $in=0;
-					my @tmp=@{$h{"$pat"}};
-					foreach(@tmp){
-						if($_ == $j){
-							$in = 1;
-						}
-					}
-					
-					push($h{"$pat"}, $j) unless $in == 1;
-				}else{
-					my @tmp_array;
-					push @tmp_array, $i;
-					push @tmp_array, $j;
-					$h{"$pat"}= \@tmp_array;
-				}
-
-			}
-		}
-	}
-
-
-
-	my $sum=0;
-	my $nb =0;
-	while ((my $key, my $value) = each %h)  {
-
-		#print "$key => ";
-		my @arr= @{$value};
-		$sum+= $#arr+1;
-		$nb ++;		
-	}
-
-	# Calcul de l'ecart-type
-	
-	my $moyenne =0 ;# moyenne
-	my $var =0; # variance
-	my $et = 0; # ecart type
-
-
-	if($nb > 0){
-		$moyenne = $sum/$nb;
-	}
-	print "100% => $sum :: cpt =>  $cpt :: m => $moyenne \n" unless $DEBUG eq "no";
-
-	while ((my $key, my $value) = each %h)  {
-		#print "$key => ";
-		my @arr= @{$value};
-		my $rep = $#arr+1;
-		my $pourcent = ($rep*100)/$sum;
-		#print "$rep\n\n";
-		#print "$rep ::: $pourcent %\n\n";
-
-		$var += ($rep-$moyenne)*($rep-$moyenne);
-		
-		#foreach(@$value){
-		#	print "$_ - ";
-		#}
-		#print "\n\n";
-			
-	}
-
-	if($nb > 0){
-		$var = $var/$nb;
-		$et = sqrt($var);
-	}
-	
-	
-	print "moyenne = $moyenne :: nb = $nb :: variance = $var :: ecartype = $et\n" unless $DEBUG eq "no";
-
-	while ((my $key, my $value) = each %h)  {
-
-		my @arr= @{$value};
-		my $rep = $#arr+1;
-
-		if($rep > 2*$et  && $rep > 30){
-			print "FOUND = $key => $rep\n" unless $DEBUG eq "no";
-			$result ++ ;
-			
-		}	
-	}
-	
-	if($result > 0){
-		$TESTS_CAT_2{"Pattern Repetition"} = "DETECTED";
-	}
-	
-	
-	
-
-}
-
-
-
 # Performes an deeper analysis of each objects
 sub ObjectAnalysis{
 
 	print "\n\n::: Object Analysis:::\n" unless $DEBUG eq "no";
 	my @objs = values(%pdfObjects);
+	
+	my $pattern_rep = 0;
+	my $shellcode = 0;
+	my $dangerous_pat = 0;
 	
 	foreach (@objs){
 	
@@ -1079,14 +523,17 @@ sub ObjectAnalysis{
 		if(exists($_->{"action"}) &&$_->{"action"} eq "/Launch"){
 			$TESTS_CAT_2{"Dangerous Pattern High"} ++;
 			print "Warning :: :: /Launch action detected\n";
-		}
-		
-		
+		}	
 		
 		# Analyse Info obj for suspicious strings
 		if(exists($_->{"type"}) && $_->{"type"} eq "/Info"){
-			Unknown_Pattern_Repetition_Detection($_->{"content"});
-			Shellcode_Detection($_->{"content"});
+		
+			#if($result > 0){
+			#	$TESTS_CAT_2{"Pattern Repetition"} = "DETECTED";
+			#}
+			
+			$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"content"});
+			$shellcode += &ObjectAnalysis::Shellcode_Detection($_->{"content"});
 			
 			my $res = DangerousKeywordsResearch($_, $_->{"content"});
 			if($res ne "none"){
@@ -1110,19 +557,19 @@ sub ObjectAnalysis{
 			}
 			
 			if(exists($pdfObjects{$js_obj_ref}->{stream_d})){
-				Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream_d});
-				Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream_d});
+				$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream_d});
+				$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream_d});
 				DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream_d});
 				
 			}elsif(exists($pdfObjects{$js_obj_ref}->{stream})){
-				Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream});
-				Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream});
+				$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream});
+				$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream});
 				DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream});
 			}
 				
 		}elsif(exists($_->{js})){
-			Unknown_Pattern_Repetition_Detection($_->{"js"});
-			Shellcode_Detection($_->{"js"});
+			$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"js"});
+			$shellcode += &ObjectAnalysis::Shellcode_Detection($_->{"js"});
 			DangerousKeywordsResearch($_, $_->{"js"});
 		}
 		
@@ -1143,296 +590,56 @@ sub ObjectAnalysis{
 			
 			# Get XFA 
 			if(exists($pdfObjects{$acrform_ref}->{xfa})){
-				my $xfa = $pdfObjects{$acrform_ref}->{xfa} ;
-				$xfa =~ s/R/obj/;
-				print "Treating XFA :: $xfa\n" unless $DEBUG eq "no";
+			
+				#my $xfa = $pdfObjects{$acrform_ref}->{xfa} ;
 				
-				if(exists($pdfObjects{$xfa}->{stream_d})){
-					Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream_d});
-					Shellcode_Detection($pdfObjects{$xfa}->{stream_d});
-					DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream_d});
-				}elsif(exists($pdfObjects{$xfa}->{stream})){
-					Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream});
-					Shellcode_Detection($pdfObjects{$xfa}->{stream});
-					DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream});
+				# If it's an array
+				
+				# an array of object
+				my @xfas = $pdfObjects{$acrform_ref}->{xfa} =~ /(\d+\s\d\sR)/sg;
+			
+				foreach (@xfas){
+			
+					my $xfa = $_;
+					$xfa =~ s/R/obj/;
+					print "Treating XFA object :: $xfa\n" unless $DEBUG eq "yes";
+				
+					if(exists($pdfObjects{$xfa})){
+				
+						#print "found XFA obj :: $xfa\n";
+						if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
+							$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream_d});
+							$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$xfa}->{stream_d});
+							DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream_d});	
+										
+						}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
+							$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream});
+							$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$xfa}->{stream});
+							DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream});
+						}
+					}
+				
 				}
 				
 			}
 	
 		}
 		
-
-		
-
-		#if(exists($_->{"javascript"})){			
-		#	Unknown_Pattern_Repetition_Detection($_->{"javascript"});
-		#	Shellcode_Detection($_->{"javascript"});
-		#}
-
-		#if(exists($_->{js})){
-		#	print "--------------\n";
-		#	Unknown_Pattern_Repetition_Detection($_->{"js"});
-		#	Shellcode_Detection($_->{"js"});
-		#}
-
-		#if(exists($_->{stream_d})){
-		#	Unknown_Pattern_Repetition_Detection($_->{"stream_d"});
-		#	Shellcode_Detection($_->{"stream_d"});
-		#}elsif(exists($_->{stream})){
-		#	Unknown_Pattern_Repetition_Detection($_->{"stream"});
-		#	Shellcode_Detection($_->{"stream"});
-		#}
+		# TODO embedded files
 				
 	}
+	
+	if($pattern_rep > 0){
+		$TESTS_CAT_2{"Pattern Repetition"} = $pattern_rep;
+	}
+	
+	if($shellcode > 0){
+		$TESTS_CAT_2{"Shellcode"} = $shellcode;
+	}
+	
 
 }
 
-
-# CCITTFaxDecode
-sub CCITTFaxDecode{
-
-	
-	# TODO
-	return ;
-
-}
-
-
-
-
-# read data for LZWDecode
-sub read_dat{
-
-	#print "self = $self\n";
-	my ($data_ref, $partial_code, $partial_bits, $code_length) = @_;
-	$partial_bits = 0 unless defined $partial_bits;
-
-	while ($partial_bits < $code_length) {
-		$partial_code = ($partial_code << 8) + unpack('C', $$data_ref);
-
-		substr($$data_ref, 0, 1) = '';
-		$partial_bits += 8;
-	}
-
-	my $code = $partial_code >> ($partial_bits - $code_length);
-	$partial_code &= (1 << ($partial_bits - $code_length)) - 1;
-	$partial_bits -= $code_length;
-
-	return ($code, $partial_code, $partial_bits);
-}
-
-
-
-
-#LZWDecode
-sub LZWDecode{
-
-	#my $stream = shift;
-	
-	#my ($data, $is_last) =@_;
-	my $self = {};
-	$self->{'table'} = [map { pack('C', $_) } (0 .. 255, 0, 0)];
-	$self->{'initial_code_length'} = 9;
-	$self->{'code_length'} = 9;
-	$self->{'clear_table'} = 256;
-	$self->{'eod_marker'} = 257;
-	$self->{'next_code'} = 258;
-
-
-	
-
-	#my $data = shift;
-	my ($data, $obj_ref) =@_;
-	my ($code, $partial_code, $partial_bits, $result);
-	
-	while ($data ne '' or $partial_bits) {
-		($code, $partial_code, $partial_bits) = read_dat(\$data, $partial_code, $partial_bits, $self->{'code_length'});
-		print "code = $code\n" unless $DEBUG eq "no";
-		#$self->{'code_length'}++ if $self->{'next_code'} == (1 << $self->{'code_length'});
-
-		if($self->{'next_code'} == (1 << $self->{'code_length'})){
-
-			$self->{'code_length'}++
-		}
-
-		if ($code == $self->{'clear_table'}) {
-		    $self->{'code_length'} = $self->{'initial_code_length'};
-		    $self->{'next_code'} = $self->{'eod_marker'} + 1;
-		    next;
-		}
-		elsif ($code == $self->{'eod_marker'}) {
-			#print "EOD_marker !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n";
-		    last;
-		}
-		elsif ($code > $self->{'eod_marker'} ) {#&& $code< $self->{'next_code'}
-
-		    $self->{'table'}[$self->{'next_code'}] = $self->{'table'}[$code];
-			
-			
-			#print "DEBUG tcnc= $table_code_nc ...\n";
-			#my $table = $self->{'table'}[$code + 1];
-			#print "DEBUG2 = $table ...\n";
-
-			my $table_code = $self->{'table'}[$code];
-			my $table_code_nc = $self->{'table'}[$self->{'next_code'}];
-			my $table_code_plus = $self->{'table'}[$code + 1];
-
-			# TODO Check Type FontDescriptor with FontFile object for buffer overflow. CVE 2010-2883
-			if(!$table_code){
-				print "/!\ LZWdecode :: Potential buffer overflow in object $obj_ref->{ref} :: CVE 2010-2883!!\n" unless $DEBUG eq "no";
-				return $result;
-			}
-			#if($obj_ref->{""} ~= ){
-
-			#}
-
-
-			#print "\n::DEBUG::\n code =$code\n next_code=$self->{next_code}\n table_code =$table_code\n table_next_code = $table_code_nc\n table_code_plus = $table_code_plus\n";
-
-		    $self->{'table'}[$self->{'next_code'}] .= substr($self->{'table'}[$code + 1], 0, 1);
-		    $result .= $self->{'table'}[$self->{'next_code'}];
-		    $self->{'next_code'}++;
-		}
-		else {
-			
-			print "code = $code :: next_code = $self->{next_code}!!\n" unless $DEBUG eq "no";
-		    $self->{'table'}[$self->{'next_code'}] = $self->{'table'}[$code];
-		    $result .= $self->{'table'}[$self->{'next_code'}];
-		    $self->{'next_code'}++;
-		}
-	}
-
-	return $result;
-
-
-	#return $out;
-}
-
-
-#ASCII85Decode
-sub ASCII85Decode{
-
-	#my ($self, $str, $isend) = @_;
-	my $self = {};
-	my $str = shift;
-	my $isend =0;
-	my ($res, $i, $j, @c, $b, $num);
-	$num = 0;
-
-	if (exists($self->{'incache'}) && $self->{'incache'} ne "") {
-		$str = $self->{'incache'} . $str;
-		$self->{'incache'} = "";
-	}
-
-	$str =~ s/(\r|\n)\n?//og;
-	for ($i = 0; $i < length($str); $i += 5) {
-		$b = 0;
-		if (substr($str, $i, 1) eq "z") {
-			$i -= 4;
-			$res .= pack("N", 0);
-			next;
-		}
-		elsif ($isend && substr($str, $i, 6) =~ m/^(.{2,4})\~\>$/o) {
-			$num = 5 - length($1);
-			@c = unpack("C5", $1 . ("u" x (4 - $num)));     # pad with 84 to sort out rounding
-			$i = length($str);
-		}
-		else {
-			@c = unpack("C5", substr($str, $i, 5));
-		}
-
-		for ($j = 0; $j < 5; $j++) {
-			$b *= 85;
-			$b += $c[$j] - 33;
-		}
-		$res .= substr(pack("N", $b), 0, 4 - $num);
-	}
-
-	if (!$isend && $i > length($str)) {
-		$self->{'incache'} = substr($str, $i - 5);
-	}
-
-	return $res;
-
-}
-
-
-
-#AsciiHexDecode
-sub AsciiHexDecode{
-
-	my $stream = shift;
-	my $out;
-	
-	# All white space characters shall be ignored
-	$stream =~ s/\s//sg;
-
-	# "A GREATER-THAN SIGN (3Eh) indicates EOD."
-	my $has_eod_marker = 0;
-	if (substr($stream, -1, 1) eq '>') {
-		$has_eod_marker = 1;
-		
-		chop $stream;
-	}
-	
-	# Accept only ascii hex-encoded stream
-	if($stream=~/[^0-9A-Fa-f]/){
-		print "AsciiHexDecode:: Illegal character in stream \n" unless $DEBUG eq "no";
-		return ;
-	}
-
-	# number of hexadecimal digits, it shall behave as if a 0 (zero)
-	# followed the last digit."
-	if ($has_eod_marker and length($stream) % 2 == 1) {
-		$stream .= '0';
-	}
-
-	# "The ASCIIHexDecode filter shall produce one byte of binary data
-	# for each pair of ASCII hexadecimal digits."
-	$out = $stream;
-	$out =~ s/([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
-	
-	
-	return $out;
-}
-
-
-# Decode Flatecode streams
-sub FlateDecode{
-
-	my $stream = shift;
-	my $out;
-
-	my $len = length($stream); # Size of compressed object
-	#print "Stream Length = $len\n";
-
-	
-	# Inflation
-	# TODO try WindowBits => -8 ou -15
-	#my ($y,$status2) = inflateInit(-BufSize => 1 ) or die "Error creating inflation stream\n";	# With use Compress::Zlib
-	my ($y,$status2) = inflateInit(WindowBits => 15, -BufSize => 1) or die "Error creating inflation stream\n";	# With use Compress::Zlib
-
-
-	# TODO Chech the header
-	#x<9C> => \x78\x9C
-	# 78 01 - No compression/low
-	# 78 9C - Default Compression
-	# 78 DA - Best Compression
-
-	($out, $status2) = $y->inflate($stream) or print "Error inflating the stream\n";
-	#print "status = $status2 ::".$y->msg()."\n";
-
-	# 
-	#my @arr = split('',$stream);
-	#print "arr == @arr\n";
-	#foreach(@arr){
-	#	$out .= $y->inflate($_) or die "Error inflating the stream\n";		
-	#}
-	#print "status = $status2 ::".$y->msg()."\n";
-	#print "OUT = $out\n";
-
-	return $out;
-}
 
 # Get filter applied to a stream
 sub GetStreamFilters{
@@ -1441,7 +648,7 @@ sub GetStreamFilters{
 	my @filter_list;
 
 	# If there is only one filter - Ex: /Filter /Flatecode
-	if( $obj_content =~ /\/Filter\s*\/([A-Za-z]*)/ig ){
+	if( $obj_content =~ /\/Filter\s*\/([A-Za-z\d]*)/ig ){
 		push @filter_list, $1;
 	}elsif($obj_content =~ /\/Filter\s*\[\s*([A-Za-z\/\s\d]*)\s*\]/ig){ # For several filters - Ex
 
@@ -1461,7 +668,7 @@ sub DecodeXRefStream{
 	
 	my $tmp;
 		
-	if(length($stream) <=10 ){
+	if(length($stream) <= 10 ){
 		return;
 	}
 		
@@ -1582,22 +789,15 @@ sub DecodeXRefStream{
 				
 	}
 
-#			10) Your first column should be the Xref entry type: 0 = f. I.e. a "free" or deleted object. My reader ignores these. 1 = n. I.e. an "in use" object. You'll want to save these for the future. 2 = a compressed object. You'll also want to save these, but they'll require a little more work before they're usable.
-#			11) If our first column is 1 (an in-use object), the second column is the offset address for that object. I add it to my Xref table array.
-#			12) If our first column is 2 (a compressed object), you have to decompress the object stream to get the actual object references and offsets. See PDF Specification section 7.5.7 (page 45).
 	# Store Decoded cross reference table
 	$obj_ref->{"xref_d"} = \@xref_d;
 	
-
-
-
+	
 }
 
 
 # Decode Object Stream using /Filters informations
 sub DecodeObjStream{
-
-	
 
 	my $obj_ref = shift;
 	my @filters;
@@ -1618,13 +818,13 @@ sub DecodeObjStream{
 			$obj_ref->{"filters"}.= "/$_ ";
 
 			if(/FlateDecode/i ){
-				$stream= FlateDecode($stream);
+				$stream= &Filters::FlateDecode($stream);
 			}elsif(/ASCIIHexDecode/i ){
-				$stream = AsciiHexDecode($stream);
+				$stream = &Filters::AsciiHexDecode($stream);
 			}elsif(/ASCII85Decode/i){
-				$stream = ASCII85Decode($stream);
+				$stream = &Filters::ASCII85Decode($stream);
 			}elsif(/LZWDecode/i){
-				$stream = LZWDecode($stream,$obj_ref);
+				$stream = &Filters::LZWDecode($stream,$obj_ref);
 			}elsif(/RunLengthDecode/i){
 				#TODO $stream_tmp = RunLengthDecode($stream_tmp);
 			}elsif(/CCITTFaxDecode/i){
@@ -1638,7 +838,7 @@ sub DecodeObjStream{
 			}elsif(/Crypt/i){
 				#TODO $stream_tmp = Crypt($stream_tmp);
 			}else{
-				print "Filter not defined\n";
+				print "Filter $_ not defined\n";
 			}
 		
 		}
@@ -1727,7 +927,9 @@ sub GetObjectInfos{
 	}
 	
 	# Length
-	if( $dico =~ /\/Length\s*(\d+\s*\d*\s*R*)/sig){
+	if( $dico =~ /Length\s*(\d+\s\d\sR)/si){
+		$obj_ref->{"length"}= $1;
+	}elsif( $dico =~ /\/Length\s*(\d+)/si){
 		$obj_ref->{"length"}= $1;
 	}
 	
@@ -2143,6 +1345,7 @@ sub GetPDFObjects{
 		
 		# Detect object reference collision 
 		if(! exists($pdfObjects{$obj_ref})){
+			# Put the object in the list
 			$pdfObjects{$obj_ref} = \%obj_tmp;
 		}else{
 			print "ERROR :: Document Structure :: Object collision :: Object $obj_ref defined more than once\n" unless $DEBUG eq "no";
@@ -2152,34 +1355,16 @@ sub GetPDFObjects{
 				$TESTS_CAT_1{"Object Collision"} = 1;
 			}
 			
+			# Bug fix in some case: When the previous object is empty
+			if( exists($pdfObjects{$obj_ref}->{stream}) && length($pdfObjects{$obj_ref}->{stream}) <= 0 ){	
+				$pdfObjects{$obj_ref} = \%obj_tmp;
+			}
 			
 		}
 		#$pdfObjects{$obj_ref} = \%obj_tmp;
-		
-		# Put the object in the list
-		push (@pdf_objects, \%obj_tmp);
 
 	}
 	
-}
-
-
-# Check the magic number of a PDF file 
-sub CheckMagicNumber{
-
-	my $file= shift;
-	my $len=8;
-	my $offset=0;
-	my $ver="undef";
-	
-	seek ($file, 0, 0);
-
-	read $file, $ver, $len, $offset or print "read failed :: $!\n";
-	if( $ver =~ /\%PDF-\d\.\d/){
-		print "PDF header : OK\n" unless $DEBUG eq "no";
-		return ($ver,$MAGIC_OK);
-	}
-	return ($ver, $BAD_MAGIC);
 }
 
 
@@ -2190,27 +1375,41 @@ sub SuspiciousCoef{
 	
 	# Tests list
 	
-	# Encryption - Tests Eliminatoires 
+	# Encryption - Test Eliminatoire
 	if(exists($TESTS_CAT_1{"Encryption"}) && $TESTS_CAT_1{"Encryption"} eq "yes"){
 		$SUSPICIOUS = "ENCRYPTED_PDF";
 		return $SUSPICIOUS ;
 	}
 	
-	# Empty Doc With Active Content - Tests Eliminatoires
+	# Empty Doc With Active Content - Test Eliminatoire
 	if( $TESTS_CAT_1{"Empty Doc With Active Content"} eq "DETECTED"){
 		$SUSPICIOUS = 99;
 		return $SUSPICIOUS;
 	}
 	
-	# Object Collision
-	if( exists($TESTS_CAT_1{"Object Collision"}) && $TESTS_CAT_1{"Object Collision"} > 0){
-		$SUSPICIOUS += 10;	
+	
+	
+	
+	
+	
+	
+	# Combination tests
+	if( exists($TESTS_CAT_1{"Object Collision"}) && exists($TESTS_CAT_1{"XRef"}) ){
+	
+		if($TESTS_CAT_1{"Object Collision"} > 0 && $TESTS_CAT_1{"XRef"} ne "OK"){
+			$SUSPICIOUS += 98;
+		}else{
+		
+			if( $TESTS_CAT_1{"Object Collision"} > 0){ # Object Collision
+				$SUSPICIOUS += 10;	
+			}
+			
+			if( $TESTS_CAT_1{"XRef"} eq "BAD_XREF_OFFSET"){ # Xref
+				$SUSPICIOUS += 30;
+			}
+		}
 	}
 	
-	# Xref
-	if(exists($TESTS_CAT_1{"XRef"}) &&  $TESTS_CAT_1{"XRef"} eq "BAD_XREF_OFFSET"){
-		$SUSPICIOUS += 30;
-	}
 	
 	
 	# Trailer
@@ -2231,12 +1430,12 @@ sub SuspiciousCoef{
 	
 	
 	# Shellcode
-	if(exists($TESTS_CAT_2{"Shellcode"}) &&  $TESTS_CAT_2{"Shellcode"} eq "DETECTED"){
+	if(exists($TESTS_CAT_2{"Shellcode"}) &&  $TESTS_CAT_2{"Shellcode"} > 0){
 		$SUSPICIOUS += 40;
 	}
 	
 	# Pattern Repetition
-	if(exists($TESTS_CAT_2{"Pattern Repetition"}) &&  $TESTS_CAT_2{"Pattern Repetition"} eq "DETECTED" ){
+	if(exists($TESTS_CAT_2{"Pattern Repetition"}) &&  $TESTS_CAT_2{"Pattern Repetition"} > 0 ){
 		$SUSPICIOUS += 40;
 	}
 	
@@ -2264,13 +1463,7 @@ sub SuspiciousCoef{
 		$SUSPICIOUS += 40;
 	}
 
-	# Combination tests
-	if( exists($TESTS_CAT_1{"Object Collision"}) && exists($TESTS_CAT_1{"XRef"}) ){
-	
-		if($TESTS_CAT_1{"Object Collision"} > 0 && $TESTS_CAT_1{"XRef"} ne "OK"){
-			$SUSPICIOUS += 98;
-		}
-	}
+
 	
 	return $SUSPICIOUS;
 	
@@ -2330,9 +1523,9 @@ sub main(){
 
 
 	# Check the header of the file (must be %PDF-1.x)
-	my ($version,$status) = CheckMagicNumber($file);
+	my ($version,$status) = &DocumentStruct::CheckMagicNumber($file);
 	
-	if($status == $BAD_MAGIC){
+	if($status eq "BAD_MAGIC"){
 		die "Error :: Bad Header for a PDF file\n";
 	}
 	
@@ -2356,36 +1549,30 @@ sub main(){
 
 
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "no";
-
-
-	# Analyze objects...
-	#BasicAnalysis();
-	#&BasicDangerousKeywordsResearch;
+	&PrintObjList unless $DEBUG eq "yes";
 
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
 		ObjectAnalysis();
 	}	
 
-	#Object_correlation_detection();
-	
-	
 	# PDF STRUCT TESTS
 	&Document_struct_detection($content,$file); # Works only for version below 1.5 with no compatibility with previous version
 
-	# Object' content Analysis
-	#&ObjectAnalysis;
 	
-	&CVE_2010_2883_Detection;
+	$status = &CVEs::CVE_2010_2883_Detection(\%pdfObjects);
+	if( $status ne "none"){
+		$TESTS_CAT_3{"CVE_2010_2883"} = $status;
+	}
+	
 	
 	# Print execution time
 	my $exTime = time - $^T;
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	PrintSingleObject("44 0 obj");
-	PrintSingleObject("48 0 obj");
+	#PrintSingleObject("15 0 obj");
+	#PrintSingleObject("16 0 obj");
 	
 	&SuspiciousCoef;
 	
