@@ -82,6 +82,8 @@ my $SUSPICIOUS = 0; # suspicious coef
 
 # TODO Presence de JavaScript sans formulaire
 # TODO Look for embedded files types
+
+# TODO See Legal Content Attestation check (DocMDP signature)
 ############################################################
 
 
@@ -318,11 +320,7 @@ sub Extract_From_Object_stream{
 		if(exists($_->{"type"}) && $_->{"type"} =~ /ObjStm/ && exists($_->{"stream_d"}) && length($_->{"stream_d"}) > 0 ){
 		
 			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "no";
-			print "Found object stream :: $_->{ref} ::\n == $_->{stream_d}";
-			#if($_->{"ref"} eq "16 0 obj"){
-			#	print $_->{"stream_d"}."\n\n\n\n";
-				
-			#}
+			#print "Found object stream :: $_->{ref} ::\n"; #== $_->{stream_d}";
 
 			# Get the list of objects inside
 			# 122 0 : 123 543 :
@@ -426,7 +424,7 @@ sub Document_struct_detection{
 	# Get active content (js, embedded files )
 	$active_content = &Active_Contents(\%pdfObjects);
 
-	print "DEBUG 1 ::".\%pdfObjects."\n";
+	
 	# Check if all pages are empty and there is only js or embedded file
 	$empty = &DocumentStruct::Empty_Pages_Document_detection(\%pdfObjects);
 	
@@ -694,7 +692,7 @@ sub DecodeXRefStream{
 		}
 	}
 	
-	
+	#print "num = $num\n";
 	#print "$byte1 :: $byte2 :: $byte3 :: $num\n";
 	
 	# Split the string into rows (Remove the last 10 characters of the string)
@@ -767,7 +765,7 @@ sub DecodeXRefStream{
 			$r2 .= $row2[$k+$byte1];
 		}
 		$r2 = pack("C$byte2","$r2"); #print "r2 = $r2 \n";
-		#$r2 = pack("C2","$row2[1]$row2[2]"); print "r2 = $r2 \n";
+		#$r2 = pack("C3","$row2[1]$row2[2]$row2[3]"); print "r2 = $r2 \n";
 		$r2 = unpack("C$byte2","$r2"); #print "r2 = $r2 \n";
 		
 		
@@ -781,8 +779,8 @@ sub DecodeXRefStream{
 		#$r3 = pack("C","$row2[3]"); print "r3 = $r3 \n";
 		$r3 = unpack("C$byte3","$r3"); #print "r3 = $r3 \n";
 		
-		my $res_row = "r1 r2 r3";
-		print "Debug :: xref row = ".$r1."-".$r2."-".$r3."\n";
+		my $res_row = "$r1 $r2 $r3";
+		#print "Debug :: xref row = ".$r1."-".$r2."-".$r3."\n";
 		push (@xref_d, $res_row);
 		
 		@prev = @row2;
@@ -791,6 +789,12 @@ sub DecodeXRefStream{
 
 	# Store Decoded cross reference table
 	$obj_ref->{"xref_d"} = \@xref_d;
+	
+	# print xref table
+	#print "\n\nXREF Stream\n";
+	#foreach(@xref_d){
+	#	print "$_\n";
+	#}
 	
 	
 }
@@ -1091,7 +1095,9 @@ sub GetObjectInfos{
 		#if($obj_ref->{"content"} =~ /\/Contents\s*(\[.*\]]|\d+\s\d\sR)/si){
 		if($dico =~ /\/Contents\s*(\[.*\]|\d+\s\d\sR)/si){
 			$obj_ref->{"pagecontent"} = $1;
-		}
+		}#elsif(){
+			
+		#}
 		
 		# Thumb
 		# TODO ... 
@@ -1185,13 +1191,13 @@ sub PrintSingleObject{
 	
 		while ((my $key, my $value) = each($pdfObjects{$obj_ref}) ){
 		
-			if(!($key =~ /stream|content|dico|ref/i)){
+			#if(!($key =~ /stream|content|dico|ref/i)){
 				print "$key = $value\n";
-			}
+			#}
 			
-			if(($key =~ /stream/i) ){
-				print "$key = $value\n";
-			}
+			#if(($key =~ /stream/i) ){
+			#	print "$key = $value\n";
+			#}
 		}
 	
 	}else{
@@ -1549,7 +1555,7 @@ sub main(){
 
 
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "yes";
+	&PrintObjList unless $DEBUG eq "no";
 
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
@@ -1571,8 +1577,9 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("15 0 obj");
-	#PrintSingleObject("16 0 obj");
+	#PrintSingleObject("373 0 obj");
+	#PrintSingleObject("534 0 obj");
+	#PrintSingleObject("368 0 obj");
 	
 	&SuspiciousCoef;
 	

@@ -32,7 +32,7 @@ sub FlateDecode{
 	# 78 DA - Best Compression
 
 	($out, $status2) = $y->inflate($stream) or print "Error inflating the stream\n";
-	print "status = $status2 ::".$y->msg()."\n";
+	#print "status = $status2 ::".$y->msg()."\n";
 
 	# 
 	#my @arr = split('',$stream);

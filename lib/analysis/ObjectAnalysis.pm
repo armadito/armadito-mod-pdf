@@ -124,7 +124,7 @@ sub Unknown_Pattern_Repetition_Detection{
 	}
 	
 	
-	print "moyenne = $moyenne :: nb = $nb :: variance = $var :: ecartype = $et\n" unless $DEBUG eq "yes";
+	print "moyenne = $moyenne :: nb = $nb :: variance = $var :: ecartype = $et\n" unless $DEBUG eq "no";
 
 	while ((my $key, my $value) = each %h)  {
 

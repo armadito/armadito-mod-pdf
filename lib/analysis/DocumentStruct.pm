@@ -29,7 +29,7 @@ sub Empty_Pages_Document_detection{
 
 	my $ref = shift;
 	
-	print "DEBUG = $ref\n";
+	#print "DEBUG = $ref\n";
 	
 	my %pdfObjects = %{$ref};
 
@@ -49,7 +49,7 @@ sub Empty_Pages_Document_detection{
 		
 		if( exists($_->{"type"}) && $_->{"type"} eq "/Pages" ){
 		
-			print "FOUND Pages object :: $_->{ref} :: \n";
+			print "FOUND Pages object :: $_->{ref} :: \n" unless $DEBUG eq "no";
 			
 			# Get kid node pages
 			my @pages = $_->{"kids"} =~ /(\d+\s\d\sR)/sg;
@@ -64,26 +64,56 @@ sub Empty_Pages_Document_detection{
 				if(exists($pdfObjects{$page_ref}) && exists($pdfObjects{$page_ref}->{"pagecontent"})  ){
 				
 					# Check if it's not an empty content
-					my $p_content = $pdfObjects{$page_ref}->{"pagecontent"};
+					#my $p_content = $pdfObjects{$page_ref}->{"pagecontent"};
 					
 					
 					# If the Contents fiels is an array
-					my @pcontents = $p_content =~ /(\d+\s\d\sR)/sg;
+					my @pcontents = $pdfObjects{$page_ref}->{"pagecontent"} =~ /(\d+\s\d\sR)/sg;
+					
 					foreach (@pcontents){
 					
-						my $contentp = $_;
-						$contentp =~ s/R/obj/;
+						my $content_page_obj = $_;
+						$content_page_obj =~ s/R/obj/;
 						
-						#print "page content = $contentp\n";
+						#print ":: page content = $content_page_obj ::\n";#" $pdfObjects{$contentp}->{content}\n";
 						
-						if(exists($pdfObjects{$contentp}) && exists($pdfObjects{$contentp}->{"stream"}) && length($pdfObjects{$contentp}->{"stream"}) > 0  ){ # I could also add $pdfObjects{$p_content}->{"type"} eq "/Contents"
+						if(exists($pdfObjects{$content_page_obj}) && exists($pdfObjects{$content_page_obj}->{"stream"}) && length($pdfObjects{$content_page_obj}->{"stream"}) > 0  ){
 							$ret ++;
-							print "Page $page_ref is not empty => OK\n"unless $DEBUG eq "yes";
+							print "Page $page_ref is not empty => OK\n"unless $DEBUG eq "no";
 						
-						}elsif(! exists($pdfObjects{$p_content})){
-							print "Warning : Content Object of page $page_ref doesn\'t exist\n" unless $DEBUG eq "no";
+						}elsif(! exists($pdfObjects{$content_page_obj})){
+							print "Warning : Content Object ($content_page_obj) of page $page_ref doesn\'t exist\n" unless $DEBUG eq "no";
+							
+						}elsif( exists($pdfObjects{$content_page_obj}->{content}) ){
+						
+							# Trigger the case when the object represents an array of objects Ex: [422 0 R 423 0 R 424 0 R 425 0 R 426 0 R 427 0 R 428 0 R 429 0 R]
+							
+							my @content_page_array = $pdfObjects{$content_page_obj}->{"content"} =~ /(\d+\s\d\sR)/sg;
+							
+							foreach(@content_page_array){
+								
+								my $content_page_obj_2 = $_;
+								$content_page_obj_2 =~ s/R/obj/;
+								#print " Found obj :: $content_page_obj_2\n";
+								
+								if(exists($pdfObjects{$content_page_obj_2})){
+								
+									if( exists($pdfObjects{$content_page_obj_2}->{"stream"}) && length($pdfObjects{$content_page_obj_2}->{"stream"}) > 0 ){
+										$ret ++;
+										print "Found content of the page $page_ref in obj $content_page_obj_2 => OK\n"unless $DEBUG eq "no";
+									}else{
+										print "Warning :: Page content Object ($content_page_obj_2) is empty\n" unless $DEBUG eq "no";
+									}
+								
+								}else{
+									print "Warning :: Page content Object ($content_page_obj_2) is not defined\n" unless $DEBUG eq "no";
+								}	
+							}
+							
+						
 						}else{
 							print "Warning : The Stream of the Content Object is empty\n" unless $DEBUG eq "no";
+							
 						}	
 					
 					}
@@ -104,7 +134,6 @@ sub Empty_Pages_Document_detection{
 	
 	}
 	
-
 	return $ret;
 	
 }
