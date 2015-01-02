@@ -1,6 +1,7 @@
 package DocumentStruct;
 
 use strict;
+use MIME::Base64 ();
 
 my $DEBUG = "no";
 
@@ -8,18 +9,59 @@ my $DEBUG = "no";
 # Check the magic number of a PDF file 
 sub CheckMagicNumber{
 
-	my $file= shift;
+	my $file_ref= shift;
+	my $file = $file_ref;
+	
 	my $len=8;
 	my $offset=0;
 	my $ver="undef";
 	
 	seek ($file, 0, 0);
-
 	read $file, $ver, $len, $offset or print "read failed :: $!\n";
 	if( $ver =~ /\%PDF-\d\.\d/){
 		print "PDF header : OK\n" unless $DEBUG eq "no";
-		return ($ver,"MAGIC_OK");
+		return ($ver,"OK");
 	}
+	
+	# Check string <?xml version="1.0"?><?xfa ?><xdp:xdp xmlns:xdp="http://ns.adobe.com/xdp/"><pdf xmlns="http://ns.adobe.com/xdp/pdf/"><document><chunk>
+	seek ($file, 0, 0); 	# rewind file
+	my $content = do { local $/; <$file>};
+	#print "$content\n";
+	if($content =~ /<xdp:xdp\sxmlns:xdp=\"http:\/\/ns\.adobe\.com\/xdp\/"><pdf\sxmlns=\"http:\/\/ns\.adobe\.com\/xdp\/pdf\/\"><document><chunk>(.*)<\/chunk><\/document><\/pdf>/si){
+	#if($content =~ /<chunk>(.*)<\/chunk>/si){
+		print "This document is an XML Data Package (XDP)\n" unless $DEBUG eq "no";
+		my $chunkContent = $1;
+		#print "chunkContent = $chunkContent\n";
+		
+		#decode base64 content
+		my $decodedContent = MIME::Base64::decode($chunkContent) or print "Error while decoding base64 :: $!\n";
+		#print "decoded content = $decodedContent\n";
+		
+		# write content in a new file
+		close($file);
+		open $file, ">tmp.pdf" or die "open failed in tmp.pdf : $! ";
+		binmode $file;
+		print $file $decodedContent;
+		#print "file handle = $file\n";
+		close($file);
+		open $file, "<tmp.pdf" or die "open failed in tmp.pdf : $! ";
+		binmode $file;
+		#print "file handle 2 = $file\n";
+		#print "$file;
+		
+		seek ($file, 0, 0);
+		read $file, $ver, $len, $offset or print "read failed :: $!\n";
+		
+		if( $ver =~ /\%PDF-\d\.\d/){
+			print "PDF header : OK\n" unless $DEBUG eq "no";
+			return ($ver,"XDP_FILE");
+		}
+		
+		return ($ver,"BAD_MAGIC");
+		
+		
+	}
+	
 	return ($ver, "BAD_MAGIC");
 }
 
@@ -32,9 +74,6 @@ sub Empty_Pages_Document_detection{
 	#print "DEBUG = $ref\n";
 	
 	my %pdfObjects = %{$ref};
-
-	#print "DEBUG ".\%pdfObjects."\n";
-	#print "= ".$pdfObjects{dblezo};
 	
 	
 	my $ret=0;

@@ -84,6 +84,10 @@ my $SUSPICIOUS = 0; # suspicious coef
 # TODO Look for embedded files types
 
 # TODO See Legal Content Attestation check (DocMDP signature)
+
+# TODO See FDF format
+
+# TODO See XDP format
 ############################################################
 
 
@@ -163,13 +167,14 @@ sub Hexa_Obfuscation_decode{
 	my $dico;
 	my ($pre,$post);
 	my $case =-1;
+	my $status = "none"; 
 	
 	if( ! exists($obj_ref->{"content"})){
-		return;
+		return "no_content";
 	}
 	
 	
-	# TODO : case where it's only #20 replacement
+	
 	# Get Dictionary
 	if($obj_ref->{"content"} =~ /<<(.*)>>\s*stream/s){
 	
@@ -179,18 +184,24 @@ sub Hexa_Obfuscation_decode{
 		#$case =1;
 		
 		my $tmp = $dico;
+		my $sans_space = $dico;
 		$dico =~ s/#([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
+		$sans_space =~ s/#(20)/pack("C", hex($1))/ge; # Trigger the case where there is only #20 (space)
 		#print "DEBUG1 :: $tmp ::=> $dico \n";
 		# If the dico has been modified
 		if( $tmp ne $dico){
-
-			#my $dico_d = $obj_ref->{"content"};	
-			# replace dico
-			#$content_d =~ s/\Q$tmp\E/\Q$dico\E/s;
-			
+		
 			$obj_ref->{"dico_d"} = $dico;
-			#print "DEBUG 3::\n";
-						
+			print "DEBUG 3 :: tmp = $tmp :: dico = $dico :: tmp2 = $sans_space\n" unless $DEBUG eq "no";
+			
+			$status = "hex_obfuscation";
+			
+			if($dico eq $sans_space){
+				print "Only #20 = space detection\n" unless $DEBUG eq "no";
+				$status = "only_space";
+			}
+			
+				
 		}
 		
 		
@@ -204,19 +215,30 @@ sub Hexa_Obfuscation_decode{
 		#$case = 2;
 		
 		my $tmp = $dico;
+		my $sans_space = $dico;
 		$dico =~ s/#([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
+		$sans_space =~ s/#(20)/pack("C", hex($1))/ge; # Trigger the case where there is only #20 (space)
+		
 		#print "DEBUG2 :: $tmp ::=> $dico \n";
 		# If the dico has been modified
-		if( $tmp ne $dico){
+		if($tmp ne $dico){
 		
-			#my $dico_d = $obj_ref->{"content"};
-			# replace dico
-			#$content_d =~ s/(\Q$tmp\E)/(\Q$dico\E)/s;
-			
 			$obj_ref->{"dico_d"} = $dico;
-			#print "DEBUG 3::\n";	
+			print "DEBUG 3 :: tmp = $tmp :: dico = $dico :: tmp2 = $sans_space\n" unless $DEBUG eq "no";
+			
+			$status = "hex_obfuscation";
+			
+			if($dico eq $sans_space){
+				print "Only #20 = space detection\n" unless $DEBUG eq "no";
+				$status = "only_space";
+			}
+			
+				
 		}
 	}
+	
+	
+	return $status;
 	
 
 }
@@ -323,8 +345,6 @@ sub Extract_From_Object_stream{
 			#print "Found object stream :: $_->{ref} ::\n"; #== $_->{stream_d}";
 
 			# Get the list of objects inside
-			# 122 0 : 123 543 :
-
 			my $num = $_->{"N"};
 			my @obj_inside = $_->{"stream_d"} =~ /(\d+\s\d+)/sig;
 
@@ -660,6 +680,7 @@ sub GetStreamFilters{
 
 
 # This function decode Xref Stream according to Predictor
+# TODO rewrite this function and save in the previous row byte values instead of integers
 sub DecodeXRefStream{
 
 	my ($obj_ref,$stream) = @_;
@@ -733,7 +754,7 @@ sub DecodeXRefStream{
 		
 			# Convert the byte from binary to int and add it to the same byte in the previous row (prev)
 
-			# Convert byte from binary to int					
+			# Convert byte from binary to int				
 			my $conv_row = unpack ("C",$row2[$j]);
 			my $conv_prev  = $prev[$j];
 			
@@ -748,6 +769,9 @@ sub DecodeXRefStream{
 			#$row2[$j] = pack ("i",$sum);
 		}
 		
+		# save the current as the previous row
+		@prev = @row2;
+		
 		# split in like described in W Ex [1 2 1]
 		
 		# convert int to bytes and then convert back to int
@@ -755,18 +779,21 @@ sub DecodeXRefStream{
 		for(my $k= 0; $k < $byte1 ; $k++){
 			$r1 .= $row2[$k];
 		}
-		$r1 = pack("C$byte1","$r1"); #print "r1 = $r1 \n";
+		$r1 = pack("C$byte1",$r1); #print "r1 = $r1 \n"; convert int to bytes
 		#$r1 = pack("C","$row2[0]"); print "r1 = $r1 \n";
-		$r1 = unpack("C$byte1","$r1"); #print "r1 = $r1 \n";
+		$r1 = unpack("C$byte1",$r1); #print "r1 = $r1 \n"; convert back to int
 		
 		
 		my $r2;
 		for(my $k= 0; $k < $byte2 ; $k++){
 			$r2 .= $row2[$k+$byte1];
 		}
-		$r2 = pack("C$byte2","$r2"); #print "r2 = $r2 \n";
+		#print "r2 = $r2 \n";
+		$r2 = pack("C$byte2",$r2); #print "r2 = $r2 \n";
+		#my $j = $byte2*8;
+		#$r2 = pack("b$j","$r2"); print "r2 = $r2 \n";
 		#$r2 = pack("C3","$row2[1]$row2[2]$row2[3]"); print "r2 = $r2 \n";
-		$r2 = unpack("C$byte2","$r2"); #print "r2 = $r2 \n";
+		$r2 = unpack("C$byte2",$r2); #print "r2 = $r2 \n";
 		
 		
 		
@@ -777,13 +804,13 @@ sub DecodeXRefStream{
 		#$r3 = pack("C$byte3",$r3); #print "r3 = $r3 \n";
 		$r3 = pack("C$byte3",$r3); #print "r3 = $r3 \n";
 		#$r3 = pack("C","$row2[3]"); print "r3 = $r3 \n";
-		$r3 = unpack("C$byte3","$r3"); #print "r3 = $r3 \n";
+		$r3 = unpack("C$byte3",$r3); #print "r3 = $r3 \n";
 		
 		my $res_row = "$r1 $r2 $r3";
 		#print "Debug :: xref row = ".$r1."-".$r2."-".$r3."\n";
 		push (@xref_d, $res_row);
 		
-		@prev = @row2;
+		
 				
 	}
 
@@ -875,6 +902,7 @@ sub GetObjectInfos{
 	my $obj_content ="";
 	my ($ref, $type, $len, $action, $js, $ef);
 	my $dico;
+	my $status = "none";
 
 	#print "objct ref =".$obj_ref;
 	#print "Object content = $obj_content\n";
@@ -884,7 +912,16 @@ sub GetObjectInfos{
 	}
 	
 	# Detect hexa obfuscation in object dictionary fields.
-	&Hexa_Obfuscation_decode($obj_ref);
+	$status = &Hexa_Obfuscation_decode($obj_ref);
+	
+	if($status eq "hex_obfuscation"){
+	
+		if(exists($TESTS_CAT_1{"Obfuscated Objects"})){
+			$TESTS_CAT_1{"Obfuscated Objects"} ++ ;
+		}else{
+			$TESTS_CAT_1{"Obfuscated Objects"}=1;
+		}
+	}
 	
 	$dico = $obj_ref->{"content"};
 	
@@ -896,11 +933,7 @@ sub GetObjectInfos{
 		
 		$dico = $obj_ref->{"dico_d"};
 		
-		if(exists($TESTS_CAT_1{"Obfuscated Objects"})){
-			$TESTS_CAT_1{"Obfuscated Objects"} ++ ;
-		}else{
-			$TESTS_CAT_1{"Obfuscated Objects"}=1;
-		}
+		
 
 	}	
 #	}elsif(exists($obj_ref->{"content"})){
@@ -1420,11 +1453,11 @@ sub SuspiciousCoef{
 	
 	# Trailer
 	if(exists($TESTS_CAT_1{"Trailer"}) && $TESTS_CAT_1{"Trailer"} eq "TRAILER_NOT_FOUND"){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += 30;
 	}
 	
 	# Obfuscated Objects
-	if(exists($TESTS_CAT_1{"Obfuscated Objects"}) &&  $TESTS_CAT_1{"Obfuscated Objects"} eq "TRAILER_NOT_FOUND"){
+	if(exists($TESTS_CAT_1{"Obfuscated Objects"}) &&  $TESTS_CAT_1{"Obfuscated Objects"} > 0){
 		$SUSPICIOUS += 40;
 	}
 	
@@ -1525,18 +1558,24 @@ sub main(){
 	binmode $file or die "Error :: $!\n";
 
 	# Get the content of the document
-	$content = do { local $/; <$file>};
+	#seek ($file, 0 ,0 );
+	#$content = do { local $/; <$file>};
+	
 
 
 	# Check the header of the file (must be %PDF-1.x)
 	my ($version,$status) = &DocumentStruct::CheckMagicNumber($file);
-	
+	print "status = $status\n";
 	if($status eq "BAD_MAGIC"){
 		die "Error :: Bad Header for a PDF file\n";
 	}
 	
-	$TESTS_CAT_1{"Header"} = "OK";
+	$TESTS_CAT_1{"Header"} = $status;
 	print "PDF version ".$version."\n";
+	
+	# Get the content of the document
+	seek ($file, 0 ,0 );
+	$content = do { local $/; <$file>};
 	
 	# Get all pdf objects content in the document
 	&GetPDFObjects($content);
