@@ -46,6 +46,63 @@ sub FlateDecode{
 	return $out;
 }
 
+# Decode Flatecode streams (returns the decoded stream)
+sub FlateEncode{
+
+	my $stream = shift;
+	
+	my $out;
+	
+	my $in="Hello world";
+
+	#my $tmp;
+	#my $inflation;
+
+	my $len = length($stream); # Size of compressed object stream
+	
+	#print "Stream Length = $len\n";
+	#chomp($input);
+
+	# All white space characters shall be ignored
+	#$input =~ s/\s//sog;
+
+	# Deflation
+	#my $x = deflateInit(-Bufsize => 1, -Level => Z_BEST_SPEED ) or die "Error creating deflation stream";
+	#my $x = deflateInit(-Bufsize => 1) or die "Error creating deflation stream";
+	# Z_NO_COMPRESSION	Z_BEST_SPEED	Z_BEST_COMPRESSION	Z_DEFAULT_COMPRESSION
+	my $x = deflateInit(-Bufsize => 1, -Level => 9 ) or die "Error creating deflation stream";
+	my ($deflation, $status) = $x->deflate($stream);
+	#print "deflation = $deflation\n";
+	($out, $status) = $x->flush();
+	$deflation .= $out;
+	#print "deflation = $deflation\n";
+	
+	# Inflation
+	# TODO try WindowBits => -8 ou -15
+	#my ($y,$status2) = inflateInit(WindowBits => 15, -BufSize => 1) or die "Error creating inflation stream\n";	# With use Compress::Zlib
+	#my ($y,$status2) = inflateInit(-BufSize => 1) or die "Error creating inflation stream\n";	# With use Compress::Zlib
+
+	# TODO Chech the header
+	#x<9C> => \x78\x9C
+	# 78 01 - No compression/low
+	# 78 9C - Default Compression
+	# 78 DA - Best Compression
+
+	#($out, $status2) = $y->inflate($stream) or print "Error inflating the stream\n";
+	#print "status = $status2 ::".$y->msg()."\n";
+
+	# 
+	#my @arr = split('',$stream);
+	#print "arr == @arr\n";
+	#foreach(@arr){
+	#	$out .= $y->inflate($_) or die "Error inflating the stream\n";		
+	#}
+	#print "status = $status2 ::".$y->msg()."\n";
+	#print "OUT = $out\n";
+
+	return $deflation;
+}
+
 
 #AsciiHexDecode
 sub AsciiHexDecode{

@@ -4,6 +4,58 @@ use strict;
 
 my $DEBUG = "no";
 
+# The basic analysis consists to parse the content of object and detect all potential dangerous patterns.
+# Returns "none" - "high" - "medium" - or "low"
+sub DangerousKeywordsResearch{
+
+	# 
+	#$TESTS_CAT_2{"Dangerous Pattern High"} ;
+	#$TESTS_CAT_2{"Dangerous Pattern Medium"};
+	#$TESTS_CAT_2{"Dangerous Pattern Low"};
+
+	my ($obj_ref,$content) = @_;
+	
+	if(!$content){
+		#print "Error :: DangerousKeywordsResearch :: empty content\n";
+		return "none";
+	}
+	
+	
+	# Trigger Launch actions (HIGH) TODO
+	#if($obj_ref->{"action"} eq "/Launch"){
+	#	$TESTS_CAT_2{"Dangerous Pattern High"} ++;
+	#	print "Dangerous action \(/Launch\) detected\n";
+	#	return "High";
+	#}
+	
+	# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar
+	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|exploit|pointers|app\.LaunchURL|byteToChar)/si ){
+		#$TESTS_CAT_2{"Dangerous Pattern High"} ++;
+		print "Dangerous Pattern \(High\) found :: $1 :: in $obj_ref->{ref} \n";
+		return "High";
+	}
+
+	
+	# Javascript keywords (MEDIUM) :: substring - toSring - split - eval - String.replace - unescape - exportDataObject - StringfromChar
+	if( $content =~ /(toString|substring|split|eval|addToolButton|String\.replace|unescape|exportDataObject|StringfromChar)/si ){
+		#$TESTS_CAT_2{"Dangerous Pattern Medium"} ++;
+		print "Dangerous Pattern \(Medium\) found :: $1 :: in $obj_ref->{ref} \n";
+		return "Medium";
+	}
+		
+
+	# javascript keywords :: 
+	# 
+	# 
+	# NOP detection "90"
+	# 
+	# %u... like   %u4141%u4141%u63a5%u4a80%u0000
+	
+	# TODO Look for JavaScript in XFA block Ex: <script name="ADBE::FileAttachment" contentType="application/x-javascript" ></script>
+	
+	return "none";
+}
+
 
 # This function detect the wide repetition of an unknown pattern
 # Test1 files	:: unknown pattern repetition
@@ -16,6 +68,97 @@ my $DEBUG = "no";
 # de8bcc90ecd0049a1ab4e5a5087359b4
 # fa2ddb10d9184dba0f90c88b7786f6ec
 sub Unknown_Pattern_Repetition_Detection{
+
+
+	my $result = 0;
+	my $objcontent = shift;
+	my %h; # hash table containing the results.
+	my $cpt=5; # number of characteres repetition to detect
+
+	if(!$objcontent){
+		return 0;
+	}
+
+	# Remove a white characters for a better processing
+	$objcontent =~ s/\s//g;
+
+	# split into array
+	my @a =split('',$objcontent);
+	
+	for (my $i = 0 ; $i<= $#a-$cpt ; $i++){
+	
+		my $pat;
+		
+		# generate pattern according to number of caracter
+		for (my $y=0 ; $y<$cpt ; $y++){
+			$pat .= $a[$i+$y];
+		}
+		
+		# if the pattern is already in the table
+		if(!exists($h{"$pat"})){
+
+			my $count = 0;
+			# count the number of repetition in the content
+			my @rep = ($objcontent =~ /\Q$pat/g);
+			$count = @rep;
+			#print "pat = $pat :: count = $count :: rep = $#repp \n";
+			$h{"$pat"} = $count;
+		}
+
+	}
+	
+	
+	# print
+	my $sum=0;
+	my $nb =0;
+	while ((my $key, my $value) = each %h)  {
+		$sum+= $value;
+		$nb ++;
+		#print "$key => $value\n";
+	}
+	
+	if($nb==0){
+		return 0;
+	}
+	
+	# Calcul de l'ecart-type
+	my $moyenne =0 ;# moyenne
+	my $var =0; # variance
+	my $et = 0; # ecart type
+	
+	
+	$moyenne = $sum/$nb;
+	
+	
+	print "100% => $sum :: cpt =>  $cpt :: m => $moyenne \n" unless $DEBUG eq "no";
+
+	while ((my $key, my $value) = each %h)  {
+		
+		my $pourcent = ($value*100)/$sum;
+		$var += ($value-$moyenne)*($value-$moyenne);
+	}
+
+	
+	$var = $var/$nb;
+	$et = sqrt($var);
+	
+	print "moyenne = $moyenne :: nb = $nb :: variance = $var :: ecartype = $et\n" unless $DEBUG eq "no";
+
+	while ((my $key, my $value) = each %h)  {
+
+		if($value > 2*$et  && $value > 100){
+			print "FOUND = $key => $value\n\n" unless $DEBUG eq "no";
+			$result ++ ;
+		}	
+	}
+	
+	#print "END\n\n";
+	return $result;
+
+}
+
+
+sub Unknown_Pattern_Repetition_Detection__{
 
 
 	my $result = 0;
@@ -148,6 +291,8 @@ sub Unknown_Pattern_Repetition_Detection{
 }
 
 
+
+
 # This function detect a shellcode or suite of hexa insertion
 # Test2  files	:: shellcode or hexa insertion
 # 5c08ea688165940008949a86805ff1d0
@@ -167,7 +312,7 @@ sub Shellcode_Detection{
 	my @found;
 	
 	if(!$objcontent){
-		return;
+		return 0;
 	}
 
 	# Remove white space for a better processing

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl -w
 
 use strict;
 #use Compress::Raw::Zlib;
@@ -11,15 +11,18 @@ use bytes;
 
 
 # libraries
+use lib::utils::StructParsing;
 use lib::utils::Filters;	# Filters
+use lib::utils::CleanRewriting;
 use lib::analysis::DocumentStruct;
 use lib::analysis::ObjectAnalysis;
 use lib::analysis::CVEs;
 
 
+
+our $dblezo = "DBLEZO";
+
 # VARIABLES
-
-
 my @to_analyze; # Elements to analyze
 #my @obj;
 #my @pdf_objects; # list of pdf Objects #TODO change the list in hash table with each key represent the reference of the value;
@@ -35,7 +38,7 @@ my $BAD_OBJ_OFFSET = -3;
 
 my $pdf_version; # PDF version
 
-my %TESTS_CAT_1; # Document structure tests
+our %TESTS_CAT_1; # Document structure tests
 my %TESTS_CAT_2; # Objects analysis tests
 my %TESTS_CAT_3; # CVEs
 
@@ -92,76 +95,46 @@ my $SUSPICIOUS = 0; # suspicious coef
 
 
 
+# This function clean all javascript and suspiscious embedded files in the pdf.
+sub Rewrite_clean{
 
 
-# The basic analysis consists to parse the content of object and detect all potential dangerous patterns.
-# Returns "none" - "high" - "medium" - or "low"
-sub DangerousKeywordsResearch{
+	#my $filename = shift;
+	my $filename ="clean.pdf";
+	my $clean_pdf;
 
-	# 
-	#$TESTS_CAT_2{"Dangerous Pattern High"} ;
-	#$TESTS_CAT_2{"Dangerous Pattern Medium"};
-	#$TESTS_CAT_2{"Dangerous Pattern Low"};
+	# Create the clean file
+	open ($clean_pdf, ">$filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";
 
-	my ($obj_ref,$content) = @_;
+	# write header
+	print $clean_pdf "$pdf_version\n";
 	
-	if(!$content){
-		#print "Error :: DangerousKeywordsResearch :: empty content\n";
-		return "err";
+	my @objs = values(%pdfObjects);
+	
+	foreach(@objs){
+		print "writing object $_->{ref} at $_->{offset}\n";
+		seek($clean_pdf,$_->{offset},0);
+		#print $clean_pdf $_->{"ref"};
+		print $clean_pdf $_->{"content"};
+		print $clean_pdf "endobj\n";
+		
 	}
 	
-	# Put pattern in categories
-	
-	#my @objs = keys(%pdfObjects);
-	
-	#foreach (@objs){
-	
-		# Trigger Launch actions (HIGH)
-		#if($_->{"action"} eq "/Launch"){
-		#	$TESTS_CAT_2{"Dangerous Pattern High"} ++;
-		#	print "Warning :: :: /Launch action detected\n";
-		#	return ;
-		#}
+	# write the trailers
+	foreach(@trailers){
 		
-		# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar
-		if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|exe|exploit|pointers|memory|app\.LaunchURL|byteToChar)/si ){
-			$TESTS_CAT_2{"Dangerous Pattern High"} ++;
-			print "Dangerous Pattern \(High\) found :: $1 :: in $obj_ref->{ref} \n";
-			return "high";
-		}
+	}
+	
+	
+	# write the xref tables
 
-		
-		# Javascript keywords (MEDIUM) :: substring - toSring - split - eval - String.replace - unescape - exportDataObject - StringfromChar
-		if( $content =~ /(toString|substring|split|eval|addToolButton|String\.replace|unescape|exportDataObject|StringfromChar)/si ){
-			$TESTS_CAT_2{"Dangerous Pattern Medium"} ++;
-			print "Dangerous Pattern \(Medium\) found :: $1 :: in $obj_ref->{ref} \n";
-			return "medium";
-		}
-		
-		
-		
-			
-	#}
-
-	# javascript keywords :: 
-	# 
-	# 
-	# NOP detection "90"
-	# 
-	# %u... like   %u4141%u4141%u63a5%u4a80%u0000
-	
-	# Look for JavaScript in XFA block Ex: <script name="ADBE::FileAttachment" contentType="application/x-javascript" ></script>
-	
-	return "none";
 }
 
 
 
 
-
-
 # This function detects hexa obfuscation in pdf objects fields and decode it.
-sub Hexa_Obfuscation_decode{
+sub Hexa_Obfuscation_decode__{
 
 	my $obj_ref = shift;
 	my $dico;
@@ -252,24 +225,27 @@ sub Active_Contents{
 	my @to_analyse;
 	my $active_content =0;
 	
+	#my (%js, %ef, %xfa ); # javascript , embedded files, xfa
+	my ($js, $ef, $xfa ) = (0,0,0); # javascript , embedded files, xfa
+	
+	
 	my @objs = values(%pdfObjects);
 	
 	foreach(@objs){
 	
 		
-		while ( (my $key, my $value) = each %{$_}){
-		
-			if($key =~ /js|javascript/){
-				print "Warning :: Active_Contents :: Found active content :: $key in  $_->{ref}\n" unless $DEBUG eq "no";
-				$active_content ++;
-			}
-			
-			if($key eq "type" and ( $value eq "/EmbeddedFile" )){# or $value eq "/Names")){
-				print "Warning :: Found active content :: $value in $_->{ref}\n" unless $DEBUG eq "no";
-				$active_content ++;
-			}	
+		if( exists($_->{"js"}) or exists($_->{"javascript"}) or exists($_->{"js_obj"}) ){
+			print "Warning :: Active_Contents :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "yes";
+			#print "content = $_->{content}\n";
+			$js ++;
+			$active_content ++;
 		}
 		
+		if( exists($_->{"type"}) && $_->{"type"} eq "/EmbeddedFile" ){
+			print "Warning :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
+			$ef ++;
+			$active_content ++;
+		}
 		
 		# XFA 
 		if(exists($_->{"xfa"}) ){
@@ -283,7 +259,7 @@ sub Active_Contents{
 			
 				my $xfa = $_;
 				$xfa =~ s/R/obj/;
-				print "found XFA obj :: $xfa\n";
+				print "found XFA obj :: $xfa\n" unless $DEBUG eq "no";
 				
 				if(exists($pdfObjects{$xfa})){
 				
@@ -326,7 +302,7 @@ sub Active_Contents{
 
 # This function extract other object inside object stream
 # TODO fix bug :: objects not in the rigth order. ()Ex: cerfa_13753-02.pdf :: 16 0 obj)
-sub Extract_From_Object_stream{
+sub Extract_From_Object_stream__{
 
 	
 	#print "\n\n ::EXTRACT OBJ FROM OBJECT STREAM\n";
@@ -533,7 +509,7 @@ sub ObjectAnalysis{
 	
 	my $pattern_rep = 0;
 	my $shellcode = 0;
-	my $dangerous_pat = 0;
+	my $dangerous_pat = "none";
 	
 	foreach (@objs){
 	
@@ -553,7 +529,7 @@ sub ObjectAnalysis{
 			$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"content"});
 			$shellcode += &ObjectAnalysis::Shellcode_Detection($_->{"content"});
 			
-			my $res = DangerousKeywordsResearch($_, $_->{"content"});
+			my $res = &ObjectAnalysis::DangerousKeywordsResearch($_, $_->{"content"});
 			if($res ne "none"){
 				print "Dangerous keyword \($res\) in Info object $_->{ref}\n";
 				$TESTS_CAT_2{"Dangerous Pattern High"} ++;
@@ -577,18 +553,34 @@ sub ObjectAnalysis{
 			if(exists($pdfObjects{$js_obj_ref}->{stream_d})){
 				$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream_d});
 				$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream_d});
-				DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream_d});
+				$dangerous_pat = &ObjectAnalysis::DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream_d});
+				
+				if($dangerous_pat ne "none"){
+					print "Dangerous keyword \($dangerous_pat\) in Info object $pdfObjects{$js_obj_ref}->{ref}\n";
+					$TESTS_CAT_2{"Dangerous Pattern $dangerous_pat"} ++;
+				}
+
 				
 			}elsif(exists($pdfObjects{$js_obj_ref}->{stream})){
 				$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$js_obj_ref}->{stream});
 				$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$js_obj_ref}->{stream});
-				DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream});
+				$dangerous_pat = &ObjectAnalysis::DangerousKeywordsResearch($pdfObjects{$js_obj_ref}, $pdfObjects{$js_obj_ref}->{stream});
+				if($dangerous_pat ne "none"){
+					print "Dangerous keyword \($dangerous_pat\) in Info object $pdfObjects{$js_obj_ref}->{ref}\n";
+					$TESTS_CAT_2{"Dangerous Pattern $dangerous_pat"} ++;
+				}
+
 			}
 				
 		}elsif(exists($_->{js})){
 			$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"js"});
 			$shellcode += &ObjectAnalysis::Shellcode_Detection($_->{"js"});
-			DangerousKeywordsResearch($_, $_->{"js"});
+			$dangerous_pat = &ObjectAnalysis::DangerousKeywordsResearch($_, $_->{"js"});
+			if($dangerous_pat ne "none"){
+				print "Dangerous keyword \($dangerous_pat\) in Info object $_->{ref}\n";
+				$TESTS_CAT_2{"Dangerous Pattern $dangerous_pat"} ++;
+			}
+
 		}
 		
 		
@@ -620,7 +612,7 @@ sub ObjectAnalysis{
 			
 					my $xfa = $_;
 					$xfa =~ s/R/obj/;
-					print "Treating XFA object :: $xfa\n" unless $DEBUG eq "yes";
+					print "Treating XFA object :: $xfa\n" unless $DEBUG eq "no";
 				
 					if(exists($pdfObjects{$xfa})){
 				
@@ -628,12 +620,22 @@ sub ObjectAnalysis{
 						if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
 							$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream_d});
 							$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$xfa}->{stream_d});
-							DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream_d});	
+							$dangerous_pat = &ObjectAnalysis::DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream_d});
+							if($dangerous_pat ne "none"){
+								print "Dangerous keyword \($dangerous_pat\) in Info object $pdfObjects{$xfa}->{ref}\n";
+								$TESTS_CAT_2{"Dangerous Pattern $dangerous_pat"} ++;
+							}
+
 										
 						}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
 							$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream});
 							$shellcode += &ObjectAnalysis::Shellcode_Detection($pdfObjects{$xfa}->{stream});
-							DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream});
+							$dangerous_pat = &ObjectAnalysis::DangerousKeywordsResearch($pdfObjects{$xfa},$pdfObjects{$xfa}->{stream});
+							if($dangerous_pat ne "none"){
+								print "Dangerous keyword \($dangerous_pat\) in Info object $pdfObjects{$xfa}->{ref}\n";
+								$TESTS_CAT_2{"Dangerous Pattern $dangerous_pat"} ++;
+							}
+							
 						}
 					}
 				
@@ -646,6 +648,7 @@ sub ObjectAnalysis{
 		# TODO embedded files
 				
 	}
+	
 	
 	if($pattern_rep > 0){
 		$TESTS_CAT_2{"Pattern Repetition"} = $pattern_rep;
@@ -660,7 +663,7 @@ sub ObjectAnalysis{
 
 
 # Get filter applied to a stream
-sub GetStreamFilters{
+sub GetStreamFilters__{
 
 	my $obj_content = shift;
 	my @filter_list;
@@ -681,7 +684,7 @@ sub GetStreamFilters{
 
 # This function decode Xref Stream according to Predictor
 # TODO rewrite this function and save in the previous row byte values instead of integers
-sub DecodeXRefStream{
+sub DecodeXRefStream__{
 
 	my ($obj_ref,$stream) = @_;
 	
@@ -828,7 +831,7 @@ sub DecodeXRefStream{
 
 
 # Decode Object Stream using /Filters informations
-sub DecodeObjStream{
+sub DecodeObjStream__{
 
 	my $obj_ref = shift;
 	my @filters;
@@ -840,7 +843,10 @@ sub DecodeObjStream{
 	}else{
 		@filters = &GetStreamFilters($obj_ref->{"content"});
 	}
-
+	
+	
+	# TODO Check first that all Filters are available before starting decoding
+	# ...
 	
 	if($#filters > -1){
 
@@ -894,7 +900,7 @@ sub DecodeObjStream{
 
 
 # Get object information from dictionary
-sub GetObjectInfos{
+sub GetObjectInfos__{
 
 	# Get parameters
 	#my $obj_content = shift;
@@ -1271,6 +1277,7 @@ sub GetPDFTrailers_until_1_4{
 
 	# Tag the Info object in the trailer as Type = Info
 	if($#trailers >= 0){
+	
 		#print "trailer found !!\n";
 		foreach(@trailers){
 
@@ -1352,7 +1359,7 @@ sub GetPDFTrailers_until_1_4{
 
 
 # This function gets all objects in pdf file.
-sub GetPDFObjects{
+sub GetPDFObjects__{
 
 	my $content = shift;
 	my @objs;
@@ -1425,11 +1432,6 @@ sub SuspiciousCoef{
 		$SUSPICIOUS = 99;
 		return $SUSPICIOUS;
 	}
-	
-	
-	
-	
-	
 	
 	
 	# Combination tests
@@ -1572,16 +1574,21 @@ sub main(){
 	
 	$TESTS_CAT_1{"Header"} = $status;
 	print "PDF version ".$version."\n";
+	$pdf_version = $version;
 	
 	# Get the content of the document
 	seek ($file, 0 ,0 );
 	$content = do { local $/; <$file>};
 	
 	# Get all pdf objects content in the document
-	&GetPDFObjects($content);
+	%pdfObjects = &StructParsing::GetPDFObjects($content, \%TESTS_CAT_1);
+	
+	&StructParsing::GetObjOffsets($file,\%pdfObjects,$content);
+
+	#my ($fh,$pdfObjects,$content)
 
 	# Get and decode object stream content
-	&Extract_From_Object_stream;
+	&StructParsing::Extract_From_Object_stream(\%pdfObjects);
 	
 	
 	# Get the trailer definition accoring to PDF version below 1.5
@@ -1616,13 +1623,19 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("373 0 obj");
+	#PrintSingleObject("395 0 obj");
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
 	&SuspiciousCoef;
 	
 	&AnalysisReport($filename);
+	
+	
+	&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
+	
+	#&PrintObjList unless $DEBUG eq "yes";
+
 
 	print "--------------------------------------------------------------\n";
 	print "--------------------------------------------------------------\n\n";
