@@ -186,7 +186,8 @@ sub GetStreamFilters{
 	my @filter_list;
 
 	# If there is only one filter - Ex: /Filter /Flatecode
-	if( $obj_content =~ /\/Filter\s*\/([A-Za-z\d]*)/ig ){
+	
+	if( $obj_content =~ /\/Filter\s*\/([A-Za-z\d]*)/sig){
 		push @filter_list, $1;
 	}elsif($obj_content =~ /\/Filter\s*\[\s*([A-Za-z\/\s\d]*)\s*\]/ig){ # For several filters - Ex
 
@@ -206,8 +207,10 @@ sub DecodeObjStream{
 	my @filters;
 	my $stream = $obj_ref->{"stream"};
 
+
 	# Get the filters list
 	if(exists($obj_ref->{"content_d"})){
+		
 		@filters = &GetStreamFilters($obj_ref->{"content_d"});
 	}else{
 		@filters = &GetStreamFilters($obj_ref->{"content"});
@@ -638,6 +641,11 @@ sub GetObjectInfos{
 		if($dico =~ /\/Prev\s*(\d*)/si){
 			$obj_ref->{"prev"} = $1;
 		}
+		
+		if($dico =~ /\/Encrypt/){			
+			print "Warning :: Found /Encryption param in XRef obj :: Encrypted PDF document!!\n" unless $DEBUG eq "no";
+			$main::TESTS_CAT_1{"Encryption"} = "yes";
+		}
 
 
 	}
@@ -732,7 +740,7 @@ sub Extract_From_Object_stream{
 	
 		if(exists($_->{"type"}) && $_->{"type"} =~ /ObjStm/ && exists($_->{"stream_d"}) && length($_->{"stream_d"}) > 0 ){
 		
-			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "no";
+			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "yes";
 			#print "Found object stream :: $_->{ref} ::\n"; #== $_->{stream_d}";
 
 			# Get the list of objects inside
@@ -743,7 +751,7 @@ sub Extract_From_Object_stream{
 
 
 			#my @obj_inside_content = $_->{"stream_d"} =~ /(<<[A-Za-z\s\d]+>>)/sig;
-			#print "";
+			#print "num = $num\n";
 			
 			if($#obj_inside < 0 ){
 				return ;

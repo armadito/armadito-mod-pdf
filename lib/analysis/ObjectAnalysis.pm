@@ -118,7 +118,8 @@ sub Unknown_Pattern_Repetition_Detection{
 		}
 		
 		my $exTime = time - $^T;
-		if($exTime > $Config::ANALYSIS_TIMEOUT ){
+		#if($exTime > $Config::ANALYSIS_TIMEOUT ){
+		if($exTime > 1 ){
 			#print "TIME_EXCEEDED\n";
 			return -1;
 		}

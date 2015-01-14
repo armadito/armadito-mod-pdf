@@ -480,7 +480,7 @@ sub Rewrite_clean{
 	my $gen = 65535;
 	$xref_table[1] = "0000000000 65535 f";
 	my $xref_offset = tell($clean_pdf);
-	print $clean_pdf "xref";
+	print $clean_pdf "xref\n";
 	
 	foreach(@xref_table){
 	

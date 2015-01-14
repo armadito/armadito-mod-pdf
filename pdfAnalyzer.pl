@@ -355,6 +355,7 @@ sub ObjectAnalysis{
 			}else{
 				$pattern_rep += $res1;
 			}
+
 		}
 
 		
@@ -388,6 +389,7 @@ sub ObjectAnalysis{
 				}else{
 					$pattern_rep += $res;
 				}
+				
 
 				
 			}elsif(exists($pdfObjects{$js_obj_ref}->{stream})){
@@ -406,6 +408,7 @@ sub ObjectAnalysis{
 				}else{
 					$pattern_rep += $res;
 				}
+				
 
 			}
 				
@@ -426,6 +429,7 @@ sub ObjectAnalysis{
 				$pattern_rep += $res;
 			}
 
+
 		}
 		
 		
@@ -442,6 +446,8 @@ sub ObjectAnalysis{
 				print "Object to analyse $acrform_ref is not defined\n" unless $DEBUG eq "no";
 				next;
 			}
+			
+			
 			
 			# Get XFA 
 			if(exists($pdfObjects{$acrform_ref}->{xfa})){
@@ -479,8 +485,7 @@ sub ObjectAnalysis{
 								#$pattern_rep += 0;
 							}else{
 								$pattern_rep += $res;
-							}
-
+							}							
 										
 						}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
 						
@@ -500,6 +505,7 @@ sub ObjectAnalysis{
 							}else{
 								$pattern_rep += $res;
 							}
+
 							
 						}
 					}
@@ -707,30 +713,6 @@ sub SuspiciousCoef{
 
 	my $SUSPICIOUS = 0;
 	
-#	our $ENCRYPTED_PDF = "ENCRYPTED_PDF";
-#	our  = 99;
-#	our  = 90;
-#	our  = 10;
-#	our  = 30;
-#	our  = 30;
-#	our  = 40;
-
-
-
-	# OBJECT ANALYSIS TESTS coefs
-#	our  = 40;
-#	our  = 40;
-#	our  = 40;
-#	our  = 90;
-#	our  = 40;
-#	our  = 20;
-#	our  = 10;
-
-
-	# CVEs TESTS
-#	our  = 50;
-#	our  = 40;
-	
 	# Tests list
 	
 	# Encryption - Test Eliminatoire
@@ -898,16 +880,15 @@ sub main(){
 	seek ($file, 0 ,0 );
 	$content = do { local $/; <$file>};
 	
+	#print "Struct Parsing...".(time - $^T)."sec\n";
+	
 	# Get all pdf objects content in the document
 	%pdfObjects = &StructParsing::GetPDFObjects($content, \%TESTS_CAT_1);
 	
 	&StructParsing::GetObjOffsets($file,\%pdfObjects,$content);
 
-	#my ($fh,$pdfObjects,$content)
-
 	# Get and decode object stream content
 	&StructParsing::Extract_From_Object_stream(\%pdfObjects);
-	
 	
 	# Get the trailer definition accoring to PDF version below 1.5
 	&GetPDFTrailers_until_1_4($content); # Get PDF trailer (works for pdf version below 1.5)
@@ -921,27 +902,25 @@ sub main(){
 	# Print the objects list
 	&PrintObjList unless $DEBUG eq "no";
 
+	#print "ObjectAnalysis...".(time - $^T)."sec\n";
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
 		&ObjectAnalysis();
+		# PDF STRUCT TESTS
+		&Document_struct_detection($content,$file); # Works only for version below 1.5 with no compatibility with previous version
+		
+		$status = &CVEs::CVE_2010_2883_Detection(\%pdfObjects);
+		if( $status ne "none"){
+			$TESTS_CAT_3{"CVE_2010_2883"} = $status;
+		}
 	}	
 
-	# PDF STRUCT TESTS
-	&Document_struct_detection($content,$file); # Works only for version below 1.5 with no compatibility with previous version
-
-	
-	$status = &CVEs::CVE_2010_2883_Detection(\%pdfObjects);
-	if( $status ne "none"){
-		$TESTS_CAT_3{"CVE_2010_2883"} = $status;
-	}
-	
-	
 	# Print execution time
 	my $exTime = time - $^T;
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("26 0 obj");
+	#PrintSingleObject("78 0 obj");
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
@@ -952,7 +931,10 @@ sub main(){
 	print "--------------------------------------------------------------\n";
 	print "--------------------------------------------------------------\n\n";
 	
-	&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
+	if($suspicious ne "ENCRYPTED_PDF"){
+		&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
+	}
+	
 	
 	#&PrintObjList unless $DEBUG eq "yes";
 
