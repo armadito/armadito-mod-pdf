@@ -29,7 +29,7 @@ sub DangerousKeywordsResearch{
 	#}
 	
 	# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar
-	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|exploit|pointers|app\.LaunchURL|byteToChar)/si ){
+	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|pointers|byteToChar)/si ){
 		#$TESTS_CAT_2{"Dangerous Pattern High"} ++;
 		print "Dangerous Pattern \(High\) found :: $1 :: in $obj_ref->{ref} \n";
 		return "High";
@@ -74,6 +74,9 @@ sub Unknown_Pattern_Repetition_Detection{
 	my $objcontent = shift;
 	my %h; # hash table containing the results.
 	my $cpt=5; # number of characteres repetition to detect
+	
+	my $timeout = 5;
+	my $nb_rep_max = 200;
 
 	if(!$objcontent){
 		return 0;
@@ -103,6 +106,19 @@ sub Unknown_Pattern_Repetition_Detection{
 			$count = @rep;
 			#print "pat = $pat :: count = $count :: rep = $#repp \n";
 			$h{"$pat"} = $count;
+			
+			if($count > $nb_rep_max){
+				print "FOUND = $pat => $count\n\n" unless $DEBUG eq "yes";
+				$result ++;
+				return $result;
+			}
+			
+		}
+		
+		my $exTime = time - $^T;
+		if($exTime > $timeout){
+			#print "TIME_EXCEEDED\n";
+			return -1;
 		}
 
 	}
@@ -146,8 +162,8 @@ sub Unknown_Pattern_Repetition_Detection{
 
 	while ((my $key, my $value) = each %h)  {
 
-		if($value > 2*$et  && $value > 100){
-			print "FOUND = $key => $value\n\n" unless $DEBUG eq "no";
+		if($value > 2*$et  && $value > $nb_rep_max){
+			print "FOUND = $key => $value :: \n\n" unless $DEBUG eq "yes";
 			$result ++ ;
 		}	
 	}

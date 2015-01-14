@@ -288,7 +288,7 @@ sub Check_xref{
 				
 				# save the object's offset
 				if(exists($pdfObjects{$obj_ref}) ){
-					print "object $obj_ref is at offset $off\n" unless $DEBUG eq "yes";
+					print "object $obj_ref is at offset $off\n" unless $DEBUG eq "no";
 					$pdfObjects{$obj_ref}->{"offset"} = $off ;
 				}
 				

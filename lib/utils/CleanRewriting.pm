@@ -3,6 +3,7 @@ package CleanRewriting;
 use strict;
 
 use lib::utils::Filters;
+use File::Basename;
 
 #use bytes;
 
@@ -42,6 +43,75 @@ sub RemoveJSContentFromObj{
 	print "verif2 :: $pdfObjects->{$obj}->{content}\n";
 		
 	return 0;			
+}
+
+sub RemoveJSContentFromXFA{
+
+	my ($obj,$pdfObjects) = @_;
+	
+	#print " Content = $pdfObjects->{$obj}->{stream_d}\n\n" if $obj eq "26 0 obj";
+	
+	# <script contentType="application/x-javascript"></script>
+	# 
+	#my @js_content = $pdfObjects->{$obj}->{stream_d} =~ /(javascript)/gi ;
+	#my @js_content = $pdfObjects->{$obj}->{stream_d} =~ /(<script contentType="application\/x-javascript"\s*>(.*)<\/script\s*>)/gi ; 
+	#my @js_content = $pdfObjects->{$obj}->{stream_d} =~ /(<script contentType="application\/x-javascript"\s*>)/gi ; 
+	#my @js_content = $pdfObjects->{$obj}->{stream_d} =~ /(<script contentType="application\/x-javascript"\s*>(.*)<\/script\s*>)/ig;
+	#my @js_content = $pdfObjects->{$obj}->{stream_d} =~ /(<script contentType="application\/x-javascript"\s*>(.*?)<\/script)/sig;
+	#my @js_content = $pdfObjects->{$obj}->{content} =~ /(<script contentType="application\/x-javascript"\s*>.*?<\/script\s*>)/sig;
+	my @js_content; # = $pdfObjects->{$obj}->{content} =~ /(<script contentType="application\/x-javascript"\s*>.*?<\/script\s*>)/sig;
+	
+	if( exists($pdfObjects->{$obj}->{"stream_d"})){
+		#print "stream_d == $pdfObjects->{$obj}->{stream_d} \n";
+		@js_content = $pdfObjects->{$obj}->{"stream_d"} =~ /(<script contentType="application\/x-javascript"\s*>.*?<\/script\s*>)/sig;
+	}else{
+		@js_content = $pdfObjects->{$obj}->{"stream"} =~ /(<script contentType="application\/x-javascript"\s*>.*?<\/script\s*>)/sig;
+	}
+	
+		
+	print "js_content = $#js_content\n";
+	
+	if($#js_content < 0 ){
+		print "Error :: RemoveJSContentFromXFA :: No JavaScript balise found in XFA form\n";
+		return -1;
+	}
+	
+	foreach(@js_content){
+		
+		print "JS_CONTENT == $_\n\n";
+		
+		# locate de content in the stream
+		#my $off = index($pdfObjects->{$obj}->{$content}, $pdfObjects->{$obj}->{js});
+		
+		if( exists($pdfObjects->{$obj}->{"stream_d"})){
+		
+			# TODO if the object is encoded
+			print "TODO if the stream is encoded\n";
+			my $old_content = $pdfObjects->{$obj}->{content};
+			
+			$pdfObjects->{$obj}->{"stream_d"} =~ s/\Q$_\E//sig;
+			
+			my $stream = &Filters::FlateEncode($pdfObjects->{$obj}->{"stream_d"});
+			
+			$pdfObjects->{$obj}->{content} = $pdfObjects->{$obj}->{"ref"}."\r<<".$pdfObjects->{$obj}->{"dico"}.">>stream"."\r\n".$stream."\r\nendstream\rendobj";
+			
+		}else{
+		
+			my $old_content = $pdfObjects->{$obj}->{content};
+			$pdfObjects->{$obj}->{content} =~ s/\Q$_\E//sig;
+
+		}
+
+		#if($old_content eq $pdfObjects->{$obj}->{content}){
+		#	print "ERR :: No modification on content :: $_ :: $old_content\n";
+		#}
+		
+
+	}
+	
+	
+	
+
 }
 
 
@@ -195,7 +265,7 @@ sub RemoveModifyDangerousObjects{
 		# remove javascript 
 		if( exists($_->{"js"}) or exists($_->{"javascript"}) or exists($_->{"js_obj"}) ){
 		
-			print "Warning :: Active_Contents :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "yes";
+			print "Warning :: RemoveModifyDangerousObjects :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "yes";
 			
 			# case if the javascript is described in another object
 			if(exists($_->{"js_obj"})){
@@ -203,7 +273,7 @@ sub RemoveModifyDangerousObjects{
 				# get the object
 				my $js_obj = $_->{"js_obj"};
 				$js_obj =~ s/R/obj/;
-				print "js_obj = $js_obj :: \n";
+				print "Deleting javascript content of object = $js_obj :: \n";
 				
 				# erase content
 				$pdfObjects->{$js_obj}->{content} = "$js_obj\nendobj";
@@ -222,7 +292,6 @@ sub RemoveModifyDangerousObjects{
 					#&RemoveObjectFromObjStream($_->{objStm},$_->{"ref"},$pdfObjects);
 					&RemoveJSContentFromObj($_->{"ref"}, $pdfObjects);
 
-					
 				}else{
 					$pdfObjects->{$_->{"ref"}}->{content} =~ s/\Q$_->{js}\E//;
 				}
@@ -233,52 +302,59 @@ sub RemoveModifyDangerousObjects{
 			#print "content = $_->{content}\n";
 			$js ++;
 			$active_content ++;
+			print "\n\n";
 		}
 		
 		if( exists($_->{"type"}) && $_->{"type"} eq "/EmbeddedFile" ){
 			#print "Warning :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
 			$ef ++;
 			$active_content ++;
+			print "\n\n";
 		}
 		
-		# XFA 
-#		if(exists($_->{"xfa"}) ){
-#			
-#			# an array of object
-#			my @xfas = $_->{"xfa"} =~ /(\d+\s\d\sR)/sg;
-#			
-#			#print @xfas;
-#			
-#			foreach (@xfas){
-#			
-#				my $xfa = $_;
-#				$xfa =~ s/R/obj/;
-#				print "found XFA obj :: $xfa\n";
-#				
-#				if(exists($pdfObjects{$xfa})){
-#				
-#					#print "found XFA obj :: $xfa\n";
-#					if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
-#						
-#						# Search javascript content
-#						# <script contentTyp='application'contentType='application/x-javascript'>
-#						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
-#							print "found javaScript in XFA : $xfa\n";
-#							$active_content ++;
-#						}
-#						
-#					}elsif(exists($pdfObjects{$xfa}->{"stream"}) && length($pdfObjects{$xfa}->{"stream"})>0){
-#					
-#						if($pdfObjects{$xfa}->{"stream"} =~ /javascript/si){
-#							print "found javaScript in XFA :: $xfa\n";
-#							$active_content ++;
-#						}
-#					}
-#				}
-#				
-#			}
-#		}
-		print "\n\n";
+		
+		# XFA processing
+		if(exists($_->{"xfa"}) ){
+			
+			# an array of object
+			my @xfas = $_->{"xfa"} =~ /(\d+\s\d\sR)/sg;
+			
+			#print @xfas;
+			
+			foreach (@xfas){
+			
+				my $xfa = $_;
+				$xfa =~ s/R/obj/;
+				print "found XFA obj :: $xfa\n";
+				
+				if(exists($pdfObjects->{$xfa})){
+				
+					#print "found XFA obj :: $xfa\n";
+					if(exists($pdfObjects->{$xfa}->{"stream_d"}) && length($pdfObjects->{$xfa}->{"stream_d"})>0 ){
+						
+						# Search javascript content
+						# <script contentTyp='application'contentType='application/x-javascript'>
+						if($pdfObjects->{$xfa}->{"stream_d"} =~ /(javascript)/si){
+							
+							print "Warning :: $1 :: RemoveModifyDangerousObjects :: Found javaScript in XFA (stream_d): $xfa\n";
+							$active_content ++;
+							&RemoveJSContentFromXFA($xfa,$pdfObjects);
+						}
+						
+						
+					}elsif(exists($pdfObjects->{$xfa}->{"stream"}) && length($pdfObjects->{$xfa}->{"stream"})>0){
+					
+						if($pdfObjects->{$xfa}->{"stream"} =~ /javascript/si){
+							print "Warning :: RemoveModifyDangerousObjects :: found javaScript in XFA (stream):: $xfa\n";
+							$active_content ++;
+							&RemoveJSContentFromXFA($xfa,$pdfObjects);
+						}
+					}
+				}
+				
+			}
+		}
+		
 	}
 	
 	#if($active_content > 0){
@@ -298,12 +374,21 @@ sub Rewrite_clean{
 	#my $filename = shift;
 	my ($filename, $version, $pdfObjects, @trailers) = @_;
 	#my %pdfObjects = %{$pdfObjs_ref};
-	#$version = "OK";
-	$filename ="clean.pdf";
+	my @xref_table;
+	
+	#$filename ="clean.pdf";
 	my $clean_pdf;
+	
+	my $clean_filename =basename($filename);
+	print "clean filename = $clean_filename\n";
+	#$clean_filename =~ s/\.pdf//;
+	#$clean_filename .= "_clean.pdf";
+	
+	$clean_filename = "clean_".$clean_filename;
+	print "clean filename = $clean_filename\n";
 
 	# Create the clean file
-	open ($clean_pdf, ">$filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";
+	open ($clean_pdf, ">$clean_filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";
 
 	# write header
 	print $clean_pdf "$version\n";
@@ -312,11 +397,13 @@ sub Rewrite_clean{
 	
 	&RemoveModifyDangerousObjects($pdfObjects);
 	
+	# TODO Remove dangerous embedded files (executables);
+	
 	
 	my @objs = values(%{$pdfObjects});
 	
 	
-	print "......\n";
+	#print "......\n";
 	
 	my $high = 0;
 	my $root = 0;
@@ -324,11 +411,15 @@ sub Rewrite_clean{
 	# Write objects extracted from object stream
 	foreach(@objs){
 	
+		my $num = -1;
+		my $gen = 0;
+		if($_->{ref} =~ /(\d+)\s(\d)\sobj/){
 		
-		if($_->{ref} =~ /(\d+)\s\d\sobj/){
-		
+			$num =$1;
+			$gen = $2;
 			if( $1 > $high){
 				$high = $1;
+				
 			}
 		}
 		
@@ -336,15 +427,36 @@ sub Rewrite_clean{
 			$root = $_->{"ref"};
 		}
 		
+		if(exists($_->{type}) && $_->{type} eq "/XRef"){
+			next;
+		}
 		
+		if(exists($_->{type}) && $_->{type} eq "/ObjStm"){
+			next;
+		}
 		
-		# Reach the end of the file
-		seek($clean_pdf,0,2);
+#		if(exists($_->{type}) && $_->{type} eq "/Metadata"){
+#			next;
+#		}
+#		
+#		if(exists($_->{type}) && $_->{type} eq "/Info"){
+#			next;
+#		}
+		
+		# TODO rewrite the Info object
+		# modify metadata		
 		
 
-		print "writing object $_->{ref} at ".tell($clean_pdf)."\n";
+		# Reach the end of the file
+		seek($clean_pdf,0,2);
+		my $offset = tell($clean_pdf);
+		print "writing object $_->{ref} at ".tell($clean_pdf)."\n" unless $DEBUG eq "no";
 		
+		
+		my $xref = sprintf("%010d",$offset)." ".sprintf("%05d",$gen)." n";
+		$xref_table[$num+1] = $xref;
 			
+		
 		# rebuild content
 		if(exists($_->{objStm})){
 			$_->{"content"} = $_->{"ref"}."\r".$_->{"content"}."\rendobj";
@@ -356,26 +468,41 @@ sub Rewrite_clean{
 		
 	}
 	
-	
-	
-	
 	# Go to the end of the file
 	seek($clean_pdf,0,2);
 	
 	
 	$root =~ s/obj/R/;
+	$high = $high+1;
 	
-	# TODO Write the XRef
+	# Write the XRef
+	$xref_table[0] = "0 $high";
+	my $offset = 0;
+	my $gen = 65535;
+	$xref_table[1] = "0000000000 65535 f";
+	my $xref_offset = tell($clean_pdf);
+	print $clean_pdf "xref";
+	
+	foreach(@xref_table){
+	
+		if($_){
+			print $clean_pdf "$_\n";
+			#print "$_\n";
+		}else{
+			print $clean_pdf "0000000000 65535 f\n";
+			#print "0000000000 65535 f\n";
+		}
+		
+		
+	}
 	
 	
 	# Write the trailer at the end of the file
-	$high = $high+1;
-	my $trailer = "trailer\n<</Size $high /Root $root>>\nstartxref\n0\n\%\%EOF";
-	print "trailer = $trailer\n";
-	
+	#$high = $high+1;
+	my $trailer = "trailer\n<</Size $high /Root $root>>\nstartxref\n$xref_offset\n\%\%EOF";
+	#print "trailer = \n$trailer\n";
 	
 	print $clean_pdf $trailer;
-	
 	
 	# write the xref tables
 	close($clean_pdf);
@@ -435,10 +562,6 @@ sub Rewrite_clean_2{
 		#print $clean_pdf "endobj\n\n";
 	}
 	
-	#print "Position in file :: ".tell($clean_pdf)."\n";
-	#foreach(sort(@objs)){
-	#	print "$_\n";	
-	#}
 	
 	# write the trailers
 	seek($clean_pdf,0,2);
@@ -464,7 +587,10 @@ sub Rewrite_clean_1{
 	#my %pdfObjects = %{$pdfObjs_ref};
 	#$version = "OK";
 	$filename ="clean.pdf";
+		
 	my $clean_pdf;
+
+	
 
 	# Create the clean file
 	open ($clean_pdf, ">$filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";
@@ -483,7 +609,7 @@ sub Rewrite_clean_1{
 			seek($clean_pdf,0,2);
 		}
 		
-		print "writing object $_->{ref} at ".tell($clean_pdf)."\n";
+		print "Writing object $_->{ref} at ".tell($clean_pdf)."\n" unless $DEBUG eq "no";
 		
 		#print $clean_pdf $_->{"ref"};
 		print $clean_pdf $_->{"content"};

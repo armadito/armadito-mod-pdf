@@ -255,8 +255,10 @@ sub DecodeObjStream{
 	}
 	
 	
+	if(exists($obj_ref->{"filters"}) ){
+		$obj_ref->{"stream_d"} = $stream;
+	}
 	
-	$obj_ref->{"stream_d"} = $stream;
 
 
 	return 0;
@@ -417,7 +419,9 @@ sub GetObjectInfos{
 	}
 	
 	# Get object type:
-	if($dico =~ /<<.*>>\/Type\s*(\/[A-Z]*)/si){
+	if($dico =~ /\/Type\s*(\/Catalog)/si){ # fix bug /Catalog
+		$obj_ref->{"type"}="/Catalog";
+	}elsif($dico =~ /<<.*>>\/Type\s*(\/[A-Z]*)/si){
 	#if($dico =~ /<<\/Type\s*(\/[A-Za-z]*)/si){
 		$obj_ref->{"type"}= $1;
 	}elsif($dico =~ /\/Type\s*(\/[A-Z]*)<<.*>>/si){
@@ -425,6 +429,7 @@ sub GetObjectInfos{
 	}elsif( $dico =~ /\/Type\s*(\/[A-Za-z]*)/si){
 		$obj_ref->{"type"}= $1;
 	}
+	
 	
 	# Length
 	if( $dico =~ /Length\s*(\d+\s\d\sR)/si){

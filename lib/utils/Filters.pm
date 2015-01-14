@@ -55,8 +55,6 @@ sub FlateEncode{
 	
 	my $in="Hello world";
 
-	#my $tmp;
-	#my $inflation;
 
 	my $len = length($stream); # Size of compressed object stream
 	
@@ -87,18 +85,6 @@ sub FlateEncode{
 	# 78 01 - No compression/low
 	# 78 9C - Default Compression
 	# 78 DA - Best Compression
-
-	#($out, $status2) = $y->inflate($stream) or print "Error inflating the stream\n";
-	#print "status = $status2 ::".$y->msg()."\n";
-
-	# 
-	#my @arr = split('',$stream);
-	#print "arr == @arr\n";
-	#foreach(@arr){
-	#	$out .= $y->inflate($_) or die "Error inflating the stream\n";		
-	#}
-	#print "status = $status2 ::".$y->msg()."\n";
-	#print "OUT = $out\n";
 
 	return $deflation;
 }
