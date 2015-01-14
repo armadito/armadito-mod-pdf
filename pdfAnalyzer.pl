@@ -11,6 +11,7 @@ use bytes;
 
 
 # libraries
+use lib::conf::Config;
 use lib::utils::StructParsing;
 use lib::utils::Filters;	# Filters
 use lib::utils::CleanRewriting;
@@ -47,12 +48,9 @@ $TESTS_CAT_2{"Dangerous Pattern Low"} = 0;
 
 
 my $DEBUG = "no"; # Print debug infos
-my $ENCRYPTED = "no";
-my $SUSPICIOUS = 0; # suspicious coef
+
 
 # object structure
-#object -> %information ($key => $value);
-#	-> content ();
 
 # object is a hash table with two keys "information" and "content"
 	# The information value is a reference to a hash table with all informations
@@ -89,7 +87,9 @@ my $SUSPICIOUS = 0; # suspicious coef
 
 # TODO See FDF format
 
-# TODO See XDP format
+# TODO See XDP format = Ok
+
+# TODO 
 ############################################################
 
 
@@ -156,7 +156,7 @@ sub Active_Contents{
 		}
 		
 		if( exists($_->{"type"}) && $_->{"type"} eq "/EmbeddedFile" ){
-			print "Warning :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
+			print "Warning :: Active_Contents :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
 			$ef ++;
 			$active_content ++;
 		}
@@ -202,7 +202,7 @@ sub Active_Contents{
 	}
 	
 	#if($active_content > 0){
-		#$TESTS_CAT_1{"Active Content"} = $active_content;
+		#$TESTS_CAT_2{"Active Content"} = $active_content;
 	#}
 
 	
@@ -243,7 +243,7 @@ sub Document_struct_detection{
 		$TESTS_CAT_1{"Empty Doc With Active Content"}="DETECTED";
 	}elsif($active_content > 0){
 		print "\t=> Potentially dangerous content ($active_content) found in this document !!\n" unless $DEBUG eq "no";
-		$TESTS_CAT_1{"Active Content"} = $active_content;
+		$TESTS_CAT_2{"Active Content"} = $active_content;
 		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
 	}else{
 		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
@@ -327,7 +327,7 @@ sub ObjectAnalysis{
 	foreach (@objs){
 	
 	
-		if(exists($_->{"action"}) &&$_->{"action"} eq "/Launch"){
+		if(exists($_->{"action"}) && $_->{"action"} eq "/Launch"){
 			$TESTS_CAT_2{"Dangerous Pattern High"} ++;
 			print "Warning :: :: /Launch action detected\n";
 		}	
@@ -351,7 +351,7 @@ sub ObjectAnalysis{
 			if($res1 == -1){
 				print "Time exceeded in object in Info object $_->{ref} \n";
 				$TESTS_CAT_2{"Time exceeded"} ++;
-				#$pattern_rep += 0;
+				
 			}else{
 				$pattern_rep += $res1;
 			}
@@ -384,7 +384,7 @@ sub ObjectAnalysis{
 				if($res == -1){
 					print "Time exceeded in object $pdfObjects{$js_obj_ref}->{ref}\n";
 					$TESTS_CAT_2{"Time exceeded"} ++;
-					#$pattern_rep += 0;
+					
 				}else{
 					$pattern_rep += $res;
 				}
@@ -402,7 +402,7 @@ sub ObjectAnalysis{
 				if($res == -1){
 					print "Time exceeded in object $pdfObjects{$js_obj_ref}->{ref}\n";
 					$TESTS_CAT_2{"Time exceeded"} ++;
-					#$pattern_rep += 0;
+					
 				}else{
 					$pattern_rep += $res;
 				}
@@ -421,7 +421,7 @@ sub ObjectAnalysis{
 			if($res == -1){
 				print "Time exceeded in object $_->{ref}\n";
 				$TESTS_CAT_2{"Time exceeded"} ++;
-				#$pattern_rep += 0;
+				
 			}else{
 				$pattern_rep += $res;
 			}
@@ -705,7 +705,31 @@ sub GetPDFTrailers_until_1_4{
 # This function calculate the suspicious coeficient (max = 100 => MALWARE)
 sub SuspiciousCoef{
 
-	$SUSPICIOUS = 0;
+	my $SUSPICIOUS = 0;
+	
+#	our $ENCRYPTED_PDF = "ENCRYPTED_PDF";
+#	our  = 99;
+#	our  = 90;
+#	our  = 10;
+#	our  = 30;
+#	our  = 30;
+#	our  = 40;
+
+
+
+	# OBJECT ANALYSIS TESTS coefs
+#	our  = 40;
+#	our  = 40;
+#	our  = 40;
+#	our  = 90;
+#	our  = 40;
+#	our  = 20;
+#	our  = 10;
+
+
+	# CVEs TESTS
+#	our  = 50;
+#	our  = 40;
 	
 	# Tests list
 	
@@ -717,7 +741,7 @@ sub SuspiciousCoef{
 	
 	# Empty Doc With Active Content - Test Eliminatoire
 	if( $TESTS_CAT_1{"Empty Doc With Active Content"} eq "DETECTED"){
-		$SUSPICIOUS = 99;
+		$SUSPICIOUS = $Config::EMPTY_PAGES_WITH_ACTIVE_CONTENT;
 		return $SUSPICIOUS;
 	}
 	
@@ -726,15 +750,15 @@ sub SuspiciousCoef{
 	if( exists($TESTS_CAT_1{"Object Collision"}) && exists($TESTS_CAT_1{"XRef"}) ){
 	
 		if($TESTS_CAT_1{"Object Collision"} > 0 && $TESTS_CAT_1{"XRef"} ne "OK"){
-			$SUSPICIOUS += 98;
+			$SUSPICIOUS += $Config::OBJECT_COLLISION_PLUS_BAD_XREF;
 		}else{
 		
 			if( $TESTS_CAT_1{"Object Collision"} > 0){ # Object Collision
-				$SUSPICIOUS += 10;	
+				$SUSPICIOUS += $Config::OBJECT_COLLISION;	
 			}
 			
 			if( $TESTS_CAT_1{"XRef"} eq "BAD_XREF_OFFSET"){ # Xref
-				$SUSPICIOUS += 30;
+				$SUSPICIOUS += $Config::BAD_XREF_OFFSET;
 			}
 		}
 	}
@@ -743,57 +767,57 @@ sub SuspiciousCoef{
 	
 	# Trailer
 	if(exists($TESTS_CAT_1{"Trailer"}) && $TESTS_CAT_1{"Trailer"} eq "TRAILER_NOT_FOUND"){
-		$SUSPICIOUS += 30;
+		$SUSPICIOUS += $Config::TRAILER_NOT_FOUND;
 	}
 	
 	# Obfuscated Objects
 	if(exists($TESTS_CAT_1{"Obfuscated Objects"}) &&  $TESTS_CAT_1{"Obfuscated Objects"} > 0){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += $Config::OBFUSCATED_OBJECTS;
 	}
 	
 	
 	# Active Content
-	if(exists($TESTS_CAT_1{"Active Content"}) &&  $TESTS_CAT_1{"Active Content"} > 0 ){
-		$SUSPICIOUS += 40;
+	if(exists($TESTS_CAT_2{"Active Content"}) &&  $TESTS_CAT_2{"Active Content"} > 0 ){
+		$SUSPICIOUS += $Config::ACTIVE_CONTENT;
 	}
 	
 	
 	# Shellcode
 	if(exists($TESTS_CAT_2{"Shellcode"}) &&  $TESTS_CAT_2{"Shellcode"} > 0){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += $Config::SHELLCODE;
 	}
 	
 	# Pattern Repetition
 	if(exists($TESTS_CAT_2{"Pattern Repetition"}) &&  $TESTS_CAT_2{"Pattern Repetition"} > 0 ){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += $Config::PATTERN_REPETITION;
 	}
 	
 	# DangerousKeywordResearch
 	if($TESTS_CAT_2{"Dangerous Pattern High"} > 0){
-		$SUSPICIOUS = 90;
+		$SUSPICIOUS = $Config::DANGEROUS_PATTERN_HIGH;
 		return $SUSPICIOUS;
 	}
 	
 	if($TESTS_CAT_2{"Dangerous Pattern Medium"} > 0){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += $Config::DANGEROUS_PATTERN_MEDIUM;
 	}
 	
 	if($TESTS_CAT_2{"Dangerous Pattern Low"} > 0){
-		$SUSPICIOUS += 20;
+		$SUSPICIOUS += $Config::DANGEROUS_PATTERN_LOW;
 	}
 	
 	if(exists($TESTS_CAT_2{"Time exceeded"}) && $TESTS_CAT_2{"Time exceeded"} > 0){
-		$SUSPICIOUS += 20;
+		$SUSPICIOUS += $Config::TIME_EXCEEDED;
 	}
 	
 
 	# CVE_2010_2883
 	if(exists($TESTS_CAT_3{"CVE_2010_2883"}) &&  $TESTS_CAT_3{"CVE_2010_2883"} eq "DETECTED" ){
-		$SUSPICIOUS += 50;
+		$SUSPICIOUS += $Config::CVE_2010_2883_DETECTED;
 	}
 	
 	if(exists($TESTS_CAT_3{"CVE_2010_2883"}) &&  $TESTS_CAT_3{"CVE_2010_2883"} eq "BAD_FONT_FILE_LENGTH" ){
-		$SUSPICIOUS += 40;
+		$SUSPICIOUS += $Config::CVE_2010_2883_BAD_FONT_FILE_LENGTH;
 	}
 	
 	
@@ -810,7 +834,7 @@ sub SuspiciousCoef{
 # This function print the reports of the analysis
 sub AnalysisReport{
 
-	my $filename = shift;
+	my ($filename,$suspicious) = @_;
 	print "\n:::::::::::::::::::::::::::\n";
 	print "::::: ANALYSIS SUMMARY ::::\n";
 	print ":::::::::::::::::::::::::::\n\n";
@@ -827,7 +851,7 @@ sub AnalysisReport{
 	}
 	
 	# Others detection tests results
-	print "\n:: Others detections tests ::\n";
+	print "\n:: Objects Analysis tests ::\n";
 	while ((my $key, my $value) = each %TESTS_CAT_2){
 		print "\t$key\t => $value\n";
 	}
@@ -838,7 +862,7 @@ sub AnalysisReport{
 		print "\t$key\t => $value\n";
 	}
 	
-	print "\nSuspicious coefficient :: $SUSPICIOUS\n\n";
+	print "\nSuspicious coefficient :: $suspicious\n\n";
 
 }
 
@@ -899,7 +923,7 @@ sub main(){
 
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
-		ObjectAnalysis();
+		&ObjectAnalysis();
 	}	
 
 	# PDF STRUCT TESTS
@@ -921,12 +945,14 @@ sub main(){
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
-	&SuspiciousCoef;
+	my $suspicious = &SuspiciousCoef;
 	
-	&AnalysisReport($filename);
+	&AnalysisReport($filename,$suspicious);
 	
+	print "--------------------------------------------------------------\n";
+	print "--------------------------------------------------------------\n\n";
 	
-	#&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
+	&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
 	
 	#&PrintObjList unless $DEBUG eq "yes";
 

@@ -265,7 +265,7 @@ sub RemoveModifyDangerousObjects{
 		# remove javascript 
 		if( exists($_->{"js"}) or exists($_->{"javascript"}) or exists($_->{"js_obj"}) ){
 		
-			print "Warning :: RemoveModifyDangerousObjects :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "yes";
+			print "Warning :: RemoveModifyDangerousObjects :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "no";
 			
 			# case if the javascript is described in another object
 			if(exists($_->{"js_obj"})){
@@ -281,12 +281,12 @@ sub RemoveModifyDangerousObjects{
 				
 			}elsif(exists($_->{"js"})){ # if the js is a string
 				
-				print "javascript content :: $_->{js} \n";
+				print "javascript content :: $_->{js} \n" unless $DEBUG eq "no";
 				
 				# If the object is packed in an object stream
 				if( exists($_->{"objStm"})  ){
 					
-					print "javascript object $_->{ref} in Object stream $_->{objStm}\n";
+					print "javascript object $_->{ref} in Object stream $_->{objStm}\n" unless $DEBUG eq "no";
 					
 					# Remove the object in object stream
 					#&RemoveObjectFromObjStream($_->{objStm},$_->{"ref"},$pdfObjects);
@@ -309,7 +309,7 @@ sub RemoveModifyDangerousObjects{
 			#print "Warning :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
 			$ef ++;
 			$active_content ++;
-			print "\n\n";
+			#print "\n\n";
 		}
 		
 		
@@ -325,7 +325,7 @@ sub RemoveModifyDangerousObjects{
 			
 				my $xfa = $_;
 				$xfa =~ s/R/obj/;
-				print "found XFA obj :: $xfa\n";
+				print "found XFA obj :: $xfa\n" unless $DEBUG eq "no";
 				
 				if(exists($pdfObjects->{$xfa})){
 				
@@ -336,7 +336,7 @@ sub RemoveModifyDangerousObjects{
 						# <script contentTyp='application'contentType='application/x-javascript'>
 						if($pdfObjects->{$xfa}->{"stream_d"} =~ /(javascript)/si){
 							
-							print "Warning :: $1 :: RemoveModifyDangerousObjects :: Found javaScript in XFA (stream_d): $xfa\n";
+							print "Warning :: $1 :: RemoveModifyDangerousObjects :: Found javaScript in XFA (stream_d): $xfa\n" unless $DEBUG eq "no";
 							$active_content ++;
 							&RemoveJSContentFromXFA($xfa,$pdfObjects);
 						}
@@ -345,7 +345,7 @@ sub RemoveModifyDangerousObjects{
 					}elsif(exists($pdfObjects->{$xfa}->{"stream"}) && length($pdfObjects->{$xfa}->{"stream"})>0){
 					
 						if($pdfObjects->{$xfa}->{"stream"} =~ /javascript/si){
-							print "Warning :: RemoveModifyDangerousObjects :: found javaScript in XFA (stream):: $xfa\n";
+							print "Warning :: RemoveModifyDangerousObjects :: found javaScript in XFA (stream):: $xfa\n" unless $DEBUG eq "no";
 							$active_content ++;
 							&RemoveJSContentFromXFA($xfa,$pdfObjects);
 						}
@@ -380,12 +380,11 @@ sub Rewrite_clean{
 	my $clean_pdf;
 	
 	my $clean_filename =basename($filename);
-	print "clean filename = $clean_filename\n";
 	#$clean_filename =~ s/\.pdf//;
 	#$clean_filename .= "_clean.pdf";
 	
-	$clean_filename = "clean_".$clean_filename;
-	print "clean filename = $clean_filename\n";
+	$clean_filename = "Cleaned_PDF/clean_".$clean_filename;
+	print "cleaned file = $clean_filename\n";
 
 	# Create the clean file
 	open ($clean_pdf, ">$clean_filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";

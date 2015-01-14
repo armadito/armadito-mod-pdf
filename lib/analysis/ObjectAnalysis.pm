@@ -2,6 +2,8 @@ package ObjectAnalysis;
 
 use strict;
 
+use lib::conf::Config;
+
 my $DEBUG = "no";
 
 # The basic analysis consists to parse the content of object and detect all potential dangerous patterns.
@@ -107,7 +109,7 @@ sub Unknown_Pattern_Repetition_Detection{
 			#print "pat = $pat :: count = $count :: rep = $#repp \n";
 			$h{"$pat"} = $count;
 			
-			if($count > $nb_rep_max){
+			if($count > $Config::MAX_REP_DETECTION){
 				print "FOUND = $pat => $count\n\n" unless $DEBUG eq "yes";
 				$result ++;
 				return $result;
@@ -116,7 +118,7 @@ sub Unknown_Pattern_Repetition_Detection{
 		}
 		
 		my $exTime = time - $^T;
-		if($exTime > $timeout){
+		if($exTime > $Config::ANALYSIS_TIMEOUT ){
 			#print "TIME_EXCEEDED\n";
 			return -1;
 		}
