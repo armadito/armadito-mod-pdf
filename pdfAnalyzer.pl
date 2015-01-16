@@ -26,7 +26,7 @@ our $dblezo = "DBLEZO";
 my @to_analyze; # Elements to analyze
 #my @obj;
 #my @pdf_objects; # list of pdf Objects #TODO change the list in hash table with each key represent the reference of the value;
-my @trailers;	# List of trailers
+
 
 my %pdfObjects;
 
@@ -94,43 +94,6 @@ my $DEBUG = "no"; # Print debug infos
 
 
 
-# This function clean all javascript and suspiscious embedded files in the pdf.
-sub Rewrite_clean{
-
-
-	#my $filename = shift;
-	my $filename ="clean.pdf";
-	my $clean_pdf;
-
-	# Create the clean file
-	open ($clean_pdf, ">$filename" ) or die "Rewrite_clean :: failed to open file :: filename\n";
-
-	# write header
-	print $clean_pdf "$pdf_version\n";
-	
-	my @objs = values(%pdfObjects);
-	
-	foreach(@objs){
-		print "writing object $_->{ref} at $_->{offset}\n";
-		seek($clean_pdf,$_->{offset},0);
-		#print $clean_pdf $_->{"ref"};
-		print $clean_pdf $_->{"content"};
-		print $clean_pdf "endobj\n";
-		
-	}
-	
-	# write the trailers
-	foreach(@trailers){
-		
-	}
-	
-	
-	# write the xref tables
-
-}
-
-
-
 # This function return the number of active " potentially dangerous" contents in the pdf
 # This function return the reference of object to analyse.
 # TODO : 
@@ -140,7 +103,7 @@ sub Active_Contents{
 	my $active_content =0;
 	
 	#my (%js, %ef, %xfa ); # javascript , embedded files, xfa
-	my ($js, $ef, $xfa ) = (0,0,0); # javascript , embedded files, xfa
+	#my ($js, $ef, $xfa ) = (0,0,0); # javascript , embedded files, xfa
 	
 	
 	my @objs = values(%pdfObjects);
@@ -151,14 +114,34 @@ sub Active_Contents{
 		if( exists($_->{"js"}) or exists($_->{"javascript"}) or exists($_->{"js_obj"}) ){
 			print "Warning :: Active_Contents :: Found javascript in  $_->{ref} :: \n" unless $DEBUG eq "yes";
 			#print "content = $_->{content}\n";
-			$js ++;
+			#$js ++;
 			$active_content ++;
 		}
 		
+		
+		# TODO Embedded File
 		if( exists($_->{"type"}) && $_->{"type"} eq "/EmbeddedFile" ){
 			print "Warning :: Active_Contents :: Found EmbeddedFile in $_->{ref}\n" unless $DEBUG eq "yes";
-			$ef ++;
+			#$ef ++;
 			$active_content ++;
+		}
+		
+		if(exists($_->{"type"}) && $_->{"type"} eq "/Filespec"){
+			print "Warning :: Active_Contents :: Found Filespec in $_->{ref}\n";
+			
+			# Get embedded file stream
+			if(exists($_->{"ef"})){
+				print "Warning :: Active_Contents :: Found embedded file entry in filespec :: $_->{ef} \n";
+				my $ef ;
+				if($_->{"ef"} =~ /\/F\s*(\d+\s\d\sR)/s){ # Get embedded file object stream
+					$ef = $1;
+					$ef =~ s/R/obj/;
+					print "Warning :: Active_Contents :: Found embedded file object :: $ef\n";
+					$active_content ++;
+					
+					# TODO check the embedded file type.
+				}
+			}
 		}
 		
 		# XFA 
@@ -198,8 +181,13 @@ sub Active_Contents{
 				
 			}
 		}
+		
+		
 	
 	}
+	
+	
+	
 	
 	#if($active_content > 0){
 		#$TESTS_CAT_2{"Active Content"} = $active_content;
@@ -221,7 +209,7 @@ sub Active_Contents{
 # This function checks incoherences in the document format (Ex: Empty pages but only js script).
 sub Document_struct_detection{
 
-	my ($content,$fh) = @_;
+	my ($content,$fh,@trailers) = @_;
 	my $result =0;
 	my $ret = 0;
 	my $active_content = 0;
@@ -240,13 +228,16 @@ sub Document_struct_detection{
 	# If all pages are empty and there is active content
 	if($empty == 0 && $active_content > 0 ){
 		print "\t=> Empty PDF document with active content !!" unless $DEBUG eq "no";
-		$TESTS_CAT_1{"Empty Doc With Active Content"}="DETECTED";
+		$TESTS_CAT_1{"Empty PDF With Active Content"}="DETECTED";
+	}elsif($empty == 0){
+		print "Warning :: Document_struct_detection :: No content in PDF pages !\n";
+		$TESTS_CAT_1{"Empty PDF With Active Content"}="EMPTY_PAGES";
 	}elsif($active_content > 0){
 		print "\t=> Potentially dangerous content ($active_content) found in this document !!\n" unless $DEBUG eq "no";
 		$TESTS_CAT_2{"Active Content"} = $active_content;
-		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
+		$TESTS_CAT_1{"Empty PDF With Active Content"}="OK";
 	}else{
-		$TESTS_CAT_1{"Empty Doc With Active Content"}="OK";
+		$TESTS_CAT_1{"Empty PDF With Active Content"}="OK";
 	}
 	
 	
@@ -329,7 +320,7 @@ sub ObjectAnalysis{
 	
 		if(exists($_->{"action"}) && $_->{"action"} eq "/Launch"){
 			$TESTS_CAT_2{"Dangerous Pattern High"} ++;
-			print "Warning :: :: /Launch action detected\n";
+			print "Warning :: Dangerous Pattern High :: /Launch action detected in $_->{ref}\n";
 		}	
 		
 		# Analyse Info obj for suspicious strings
@@ -557,10 +548,10 @@ sub PrintObjList{
 
 		while ((my $key, my $value) = each(%{$_}) ){
 
-			if(!($key =~ /stream|content|dico|ref/i)){
+			if(!($key =~ /stream|content|ref/i)){
 				print "$key = $value\n";
 			}
-			if(($key =~ /stream_d/i) ){
+			if(($key =~ /stream/i) ){
 				#print "$key = $value\n";
 			}
 		}
@@ -598,115 +589,6 @@ sub PrintSingleObject{
 }
 
 
-# This function get the trailer (startxref) params pointing to a XRef stream object (works only starting from version 1.5) 
-sub GetPDFTrailers_from_1_5{
-
-	my $content = shift;
-	@trailers = $content =~ /(startxref\s*\d+\s*\%\%EOF)/sg;
-
-	print "trailer == @trailers\n" unless $DEBUG eq "no";
-
-	# Get the offset of the Xref stream object
-	
-}
-
-
-# This function get the trailer params (available for pdf version previous thant 1.5)
-sub GetPDFTrailers_until_1_4{
-
-	my $content = shift;
-	my $info;
-
-	@trailers = $content =~ /(trailer.*\%\%EOF)/sig;
-	
-	# TODO Decode hexa obfuscated trailer dico
-	
-	
-	#print "trailers = @trailers\n";
-	# Do not treat encrypted documents
-
-	# Tag the Info object in the trailer as Type = Info
-	if($#trailers >= 0){
-	
-		#print "trailer found !!\n";
-		foreach(@trailers){
-
-			# Do not treat encrypted documents
-			if(/\/Encrypt/){
-				print "Warning :: Encrypted PDF document!!\n" unless $DEBUG eq "no";
-				$TESTS_CAT_1{"Encryption"} = "yes";
-			}
-
-			#if(/\/Info\s*(\d{1,3}\s\d\sR)/sig){
-			if(/\/Info\s(\d{1,3}\s\d\sR)/sig){
-				$info = $1;
-				$info =~ s/R/obj/;
-				
-				
-				# Tag the info object and fill params
-				if( exists($pdfObjects{$info}) ){
-
-					print "Info obj found !!\n" unless $DEBUG eq "no";					
-					my $info_obj = $pdfObjects{$info};
-					$info_obj->{type} = "/Info";
-
-					# Title		(text string)
-					if( $info_obj->{"content"} =~ /Title\s*(\(.*\))/g){
-					#if( $_->{"content"} =~ /\/(Title)/g){
-						$info_obj->{"title"}=$1;
-					}
-					
-					# Author	(text string)
-					if( $info_obj->{"content"} =~ /(Author)/){
-						$info_obj->{"author"}=$1;
-					}
-					
-					# Subject	(text string)
-					if( $info_obj->{"content"} =~ /(Subject)/){
-						$info_obj->{"subject"}=$1;
-					}
-						
-					# Keywords	(text string)
-					if( $info_obj->{"content"} =~ /(Keyword)/){
-						$info_obj->{"keyword"}=$1;
-					}
-
-					# Creator	(text string)
-					# Producer	(text string)
-					if( $info_obj->{"content"} =~ /(Producer)/){
-						$info_obj->{"producer"}=$1;
-					}
-
-					# CreationDate	(date)
-					if( $info_obj->{"content"} =~ /(CreationDate)/){
-						$info_obj->{"creationdate"}=$1;
-					}
-
-					# ModDate	(date)
-					if( $info_obj->{"content"} =~ /(ModDate)/){
-						$info_obj->{"Moddate"}=$1;
-					}
-
-					# Trapped	(name)
-					if( $info_obj->{"content"} =~ /(Trapped)/){
-						$info_obj->{"trapped"}=$1;
-					}
-					
-					# Xref stream object offset
-					if( $info_obj->{"content"} =~ /\/XRefStm\s*(\d+)/si){
-						$info_obj->{"xrefstm"}=$1;
-					}
-				}
-			}
-		}
-	}
-	
-	return @trailers;
-
-}
-
-
-
 
 # This function calculate the suspicious coeficient (max = 100 => MALWARE)
 sub SuspiciousCoef{
@@ -721,12 +603,15 @@ sub SuspiciousCoef{
 		return $SUSPICIOUS ;
 	}
 	
-	# Empty Doc With Active Content - Test Eliminatoire
-	if( $TESTS_CAT_1{"Empty Doc With Active Content"} eq "DETECTED"){
+	# Empty PDF With Active Content - Test Eliminatoire
+	if( $TESTS_CAT_1{"Empty PDF With Active Content"} eq "DETECTED"){
 		$SUSPICIOUS = $Config::EMPTY_PAGES_WITH_ACTIVE_CONTENT;
 		return $SUSPICIOUS;
 	}
 	
+	if( $TESTS_CAT_1{"Empty PDF With Active Content"} eq "EMPTY_PAGES"){
+		$SUSPICIOUS += $Config::EMPTY_PAGES_CONTENT;
+	}
 	
 	# Combination tests
 	if( exists($TESTS_CAT_1{"Object Collision"}) && exists($TESTS_CAT_1{"XRef"}) ){
@@ -750,6 +635,10 @@ sub SuspiciousCoef{
 	# Trailer
 	if(exists($TESTS_CAT_1{"Trailer"}) && $TESTS_CAT_1{"Trailer"} eq "TRAILER_NOT_FOUND"){
 		$SUSPICIOUS += $Config::TRAILER_NOT_FOUND;
+	}
+	
+	if(exists($TESTS_CAT_1{"Trailer"}) && $TESTS_CAT_1{"Trailer"} eq "BAD_TRAILER"){
+		$SUSPICIOUS += $Config::BAD_TRAILER;
 	}
 	
 	# Obfuscated Objects
@@ -854,6 +743,7 @@ sub main(){
 	my $filename=shift;
 	my $file;
 	my $content;
+	my @trailers;
 
 	# Open the document
 	open $file, "<$filename" or die "open failed in $filename : $! ";
@@ -891,23 +781,23 @@ sub main(){
 	&StructParsing::Extract_From_Object_stream(\%pdfObjects);
 	
 	# Get the trailer definition accoring to PDF version below 1.5
-	&GetPDFTrailers_until_1_4($content); # Get PDF trailer (works for pdf version below 1.5)
+	@trailers = &StructParsing::GetPDFTrailers_until_1_4($content,\%pdfObjects); # Get PDF trailer (works for pdf version below 1.5)
 
 	# If no trailer have been found	
 	if($#trailers <0 && $version =~ /\%PDF-1\.[5|6|7]/){
-		&GetPDFTrailers_from_1_5($content); #  Get PDF trailer (works for pdf version starting from 1.5)
+		@trailers = &StructParsing::GetPDFTrailers_from_1_5($content,\%pdfObjects); #  Get PDF trailer (works for pdf version starting from 1.5)
 	}
 
 
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "no";
+	&PrintObjList unless $DEBUG eq "n";
 
 	#print "ObjectAnalysis...".(time - $^T)."sec\n";
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
 		&ObjectAnalysis();
 		# PDF STRUCT TESTS
-		&Document_struct_detection($content,$file); # Works only for version below 1.5 with no compatibility with previous version
+		&Document_struct_detection($content,$file,@trailers); # Works only for version below 1.5 with no compatibility with previous version
 		
 		$status = &CVEs::CVE_2010_2883_Detection(\%pdfObjects);
 		if( $status ne "none"){
@@ -920,7 +810,7 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("78 0 obj");
+	#PrintSingleObject("6 0 obj");
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
@@ -932,7 +822,7 @@ sub main(){
 	print "--------------------------------------------------------------\n\n";
 	
 	if($suspicious ne "ENCRYPTED_PDF"){
-		&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
+		#&CleanRewriting::Rewrite_clean($filename, $pdf_version,\%pdfObjects, @trailers);
 	}
 	
 	

@@ -23,27 +23,36 @@ sub DangerousKeywordsResearch{
 	}
 	
 	
-	# Trigger Launch actions (HIGH) TODO
-	#if($obj_ref->{"action"} eq "/Launch"){
-	#	$TESTS_CAT_2{"Dangerous Pattern High"} ++;
-	#	print "Dangerous action \(/Launch\) detected\n";
-	#	return "High";
-	#}
 	
-	# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar
-	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|pointers|byteToChar)/si ){
+	# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar - system32  - payload
+	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|pointers|byteToChar|system32|payload)/si ){
 		#$TESTS_CAT_2{"Dangerous Pattern High"} ++;
 		print "Dangerous Pattern \(High\) found :: $1 :: in $obj_ref->{ref} \n";
 		return "High";
 	}
+	
+	# Unicode detection
+	my @rep_unicode = ($content =~ /(\%u[a-f0-9]{4})/gi);
+	my $count = @rep_unicode;
+	print "unicode string = $count :: @rep_unicode\n" if ($count > 0);
+	
+	if($count > 10){
+		print "Warning :: DangerousKeywordsResearch :: Found unicode strings :: @rep_unicode\n";
+		return "High";
+	}
+	
+	# TODO combinaison between unicode and medium
 
 	
-	# Javascript keywords (MEDIUM) :: substring - toSring - split - eval - String.replace - unescape - exportDataObject - StringfromChar
-	if( $content =~ /(toString|substring|split|eval|addToolButton|String\.replace|unescape|exportDataObject|StringfromChar)/si ){
+	# Javascript keywords (MEDIUM) :: substring - toSring - split - eval - String.replace - unescape - exportDataObject - StringfromChar - util.print
+	if( $content =~ /(toString|substring|split|eval|addToolButton|String\.replace|unescape|exportDataObject|StringfromChar|util\.print)/si ){
 		#$TESTS_CAT_2{"Dangerous Pattern Medium"} ++;
 		print "Dangerous Pattern \(Medium\) found :: $1 :: in $obj_ref->{ref} \n";
 		return "Medium";
 	}
+	
+	
+	
 		
 
 	# javascript keywords :: 
@@ -52,6 +61,8 @@ sub DangerousKeywordsResearch{
 	# NOP detection "90"
 	# 
 	# %u... like   %u4141%u4141%u63a5%u4a80%u0000
+	
+	
 	
 	# TODO Look for JavaScript in XFA block Ex: <script name="ADBE::FileAttachment" contentType="application/x-javascript" ></script>
 	

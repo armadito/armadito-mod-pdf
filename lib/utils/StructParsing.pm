@@ -222,14 +222,16 @@ sub DecodeObjStream{
 		foreach(@filters){
 
 			$obj_ref->{"filters"}.= "/$_ ";
+			
+			print "filter in $obj_ref->{ref} = $_\n";
 
-			if(/FlateDecode/i ){
+			if(/FlateDecode/i or $_ eq "Fl" ){
 				$stream= &Filters::FlateDecode($stream);
-			}elsif(/ASCIIHexDecode/i ){
+			}elsif(/ASCIIHexDecode/i or $_ eq "AHx"){
 				$stream = &Filters::AsciiHexDecode($stream);
-			}elsif(/ASCII85Decode/i){
+			}elsif(/ASCII85Decode/i or $_ eq "A85"){
 				$stream = &Filters::ASCII85Decode($stream);
-			}elsif(/LZWDecode/i){
+			}elsif(/LZWDecode/i or $_ eq "LZW"){
 				$stream = &Filters::LZWDecode($stream,$obj_ref);
 			}elsif(/RunLengthDecode/i){
 				#TODO $stream_tmp = RunLengthDecode($stream_tmp);
@@ -362,7 +364,7 @@ sub GetObjectInfos{
 	# Get parameters
 	#my $obj_content = shift;
 	#my $obj_ref= shift;
-	my ($obj_ref, $TESTS_CAT_1) = @_;
+	my $obj_ref = shift;
 	
 	
 	my $obj_content ="";
@@ -382,10 +384,10 @@ sub GetObjectInfos{
 	
 	if($status eq "hex_obfuscation"){
 	
-		if(exists($TESTS_CAT_1->{"Obfuscated Objects"})){
-			$TESTS_CAT_1->{"Obfuscated Objects"} ++ ;
+		if(exists($main::TESTS_CAT_1->{"Obfuscated Objects"})){
+			$main::TESTS_CAT_1->{"Obfuscated Objects"} ++ ;
 		}else{
-			$TESTS_CAT_1->{"Obfuscated Objects"}=1;
+			$main::TESTS_CAT_1->{"Obfuscated Objects"}=1;
 		}
 		
 	}
@@ -399,9 +401,6 @@ sub GetObjectInfos{
 		#$obj_content = $obj_ref->{"content_d"};
 		
 		$dico = $obj_ref->{"dico_d"};
-		
-		
-
 	}	
 
 	
@@ -424,12 +423,12 @@ sub GetObjectInfos{
 	# Get object type:
 	if($dico =~ /\/Type\s*(\/Catalog)/si){ # fix bug /Catalog
 		$obj_ref->{"type"}="/Catalog";
-	}elsif($dico =~ /<<.*>>\/Type\s*(\/[A-Z]*)/si){
+	}elsif($dico =~ /<<.*>>\/Type\s*(\/[A-Z0-9]+)/si){
 	#if($dico =~ /<<\/Type\s*(\/[A-Za-z]*)/si){
 		$obj_ref->{"type"}= $1;
 	}elsif($dico =~ /\/Type\s*(\/[A-Z]*)<<.*>>/si){
 		$obj_ref->{"type"}= $1;	
-	}elsif( $dico =~ /\/Type\s*(\/[A-Za-z]*)/si){
+	}elsif( $dico =~ /\/Type\s*(\/[A-Za-z0-9]*)/si){
 		$obj_ref->{"type"}= $1;
 	}
 	
@@ -447,7 +446,10 @@ sub GetObjectInfos{
 	}
 
 	# Actions
-	if( $dico =~ /\/S\s*\/([A-Za-z]*)/g){
+	if($dico =~ /\/S\s*\/(Launch)/sig){
+		$obj_ref->{"action"}= "/Launch";
+	}
+	elsif( $dico =~ /\/S\s*\/([A-Za-z]*)/g){
 		$obj_ref->{"action"}= $1;
 	}
 
@@ -649,8 +651,98 @@ sub GetObjectInfos{
 
 
 	}
+	
+	
+	# TODO Info object infos
+	if( exists($obj_ref->{"type"}) && $obj_ref->{"type"} eq "/Info" ){
+				
+					
 
+		#print "Info obj found !!\n" unless $DEBUG eq "no";					
+		
+		#$pdfObjects->{$info}->{type} = "/Info";
 
+		# Title		(text string)
+		if( $obj_ref->{"content"} =~ /Title\s*(\(.*\))/g){
+		#if( $_->{"content"} =~ /\/(Title)/g){
+			$obj_ref->{"title"}=$1;
+		}
+		
+		# Author	(text string)
+		if( $obj_ref->{"content"} =~ /(Author)/){
+			$obj_ref->{"author"}=$1;
+		}
+		
+		# Subject	(text string)
+		if( $obj_ref->{"content"} =~ /(Subject)/){
+			$obj_ref->{"subject"}=$1;
+		}
+			
+		# Keywords	(text string)
+		if( $obj_ref->{"content"} =~ /(Keyword)/){
+			$obj_ref->{"keyword"}=$1;
+		}
+
+		# Creator	(text string)
+		# Producer	(text string)
+		if( $obj_ref->{"content"} =~ /(Producer)/){
+			$obj_ref->{"producer"}=$1;
+		}
+
+		# CreationDate	(date)
+		if( $obj_ref->{"content"} =~ /(CreationDate)/){
+			$obj_ref->{"creationdate"}=$1;
+		}
+
+		# ModDate	(date)
+		if( $obj_ref->{"content"} =~ /(ModDate)/){
+			$obj_ref->{"Moddate"}=$1;
+		}
+
+		# Trapped	(name)
+		if( $obj_ref->{"content"} =~ /(Trapped)/){
+			$obj_ref->{"trapped"}=$1;
+		}
+		
+		# Xref stream object offset
+		if( $obj_ref->{"content"} =~ /\/XRefStm\s*(\d+)/si){
+			$obj_ref->{"xrefstm"}=$1;
+		}
+		
+	}
+	
+	# File Specification
+#- FS	= (name) The name of the file system to be used to interprete this file specification.
+#- 
+#- 
+#- DOS	= (byte string) A file specification string representing DOS file name.
+#- Mac 	= (byte string) 
+#- Unix	= (byte string)
+#- ID	= (array) An array of two byte strings constituting a file identifier.
+#- V 	= (boolean) A flag indicating whether the file referenced by the file specification is volatile (changes frequently with time).
+#- EF	= (dico) A dictionary containing a subset of the keys F, UF, DOS, Mac and Unix, corresponding to the file by those names in the file specification dictionary.
+#- RF	= (dico) A dico with the same structure as the EF dictionary, which must also be present. /!\ If this entry is present the type entry is required and the file spec dico must be indirectly referenced.
+#- Desc	= (text string) Descriptive text associated with the file specification.
+#- CI	= (dico) A collection item dictionary, which is used to create the user interface for portable collections.
+
+	if( exists($obj_ref->{"type"}) && $obj_ref->{"type"} eq "/Filespec" ){
+	
+		# /EF	(dico) A dictionary containing a subset of the keys F, UF, DOS, Mac and Unix, corresponding to the file by those names in the file specification dictionary.
+		if( $obj_ref->{"dico"} =~ /\/EF\s*(<<.*>>)/si){
+			$obj_ref->{"ef"}=$1;
+		}
+		
+		# /F	= (string) Required if the DOS, Max and Unix entries are all absent.
+		if( $obj_ref->{"dico"} =~ /\/F\s*\(([^\(\)]*)\)/si){
+			$obj_ref->{"f"}=$1;
+		}
+		
+		# /UF	= (text string) Unicode string that provides file specification.
+		#if( $obj_ref->{"dico"} =~ /\/UF\s*\((.*)\)\/*/si){
+		if( $obj_ref->{"dico"} =~ /\/UF\s*\(([^\(\)]*)\)/si){
+			$obj_ref->{"uf"}=$1;
+		}
+	}
 	
 
 
@@ -719,6 +811,94 @@ sub GetPDFObjects{
 }
 
 
+# This function get the trailer params (available for pdf version previous thant 1.5)
+sub GetPDFTrailers_until_1_4{
+
+	#my $content = shift;
+	my ($content,$pdfObjects) = @_;
+	my $info;
+
+	my @trailers = $content =~ /(trailer.*\%\%EOF)/sig;
+	
+	# TODO Decode hexa obfuscated trailer dico
+	
+	
+	#print "trailers = @trailers\n";
+
+	# Tag the Info object in the trailer as Type = Info
+	if($#trailers >= 0){
+	
+		
+		foreach(@trailers){
+
+			#print "== $_\n";
+			
+			# Check the root entry in the trailer's dictionary
+			if($_ =~ /\/Root\s*(\d+\s\d\sR)/s){
+				
+				my $root = $1;
+				$root =~ s/R/obj/;
+				
+				if(exists($pdfObjects->{$root}->{type}) && $pdfObjects->{$root}->{type} eq "/Catalog"){
+					print "Trailer = OK\n" unless $DEBUG eq "no";
+				}else{
+					print "BAD trailer :: obj $root is not a Catalog\n";
+					$main::TESTS_CAT_1{"Trailer"} = "BAD_TRAILER";
+				}
+				
+				
+			}else{
+				print "BAD_TRAILER\n";
+				$main::TESTS_CAT_1{"Trailer"} = "BAD_TRAILER";
+			}
+			
+			
+			# Do not treat encrypted documents
+			if(/\/Encrypt/){
+				print "Warning :: Encrypted PDF document!!\n" unless $DEBUG eq "no";
+				$main::TESTS_CAT_1{"Encryption"} = "yes";
+			}
+
+			#if(/\/Info\s*(\d{1,3}\s\d\sR)/sig){
+			if(/\/Info\s(\d+\s\d\sR)/sig){
+				$info = $1;
+				$info =~ s/R/obj/;
+				
+				print "Info obj found !!\n" unless $DEBUG eq "no";
+				$pdfObjects->{$info}->{type} = "/Info";
+			
+				&GetObjectInfos($pdfObjects->{$info});
+
+			}
+		}
+	}
+	
+	return @trailers;
+
+}
+
+
+# This function get the trailer (startxref) params pointing to a XRef stream object (works only starting from version 1.5) 
+sub GetPDFTrailers_from_1_5{
+
+	#my $content = shift;
+	my ($content, $pdfObjects) = @_;
+	
+	my @trailers = $content =~ /(startxref\s*\d+\s*\%\%EOF)/sg;
+
+	print "trailer == @trailers\n" unless $DEBUG eq "no";
+
+	# Get the offset of the Xref stream object
+	
+	# TODO Verify the offset of the XRef stream object
+	
+	return @trailers;
+	
+}
+
+
+
+
 # This function extract other object inside object stream
 # TODO fix bug :: objects not in the rigth order. ()Ex: cerfa_13753-02.pdf :: 16 0 obj)
 sub Extract_From_Object_stream{
@@ -740,7 +920,7 @@ sub Extract_From_Object_stream{
 	
 		if(exists($_->{"type"}) && $_->{"type"} =~ /ObjStm/ && exists($_->{"stream_d"}) && length($_->{"stream_d"}) > 0 ){
 		
-			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "yes";
+			print "Found object stream :: $_->{ref} :: $_->{N} :: $_->{first} :: == $_->{stream_d} \n" unless $DEBUG eq "no";
 			#print "Found object stream :: $_->{ref} ::\n"; #== $_->{stream_d}";
 
 			# Get the list of objects inside
