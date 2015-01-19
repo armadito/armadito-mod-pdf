@@ -25,7 +25,7 @@ sub DangerousKeywordsResearch{
 	
 	
 	# keywords (HIGH) :: HeapSpray - heap - spray - hack - shellcode - shell - Execute - exe - exploit - pointers - memory - exportDataObject -app.LaunchURL -byteToChar - system32  - payload
-	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|pointers|byteToChar|system32|payload)/si ){
+	if( $content =~ /(HeapSpray|heap|spray|hack|shellcode|shell|Execute|pointers|byteToChar|system32|payload|console)/si ){
 		#$TESTS_CAT_2{"Dangerous Pattern High"} ++;
 		print "Dangerous Pattern \(High\) found :: $1 :: in $obj_ref->{ref} \n";
 		return "High";
@@ -94,6 +94,8 @@ sub Unknown_Pattern_Repetition_Detection{
 	if(!$objcontent){
 		return 0;
 	}
+	
+	my $start_time = time - $^T;
 
 	# Remove a white characters for a better processing
 	$objcontent =~ s/\s//g;
@@ -128,10 +130,10 @@ sub Unknown_Pattern_Repetition_Detection{
 			
 		}
 		
-		my $exTime = time - $^T;
-		#if($exTime > $Config::ANALYSIS_TIMEOUT ){
-		if($exTime > 1 ){
-			#print "TIME_EXCEEDED\n";
+		my $time_elapsed = time - $^T;
+		if($time_elapsed-$start_time > $Config::ANALYSIS_TIMEOUT ){
+		
+			print "TIME_EXCEEDED\n";
 			return -1;
 		}
 

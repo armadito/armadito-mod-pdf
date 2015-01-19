@@ -192,7 +192,8 @@ sub GetStreamFilters{
 	}elsif($obj_content =~ /\/Filter\s*\[\s*([A-Za-z\/\s\d]*)\s*\]/ig){ # For several filters - Ex
 
 		my $tmp = $1;
-		@filter_list= $tmp =~ /\/([A-Za-z\d]*\s*)/ig;	
+		#@filter_list= $tmp =~ /\/([A-Za-z\d]*\s*)/ig;
+		@filter_list= $tmp =~ /\/(\S+)/ig;	
 	}
 
 	return @filter_list;
@@ -223,7 +224,7 @@ sub DecodeObjStream{
 
 			$obj_ref->{"filters"}.= "/$_ ";
 			
-			print "filter in $obj_ref->{ref} = $_\n";
+			print "filter in $obj_ref->{ref} = $_\n" unless $DEBUG eq "no";
 
 			if(/FlateDecode/i or $_ eq "Fl" ){
 				$stream= &Filters::FlateDecode($stream);

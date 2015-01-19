@@ -89,7 +89,7 @@ my $DEBUG = "no"; # Print debug infos
 
 # TODO See XDP format = Ok
 
-# TODO 
+# TODO Only analyze updated trailer. (do not get all trailers because the previous are deprecated)
 ############################################################
 
 
@@ -186,13 +186,6 @@ sub Active_Contents{
 	
 	}
 	
-	
-	
-	
-	#if($active_content > 0){
-		#$TESTS_CAT_2{"Active Content"} = $active_content;
-	#}
-
 	
 	return $active_content;
 }
@@ -530,9 +523,6 @@ sub ObjectAnalysis{
 
 
 
-
-
-
 # This function print all object in the list
 sub PrintObjList{
 
@@ -744,6 +734,7 @@ sub main(){
 	my $file;
 	my $content;
 	my @trailers;
+	my $suspicious;
 
 	# Open the document
 	open $file, "<$filename" or die "open failed in $filename : $! ";
@@ -759,7 +750,10 @@ sub main(){
 	my ($version,$status) = &DocumentStruct::CheckMagicNumber($file);
 	print "status = $status\n";
 	if($status eq "BAD_MAGIC"){
-		die "Error :: Bad Header for a PDF file\n";
+		print "Error :: Bad Header for a PDF file\n";
+		$TESTS_CAT_1{"Header"} = $status;
+		&AnalysisReport($filename,-1);
+		return $status;
 	}
 	
 	$TESTS_CAT_1{"Header"} = $status;
@@ -790,7 +784,7 @@ sub main(){
 
 
 	# Print the objects list
-	&PrintObjList unless $DEBUG eq "n";
+	&PrintObjList unless $DEBUG eq "no";
 
 	#print "ObjectAnalysis...".(time - $^T)."sec\n";
 	# if the document is not encrypted
@@ -810,11 +804,14 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("6 0 obj");
+	#PrintSingleObject("1 0 obj");
+	#PrintSingleObject("32 0 obj");
+	#PrintSingleObject("1 0 obj");
+	#PrintSingleObject("10 0 obj");
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
-	my $suspicious = &SuspiciousCoef;
+	$suspicious = &SuspiciousCoef;
 	
 	&AnalysisReport($filename,$suspicious);
 	
