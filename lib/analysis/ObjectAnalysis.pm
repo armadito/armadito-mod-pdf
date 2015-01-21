@@ -6,6 +6,54 @@ use lib::conf::Config;
 
 my $DEBUG = "no";
 
+
+# This function analyzes uri (for example detect a path traversal pattern in URI object.)
+sub URI_analysis{
+
+	my $obj_ref = shift;
+	
+	
+	#print "Warning :: URI_analysis :: $obj_ref->{ref}\n";
+	
+	
+	my $test = "../../../myPath";
+	#my $test = "..\..\..\myPath";
+	
+	
+	# Path traversal detection
+	#if($obj_ref->{uri} =~ /([\.\.\/|\.\.\\])+/){
+	#if($test =~ /(\.\.\/)+/){
+	if($obj_ref->{uri} =~ /(\.\.\/)+/){
+	#if($obj_ref->{uri} =~ /(\.\.\/|\.\.\\)+/){
+		print "Warning :: URI_analysis :: Found path traversal in $obj_ref->{ref} URI :: $obj_ref->{uri}\n";
+		
+		if(exists($main::TESTS_CAT_2{"Malicious URI"})){
+			$main::TESTS_CAT_2{"Malicious URI"} ++;
+		}else{
+			$main::TESTS_CAT_2{"Malicious URI"} =1;
+		}
+		
+	}
+	
+	
+	# potential dangerous pattern :: system32
+	if($obj_ref->{uri} =~ /(system32)+/){
+		print "Warning :: URI_analysis :: Found potentially dangerous pattern in $obj_ref->{ref} URI :: $obj_ref->{uri}\n";
+		#$main::%TESTS_CAT_2{"Malicious URI"} ++;
+		
+		if(exists($main::TESTS_CAT_2{"Malicious URI"})){
+			$main::TESTS_CAT_2{"Malicious URI"} ++;
+		}else{
+			$main::TESTS_CAT_2{"Malicious URI"} =1;
+		}
+	}
+	
+	
+
+}
+
+
+
 # The basic analysis consists to parse the content of object and detect all potential dangerous patterns.
 # Returns "none" - "high" - "medium" - or "low"
 sub DangerousKeywordsResearch{
@@ -52,9 +100,6 @@ sub DangerousKeywordsResearch{
 	}
 	
 	
-	
-		
-
 	# javascript keywords :: 
 	# 
 	# 

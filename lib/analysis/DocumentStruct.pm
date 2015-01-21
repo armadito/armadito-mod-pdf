@@ -276,11 +276,15 @@ sub Check_xref{
 			my $gen = $2;
 			my $free = $3;
 
-			$len = 8; # TODO calc len en fonction du nombre d'entrées.
+			my $digit = length($id);
+			
+			$len = 6+length($id); # len depends of the number of digit of ref id
+			
 			seek ($fh, $off, 0);
 			read ($fh, $res, $len) or print "Check_xref :: read failed :: off=$off :: len=$len\n";
 			chomp $res;
-			#print "res = $res\n";
+			
+			#print "res = $res\n" if $id == 100;
 
 			if($res =~/($id\s0\sobj)/ or $free ne "n"){
 			

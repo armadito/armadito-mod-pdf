@@ -1,0 +1,203 @@
+::::::::::::::::::: PDF ANALYZER SPECIFICATIONS :::::::::::::::::::::::
+
+Author: Ulrich FAUSTHER
+Modification date: 21/01/2015
+-----------------------------------------------------------------------
+
+Plan:
+
+I- Description 
+
+II- Parsing du PDF
+	II-a	PDF Header
+	II-b	Objets
+	II-c	Trailer
+	II-d	Cross-reference table
+	 
+
+III- Analyse Anti-malware
+
+	III-a	Format PDF
+	III-b	Analyse des objets
+	III-c	CVEs detection
+	III-d	Coefficient de suspicion
+	III-e	Cas non pris en compte
+
+IV- Réécriture de PDF
+
+	IV-a	Principes de réécriture de PDF
+	IV-b	Cas non pris en compte
+	
+-----------------------------------------------------------------------
+
+I- Description 
+
+
+II- Parsing du PDF
+
+Cette étape a pour but d'extraire tous les informations nécessaires à l'analyse antivirale du PDF.
+
+-------	II-a	PDF Header
+	
+	
+	Vérification de l'entête du document à analyser. 
+	L'entête du document doit etre de la forme: %PDF-x.y (où x-y représente la version du PDF) Exemple : %PDF-1.7 (version 1.7 des spécifications).
+	
+	/!\NB: L'analyseur prend egalement en compte le format XDP (XML Data Package). Qui représente la forme XML d'un PDF. Dans ce format, le contenu du PDF est encodé dans le XML en base64.
+		L'anlyseur va alors extraire le PDF packagé dans le XML, puis vérifier le header. A noter que la suite de l'analyse se fera sur le PDF extrait.
+	
+	Dans le cas où l'entête serait incorrect, l'analyse s'arrete en produisant un rapport d'erreur.
+		
+-------	II-b	Objets
+	
+	
+	Récupération de tous les objets qui constituent le document PDF et parsing des attributs.
+	Les attributs de l'objet récupérés sont rangés dans une structure (table de hashage).
+	Les principaux attributs d'un objects qui sont récupérés sont:
+		* La réference (Ex: 16 0 obj);
+		* L'offset en octet du début de l'objet dans le document;
+		* Le contenu integrale de l'objet (11 0 obj......endobj);
+	
+	Si présent:
+		* Le dictionaire de l'objects (<<...>>);
+		* Le type de l'objet.
+		* Puis d'autres attributs specifiques au type d'objet. etc...
+	
+	/!\NB: A partir de la version 1.5 de PDF : Récupération des objets intégrés dans des objets de type /ObjStm (object stream).
+		Dans ce cas, des attributs sont rajoutés à la structure de l'objet à savoir ( objstm = l'objet stream dans lequel il est integré; objStmOff = l'offset dans l'object stream );
+		
+	
+	
+-------	II-c	Trailer
+
+
+	Récupération des trailers du PDF. (TODO:: Récupérer seulement le "dernier" Trailer mis à jour)
+	Conformément aux specifications PDF (jusqu'a la version 1.4 incluse), le trailer du document est défini sous la forme: 
+		trailer
+		<<dico>>
+		startxref
+		xref_table_offset
+		%%EOF
+	A partir de la version 1.5 de PDF, le trailer peut etre de la forme:
+		startxref
+		xref_stream_offset
+		%%EOF
+	
+	Dans le cas où la première forme du trailer n'aurait pas été retrouvée, essayer de l'obtenir sous la deuxième forme.
+
+	/!\NB: Pour les documents PDF ayant été mis à jour, on peut retrouver plusieurs trailers.
+
+
+-------	II-d	Cross-reference table
+
+
+	Récupération de la table de référence des objects.
+	La récupération de la table de référence des objects se fera lors de la vérification de sa confirmité (voir partie III-a).
+	
+	Conformément aux spécifications PDF (jusqu'à la version 1.4 incluse); la table de reference des objets est de la forme:
+		xref
+		0 3
+		0000000000 65535 f
+		0000000009 00000 n
+		0000000098 00000 n
+	
+	A partir de la version 1.5, la table de référence peut etre représentée via des objets de type (/XRef).
+	/!\NB: Pour les documents PDF ayant été mis à jour, on peut retrouver plusieurs trailers.
+	 
+
+
+III- Analyse Anti-malware
+
+Objectif: Déterminer le niveau de suspicion (ou de dangerosité) du document analysé.
+Pour se faire, plusieurs tests divisés en 3 catégories seront effectuées sur le document.
+	* Tests portant sur la structure du document.
+	* Tests analysant le contenu des objets.
+	* Tests d'identification de exploitation de vulnérabilités (CVE).
+
+
+-------	III-a	Format PDF
+
+
+	L'objectif de cette suite de tests est de déterminer si le document respecte bien les spécifications sur la structure du PDF.
+	
+	* Vérification du trailer
+		Vérifier qu'un trailer a bien été trouvé dans le document.
+		Si oui, vérifier les paramètres du dictionaire du trailer (Ex: /root 1 0 R :: vérifier que l'objet '1 0 obj' référencé est bien de type /Catalog).
+		
+	* Vérification de la table de reference des objets (Xref table).
+		Vérifier que l'offset de la table de reference (ou de l'objet de type XRef) défini dans le trailer.
+		Si ok, vérifier les entrées de la table de réference (par rapport aux offsets des objets).
+		
+	* Vérification du contenu du document.
+		Vérifier que le document ne contienne pas uniquement que des pages vides.
+		/!\NB: Un document PDF dont toutes les pages sont vides est considéré comme suspect.
+		
+	* Collisions d'objets
+		Vérifier qu'un object ne soit pas défini plusieurs fois dans le PDF (avec une table de reference incorrecte).
+		
+
+	* Detection de PDF dont le contenu est chiffré.
+		/!\NB: Dans ce cas, ne pas continuer le traitement du document.
+		
+	
+	
+-------	III-b	Analyse des objets
+
+	L'objectif de cette suite de tests est de detecter des éléments potentiellement dangereux dans le contenu des objects du PDF.
+	
+	* Recherche d'objets potentiellement dangereux.
+		-> javascript,
+		-> embedded file,
+		-> formulaire XFA,
+		-> action de type /Launch,
+		-> URI
+		-> etc.
+		
+	* Recherche de pattern potentiellement dangereux dans les objects.
+		-> shellcode,
+		-> pattern à forte répetition,
+		-> unicode strings,
+		-> mots clés potentiellement dangereux (heapSpray, payload, shellcode, etc.),
+		-> javascript fonctions (StringfromChar, byteToChar, eval, unescape, split, etc.),
+		-> path traversal URI.
+		
+
+-------	III-c	CVEs exploit detection
+
+
+	L'objectif de ces tests est de determiner une possible exploitation d'une vulnérabilité CVE.
+	
+	Les vulnérabilités implémentées sont:
+		* CVE-2010-2883
+		
+		
+-------	III-d	Coefficient de suspicion
+
+	Afin de définir un coefficient de suspicion du document analysé, un coefficient va etre attribué au resultat de chaque test:
+		* $EMPTY_PAGES_WITH_ACTIVE_CONTENT = 99;
+		* $EMPTY_PAGES_CONTENT = 70;
+		* $OBJECT_COLLISION_PLUS_BAD_XREF = 90;
+		* $OBJECT_COLLISION = 10;
+		* $BAD_XREF_OFFSET = 30;
+		* $TRAILER_NOT_FOUND = 30;
+		* $BAD_TRAILER = 40;
+		* $OBFUSCATED_OBJECTS = 40;
+		* $ACTIVE_CONTENT = 40;
+		* $SHELLCODE = 40;
+		* $PATTERN_REPETITION = 40;
+		* $DANGEROUS_PATTERN_HIGH = 90;
+		* $DANGEROUS_PATTERN_MEDIUM = 40;
+		* $DANGEROUS_PATTERN_LOW = 20;
+		* $TIME_EXCEEDED = 20;
+		
+	
+	Ces coefficients doivent etre calibrés afin d'obtenirde meilleurs resultats.
+	
+	Le coefficient de suspicion est la somme de tous les résultats des tests positifs. Plus le coefficient est élevé, plus le document est suspect.
+
+	III-e	Cas non pris en compte
+
+IV- Réécriture de PDF
+
+	IV-a	Principes de réécriture de PDF
+	IV-b	Cas non pris en compte

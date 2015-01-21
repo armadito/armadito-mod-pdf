@@ -745,6 +745,14 @@ sub GetObjectInfos{
 		}
 	}
 	
+	
+	# URI
+	if(exists($obj_ref->{"action"}) && $obj_ref->{"action"} eq "URI"){
+		if($obj_ref->{"dico"} =~ /\/URI\s*(\(.*\))/si ){
+			$obj_ref->{"uri"}=$1;
+		}
+	}
+	
 
 
 }
