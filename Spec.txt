@@ -67,6 +67,16 @@ Cette étape a pour but d'extraire tous les informations nécessaires à l'analy
 		Dans ce cas, des attributs sont rajoutés à la structure de l'objet à savoir ( objstm = l'objet stream dans lequel il est integré; objStmOff = l'offset dans l'object stream );
 		
 	
+	Decodage des streams presentes dans les objects; Les filtres implémentés sont:
+		* FlateDecode
+		* ASCIIHexDecode
+		* ASCII85Decode
+		* LZWDecode
+		* CCITTFaxDecode
+		* DCTDecode
+
+		
+	
 	
 -------	II-c	Trailer
 
@@ -189,11 +199,13 @@ Pour se faire, plusieurs tests divisés en 3 catégories seront effectuées sur 
 		* $DANGEROUS_PATTERN_MEDIUM = 40;
 		* $DANGEROUS_PATTERN_LOW = 20;
 		* $TIME_EXCEEDED = 20;
+		* $MALICIOUS_URI = 50;
 		
 	
-	Ces coefficients doivent etre calibrés afin d'obtenirde meilleurs resultats.
+	NB: Ces coefficients doivent etre calibrés afin d'obtenir de meilleurs resultats.
 	
 	Le coefficient de suspicion est la somme de tous les résultats des tests positifs. Plus le coefficient est élevé, plus le document est suspect.
+
 
 	III-e	Cas non pris en compte
 

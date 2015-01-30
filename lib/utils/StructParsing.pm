@@ -20,11 +20,8 @@ sub GetObjOffsets{
 		
 		# Search object offset:
 		if($content =~ /\s\Q$_->{ref}/){
-			#print "Object $_->{ref} is at  $-[0] + 1\n";
 			$_->{offset} =  $-[0]+1; 
-		}
-		#print "";
-	
+		}	
 	}
 
 }
@@ -192,8 +189,9 @@ sub GetStreamFilters{
 	}elsif($obj_content =~ /\/Filter\s*\[\s*([A-Za-z\/\s\d]*)\s*\]/ig){ # For several filters - Ex
 
 		my $tmp = $1;
+		
 		#@filter_list= $tmp =~ /\/([A-Za-z\d]*\s*)/ig;
-		@filter_list= $tmp =~ /\/(\S+)/ig;	
+		@filter_list= $tmp =~ /\/([A-Za-z\d]+)/ig;	
 	}
 
 	return @filter_list;
@@ -228,6 +226,7 @@ sub DecodeObjStream{
 
 			if(/FlateDecode/i or $_ eq "Fl" ){
 				$stream= &Filters::FlateDecode($stream);
+				#print "flatedecode_res = $stream\n" if $obj_ref->{"ref"} eq "12 0 obj"; 
 			}elsif(/ASCIIHexDecode/i or $_ eq "AHx"){
 				$stream = &Filters::AsciiHexDecode($stream);
 			}elsif(/ASCII85Decode/i or $_ eq "A85"){
@@ -236,12 +235,12 @@ sub DecodeObjStream{
 				$stream = &Filters::LZWDecode($stream,$obj_ref);
 			}elsif(/RunLengthDecode/i){
 				#TODO $stream_tmp = RunLengthDecode($stream_tmp);
-			}elsif(/CCITTFaxDecode/i){
-				#TODO $stream = CCITTFaxDecode($stream);
+			}elsif(/CCITTFaxDecode/i or $_ eq "CCF"){
+				$stream = &Filters::CCITTFaxDecode($stream);
 			}elsif(/JBIG2Decode/i){
 				#TODO $stream_tmp = JBIG2Decode($stream_tmp);
 			}elsif(/DCTDecode/i){
-				#TODO $stream_tmp = DCTDecode($stream_tmp);
+				#$stream = &Filters::DCTDecode($stream) if $obj_ref->{"ref"} eq "40 0 obj";
 			}elsif(/PXDecode/i){
 				#TODO $stream_tmp = PXDecode($stream_tmp);
 			}elsif(/Crypt/i){
@@ -261,11 +260,10 @@ sub DecodeObjStream{
 	}
 	
 	
-	if(exists($obj_ref->{"filters"}) ){
+	if(exists($obj_ref->{"filters"}) && $stream ){
 		$obj_ref->{"stream_d"} = $stream;
 	}
 	
-
 
 	return 0;
 	
@@ -301,7 +299,7 @@ sub Hexa_Obfuscation_decode{
 		my $sans_space = $dico;
 		$dico =~ s/#([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
 		$sans_space =~ s/#(20)/pack("C", hex($1))/ge; # Trigger the case where there is only #20 (space)
-		#print "DEBUG1 :: $tmp ::=> $dico \n";
+		
 		# If the dico has been modified
 		if( $tmp ne $dico){
 		
@@ -333,7 +331,7 @@ sub Hexa_Obfuscation_decode{
 		$dico =~ s/#([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
 		$sans_space =~ s/#(20)/pack("C", hex($1))/ge; # Trigger the case where there is only #20 (space)
 		
-		#print "DEBUG2 :: $tmp ::=> $dico \n";
+		
 		# If the dico has been modified
 		if($tmp ne $dico){
 		
@@ -345,9 +343,7 @@ sub Hexa_Obfuscation_decode{
 			if($dico eq $sans_space){
 				print "Only #20 = space detection\n" unless $DEBUG eq "no";
 				$status = "only_space";
-			}
-			
-				
+			}		
 		}
 	}
 	
@@ -363,18 +359,15 @@ sub Hexa_Obfuscation_decode{
 sub GetObjectInfos{
 
 	# Get parameters
-	#my $obj_content = shift;
-	#my $obj_ref= shift;
+	
 	my $obj_ref = shift;
 	
 	
-	my $obj_content ="";
+	my $obj_content;
 	my ($ref, $type, $len, $action, $js, $ef);
 	my $dico;
 	my $status = "none";
 
-	#print "objct ref =".$obj_ref;
-	#print "Object content = $obj_content\n";
 	
 	if(! exists($obj_ref->{"content"})){
 		return;
@@ -422,16 +415,56 @@ sub GetObjectInfos{
 	}
 	
 	# Get object type:
-	if($dico =~ /\/Type\s*(\/Catalog)/si){ # fix bug /Catalog
-		$obj_ref->{"type"}="/Catalog";
-	}elsif($dico =~ /<<.*>>\/Type\s*(\/[A-Z0-9]+)/si){
+#	if($dico =~ /\/Type\s*(\/Catalog)/si){ # fix bug /Catalog
+#		$obj_ref->{"type"}="/Catalog";
+#	}elsif($dico =~ /<<.*>>\/Type\s*(\/[A-Z0-9]+)/si){
 	#if($dico =~ /<<\/Type\s*(\/[A-Za-z]*)/si){
-		$obj_ref->{"type"}= $1;
-	}elsif($dico =~ /\/Type\s*(\/[A-Z]*)<<.*>>/si){
-		$obj_ref->{"type"}= $1;	
-	}elsif( $dico =~ /\/Type\s*(\/[A-Za-z0-9]*)/si){
-		$obj_ref->{"type"}= $1;
+#		$obj_ref->{"type"}= $1;
+#	}elsif($dico =~ /\/Type\s*(\/[A-Z]*)<<.*>>/si){
+#		$obj_ref->{"type"}= $1;	
+#	}elsif( $dico =~ /\/Type\s*(\/[A-Za-z0-9]*)/si){
+#		print "debug : $1 :: $dico\n" if($obj_ref->{"ref"} eq "1 0 obj");
+#		$obj_ref->{"type"}= $1;
+#	}
+	
+
+	# BUG FIX :: Recuperation du Type de l'objet
+	my $tmp = $obj_ref->{"dico"};
+		
+	if(exists($obj_ref->{"dico"})){
+	
+		my @sub_dico = $tmp =~ /<<([^<>]*)>>/sg;
+	
+		foreach(@sub_dico){
+			# remove sub dictionaries inside in order to avoid redundancy of /Type entry
+			$tmp =~ s/<<\Q$_>>//s;
+		}
+	
+	
+		if($tmp =~ /\/Type\s*(\/Catalog)/s){ # fix bug /Catalog
+			$obj_ref->{"type"}="/Catalog";
+		}elsif($tmp =~ /<<.+>>*\/Type\s*(\/[A-Za-z0-9]+)/s){
+			$obj_ref->{"type"}= $1;
+		}elsif($tmp =~ /\/Type\s*(\/[A-Za-z0-9]+).*<<.+>>/s){
+			$obj_ref->{"type"}= $1;
+		}elsif($tmp =~ /\/Type\s*(\/[A-Za-z0-9]+)/s){
+			$obj_ref->{"type"}= $1;
+		}
+
 	}
+	
+	
+#	if($dico =~ /\/Type\s*(\/Catalog)/s){ # fix bug /Catalog
+#		$obj_ref->{"type"}="/Catalog";
+#	}elsif($dico =~ /<<.+>>*\/Type\s*(\/[A-Za-z0-9]+)/s){
+#		print "dblezo\n" if($obj_ref->{"ref"} eq "3 0 obj");
+#		$obj_ref->{"type"}= $1;
+#	}elsif($dico =~ /\/Type\s*(\/[A-Za-z0-9]+).*<<.+>>/s){
+#		$obj_ref->{"type"}= $1;
+#	}elsif($dico =~ /\/Type\s*(\/[A-Za-z0-9]+)/s){
+#		$obj_ref->{"type"}= $1;
+#	}
+	
 	
 	
 	# Length
@@ -467,11 +500,6 @@ sub GetObjectInfos{
 	}elsif($dico =~ /\/JS\s*(\d+\s\d\sR)/si){ # indirect reference to an object
 		$obj_ref->{"js_obj"} = $1;
 	}
-	
-	#if( $obj_content =~ /\/JS\s*(\(.*\)|\d*\s\d\sR)/sig){
-	#	$obj_ref->{"js"}= $1;
-		#print "$1";
-	#}
 
 	# Stream
 	if( $obj_ref->{"content"} =~ /stream\s*(.*)\s*endstream/si){
@@ -763,16 +791,13 @@ sub GetObjectInfos{
 # This function gets all objects in pdf file.
 sub GetPDFObjects{
 
-	my ($content, $TESTS_CAT_1)= @_;
+	my $content= shift;
 	
 	my @objs;
 	my $num_obj= 0;
 	my %pdfObjects;
 	
 	@objs = $content =~ /(\d+\s+\d+\s+obj.*?endobj)/sig;
-	
-	#$num_obj = $#objs+1;
-	#print "Number of Objects: $num_obj \n" unless $DEBUG eq "no";
 	
 	# Object in the file
 	foreach (@objs){
@@ -799,10 +824,11 @@ sub GetPDFObjects{
 			$pdfObjects{$obj_ref} = \%obj_tmp;
 		}else{
 			print "ERROR :: Document Structure :: Object collision :: Object $obj_ref defined more than once\n" unless $DEBUG eq "no";
-			if(exists($TESTS_CAT_1->{"Object Collision"})){
-				$TESTS_CAT_1->{"Object Collision"} ++;
+			
+			if(exists($main::TESTS_CAT_1{"Object Collision"})){
+				$main::TESTS_CAT_1{"Object Collision"} ++;
 			}else{
-				$TESTS_CAT_1->{"Object Collision"} = 1;
+				$main::TESTS_CAT_1{"Object Collision"} = 1;
 			}
 			
 			# Bug fix in some case: When the previous object is empty
@@ -810,8 +836,9 @@ sub GetPDFObjects{
 				$pdfObjects{$obj_ref} = \%obj_tmp;
 			}
 			
+			
 		}
-		#$pdfObjects{$obj_ref} = \%obj_tmp;
+		
 
 	}
 	
@@ -840,7 +867,6 @@ sub GetPDFTrailers_until_1_4{
 		
 		foreach(@trailers){
 
-			#print "== $_\n";
 			
 			# Check the root entry in the trailer's dictionary
 			if($_ =~ /\/Root\s*(\d+\s\d\sR)/s){
@@ -868,7 +894,7 @@ sub GetPDFTrailers_until_1_4{
 				$main::TESTS_CAT_1{"Encryption"} = "yes";
 			}
 
-			#if(/\/Info\s*(\d{1,3}\s\d\sR)/sig){
+
 			if(/\/Info\s(\d+\s\d\sR)/sig){
 				$info = $1;
 				$info =~ s/R/obj/;
@@ -907,7 +933,6 @@ sub GetPDFTrailers_from_1_5{
 
 
 
-
 # This function extract other object inside object stream
 # TODO fix bug :: objects not in the rigth order. ()Ex: cerfa_13753-02.pdf :: 16 0 obj)
 sub Extract_From_Object_stream{
@@ -921,8 +946,6 @@ sub Extract_From_Object_stream{
 	my $pdfObjects = shift;
 	
 	my @objs = values(%{$pdfObjects});
-	
-	#if(exists($pdfObjects{$obj_ref}) && $pdfObjects{$obj_ref}->{"type"} eq "/XRef"  ){
 	
 	# Look for object stream
 	for(@objs){
@@ -992,13 +1015,13 @@ sub Extract_From_Object_stream{
 				}else{
 					$new_obj{"content"} = substr ($_->{"stream_d"}, $off);					
 				}
-				#$new_obj{"content"} = substr ($_->{"stream_d"}, $off, $len );
+				
 
 				print "\nObject content :: $oref :: == ".$new_obj{"content"}."\n" unless $DEBUG eq "no";
 
 				if($new_obj{"content"}){
 					if(exists($new_obj{"content"}) && length($new_obj{"content"}) > 0 ){
-						#print "DBLEZO\n";
+						
 						&GetObjectInfos(\%new_obj);
 					}
 				}
@@ -1012,11 +1035,7 @@ sub Extract_From_Object_stream{
 				
 			}
 
-			#print "Number of object inside = $#obj_inside\n";
-			#foreach (@obj_inside){
-			#	print "$_\n";
-			#	pull ,$_
-			#}
+			
 			
 		}
 		

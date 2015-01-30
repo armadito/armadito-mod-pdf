@@ -20,8 +20,6 @@ use lib::analysis::ObjectAnalysis;
 use lib::analysis::CVEs;
 
 
-our $dblezo = "DBLEZO";
-
 # VARIABLES
 my @to_analyze; # Elements to analyze
 #my @obj;
@@ -39,8 +37,8 @@ my $BAD_OBJ_OFFSET = -3;
 my $pdf_version; # PDF version
 
 our %TESTS_CAT_1; # Document structure tests
-our %TESTS_CAT_2; # Objects analysis tests
-our %TESTS_CAT_3; # CVEs
+my %TESTS_CAT_2; # Objects analysis tests
+my %TESTS_CAT_3; # CVEs
 
 $TESTS_CAT_2{"Dangerous Pattern High"} = 0;
 $TESTS_CAT_2{"Dangerous Pattern Medium"} = 0;
@@ -90,6 +88,8 @@ my $DEBUG = "no"; # Print debug infos
 # TODO See XDP format = Ok
 
 # TODO Only analyze updated trailer. (do not get all trailers because the previous are deprecated)
+
+# TODO Bug fix: Get Type entries in dictionary (several sub-dictionaries)
 ############################################################
 
 
@@ -101,9 +101,6 @@ sub Active_Contents{
 	
 	my @to_analyse;
 	my $active_content =0;
-	
-	#my (%js, %ef, %xfa ); # javascript , embedded files, xfa
-	#my ($js, $ef, $xfa ) = (0,0,0); # javascript , embedded files, xfa
 	
 	
 	my @objs = values(%pdfObjects);
@@ -181,9 +178,7 @@ sub Active_Contents{
 				
 			}
 		}
-		
-		
-	
+
 	}
 	
 	
@@ -191,20 +186,12 @@ sub Active_Contents{
 }
 
 
-
-
-
-
-# This function extract other object inside object stream
-# TODO fix bug :: objects not in the rigth order. ()Ex: cerfa_13753-02.pdf :: 16 0 obj)
-
-
 # This function checks incoherences in the document format (Ex: Empty pages but only js script).
 sub Document_struct_detection{
 
 	my ($content,$fh,@trailers) = @_;
 	my $result =0;
-	my $ret = 0;
+	
 	my $active_content = 0;
 	my $empty =0;
 
@@ -235,8 +222,6 @@ sub Document_struct_detection{
 	
 	
 	# stream with Length = 0
-
-	# TODO Verification des fonctions natives javascripts
 
 
 	# Check xref table or xref stream object
@@ -290,8 +275,6 @@ sub Object_correlation_detection{
 		}
 
 		# TODO Get basic pattern search on Info content and catalogue (string text).
-
-
 		# TODO Get XFA stream or array		
 	}
 
@@ -319,10 +302,7 @@ sub ObjectAnalysis{
 		# Analyse Info obj for suspicious strings
 		if( exists($_->{"type"}) && $_->{"type"} eq "/Info"){
 		
-			#if($result > 0){
-			#	$TESTS_CAT_2{"Pattern Repetition"} = "DETECTED";
-			#}
-			
+						
 			#$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"content"});
 			my $res1= &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($_->{"content"});
 			$shellcode += &ObjectAnalysis::Shellcode_Detection($_->{"content"});
@@ -334,8 +314,7 @@ sub ObjectAnalysis{
 			}
 			if($res1 == -1){
 				print "Time exceeded in object in Info object $_->{ref} \n";
-				$TESTS_CAT_2{"Time exceeded"} ++;
-				
+				$TESTS_CAT_2{"Time exceeded"} ++;	
 			}else{
 				$pattern_rep += $res1;
 			}
@@ -436,11 +415,8 @@ sub ObjectAnalysis{
 			# Get XFA 
 			if(exists($pdfObjects{$acrform_ref}->{xfa})){
 			
-				#my $xfa = $pdfObjects{$acrform_ref}->{xfa} ;
 				
-				# If it's an array
-				
-				# an array of object
+				# the case when it's an array of object
 				my @xfas = $pdfObjects{$acrform_ref}->{xfa} =~ /(\d+\s\d\sR)/sg;
 			
 				foreach (@xfas){
@@ -451,7 +427,7 @@ sub ObjectAnalysis{
 				
 					if(exists($pdfObjects{$xfa})){
 				
-						#print "found XFA obj :: $xfa\n";
+						
 						if(exists($pdfObjects{$xfa}->{"stream_d"}) && length($pdfObjects{$xfa}->{"stream_d"})>0 ){
 							#$pattern_rep += &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream_d});
 							my $res = &ObjectAnalysis::Unknown_Pattern_Repetition_Detection($pdfObjects{$xfa}->{stream_d});
@@ -466,7 +442,6 @@ sub ObjectAnalysis{
 							if($res == -1){
 								print "Time exceeded in object $pdfObjects{$xfa}->{ref}\n";
 								$TESTS_CAT_2{"Time exceeded"} ++;
-								#$pattern_rep += 0;
 							}else{
 								$pattern_rep += $res;
 							}							
@@ -501,14 +476,6 @@ sub ObjectAnalysis{
 		}
 		
 		# TODO embedded files
-		
-		# URI path traversal detection
-		if(exists($_->{"action"}) && $_->{"action"} eq "URI"){
-			print "Found URI in object $_->{ref}\n" unless $DEBUG eq "no";
-			&ObjectAnalysis::URI_analysis($_);
-		}
-		
-		
 				
 	}
 	
@@ -568,21 +535,12 @@ sub PrintSingleObject{
 	if( exists($pdfObjects{$obj_ref})){
 	
 		while ((my $key, my $value) = each($pdfObjects{$obj_ref}) ){
-		
-			#if(!($key =~ /stream|content|dico|ref/i)){
-				print "$key = $value\n";
-			#}
-			
-			#if(($key =~ /stream/i) ){
-			#	print "$key = $value\n";
-			#}
+			print "$key = $value\n\n";
 		}
 	
 	}else{
 		print "Object $obj_ref not referenced !\n";
 	}
-		
-	
 
 }
 
@@ -628,6 +586,10 @@ sub SuspiciousCoef{
 		}
 	}
 	
+	
+	if(exists($TESTS_CAT_1{"Multiple Headers"}) && $TESTS_CAT_1{"Multiple Headers"} > 1){
+		$SUSPICIOUS += $Config::MULTIPLE_HEADERS;
+	}
 	
 	
 	# Trailer
@@ -679,10 +641,6 @@ sub SuspiciousCoef{
 		$SUSPICIOUS += $Config::TIME_EXCEEDED;
 	}
 	
-	if(exists($TESTS_CAT_2{"Malicious URI"}) && $TESTS_CAT_2{"Malicious URI"} > 0){
-		$SUSPICIOUS += $Config::MALICIOUS_URI;
-	}
-	
 
 	# CVE_2010_2883
 	if(exists($TESTS_CAT_3{"CVE_2010_2883"}) &&  $TESTS_CAT_3{"CVE_2010_2883"} eq "DETECTED" ){
@@ -693,10 +651,7 @@ sub SuspiciousCoef{
 		$SUSPICIOUS += $Config::CVE_2010_2883_BAD_FONT_FILE_LENGTH;
 	}
 	
-	
 
-
-	
 	return $SUSPICIOUS;
 	
 
@@ -752,12 +707,6 @@ sub main(){
 	open $file, "<$filename" or die "open failed in $filename : $! ";
 	binmode $file or die "Error :: $!\n";
 
-	# Get the content of the document
-	#seek ($file, 0 ,0 );
-	#$content = do { local $/; <$file>};
-	
-
-
 	# Check the header of the file (must be %PDF-1.x)
 	my ($version,$status) = &DocumentStruct::CheckMagicNumber($file);
 	print "status = $status\n";
@@ -776,10 +725,9 @@ sub main(){
 	seek ($file, 0 ,0 );
 	$content = do { local $/; <$file>};
 	
-	#print "Struct Parsing...".(time - $^T)."sec\n";
 	
 	# Get all pdf objects content in the document
-	%pdfObjects = &StructParsing::GetPDFObjects($content, \%TESTS_CAT_1);
+	%pdfObjects = &StructParsing::GetPDFObjects($content);
 	
 	&StructParsing::GetObjOffsets($file,\%pdfObjects,$content);
 
@@ -794,18 +742,20 @@ sub main(){
 		@trailers = &StructParsing::GetPDFTrailers_from_1_5($content,\%pdfObjects); #  Get PDF trailer (works for pdf version starting from 1.5)
 	}
 
-
 	# Print the objects list
 	&PrintObjList unless $DEBUG eq "no";
 
 	#print "ObjectAnalysis...".(time - $^T)."sec\n";
 	# if the document is not encrypted
 	if(! exists ($TESTS_CAT_1{"Encryption"})){
+	
 		&ObjectAnalysis();
+		
 		# PDF STRUCT TESTS
 		&Document_struct_detection($content,$file,@trailers); # Works only for version below 1.5 with no compatibility with previous version
 		
 		$status = &CVEs::CVE_2010_2883_Detection(\%pdfObjects);
+		
 		if( $status ne "none"){
 			$TESTS_CAT_3{"CVE_2010_2883"} = $status;
 		}
@@ -816,8 +766,8 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("376 0 obj");
-	#PrintSingleObject("32 0 obj");
+	#PrintSingleObject("30 0 obj");
+	#PrintSingleObject("25 0 obj");
 	#PrintSingleObject("1 0 obj");
 	#PrintSingleObject("10 0 obj");
 	#PrintSingleObject("534 0 obj");

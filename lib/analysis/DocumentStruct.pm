@@ -16,10 +16,28 @@ sub CheckMagicNumber{
 	my $offset=0;
 	my $ver="undef";
 	
+	
+	
 	seek ($file, 0, 0);
 	read $file, $ver, $len, $offset or print "read failed :: $!\n";
+	
+	
 	if( $ver =~ /\%PDF-\d\.\d/){
 		print "PDF header : OK\n" unless $DEBUG eq "no";
+		
+		
+		# Check if there is several headers in file
+		seek ($file, 0, 0);
+		my $content = do { local $/; <$file>};
+		
+		my @pdf_headers = $content =~ /\%PDF-\d\.\d/sg;
+		my $num = @pdf_headers;
+		
+		if($num > 1){
+			print "Warning :: CheckMagicNumber :: There are $num pdf headers in this file\n";
+			$main::TESTS_CAT_1{"Multiple Headers"} = $num;
+		}
+		
 		return ($ver,"OK");
 	}
 	
@@ -88,7 +106,7 @@ sub Empty_Pages_Document_detection{
 		
 		if( exists($_->{"type"}) && $_->{"type"} eq "/Pages" ){
 		
-			print "FOUND Pages object :: $_->{ref} :: \n" unless $DEBUG eq "no";
+			print "FOUND Pages object :: $_->{ref} :: \n" unless $DEBUG eq "yes";
 			
 			# Get kid node pages
 			my @pages = $_->{"kids"} =~ /(\d+\s\d\sR)/sg;
@@ -141,17 +159,17 @@ sub Empty_Pages_Document_detection{
 										$ret ++;
 										print "Found content of the page $page_ref in obj $content_page_obj_2 => OK\n"unless $DEBUG eq "no";
 									}else{
-										print "Warning :: Page content Object ($content_page_obj_2) is empty\n" unless $DEBUG eq "no";
+										print "Warning :: Page content Object ($content_page_obj_2) is empty\n" unless $DEBUG eq "yes";
 									}
 								
 								}else{
-									print "Warning :: Page content Object ($content_page_obj_2) is not defined\n" unless $DEBUG eq "no";
+									print "Warning :: Empty_Pages_Document_detection :: Page content Object ($content_page_obj_2) is not defined\n" unless $DEBUG eq "yes";
 								}	
 							}
 							
 						
 						}else{
-							print "Warning : The Stream of the Content Object is empty\n" unless $DEBUG eq "no";
+							print "Warning :: Empty_Pages_Document_detection :: The Stream of the Content Object is empty\n" unless $DEBUG eq "yes";
 							
 						}	
 					
@@ -159,9 +177,9 @@ sub Empty_Pages_Document_detection{
 				
 					
 				}elsif(! exists($pdfObjects{$page_ref})){
-					print "Warning : Page $page_ref does\'nt exist.\n" unless $DEBUG eq "no";
+					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref does\'nt exist.\n" unless $DEBUG eq "o";
 				}else{
-					print "Warning : Page $page_ref is empty\n" unless $DEBUG eq "no";
+					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref is empty\n" unless $DEBUG eq "o";
 				}
 				
 			

@@ -49,9 +49,11 @@ sub CVE_2010_2883_Detection{
 				# - cmap - glyf - head - hhea - hmtx - loca - maxp - name - post
 				# Detect the SING ()Smart INdependent Glyphlets) string
 				if($fontstream =~ /SING/ ){
-					print "Warning :: Found SING (Smart INdependent Glyphlets)\n" unless $DEBUG eq "no";
+					print "Warning :: Found SING (Smart INdependent Glyphlets) :: Possible CVE_2010_2883\n" unless $DEBUG eq "yes";
 					#$TESTS_CAT_3{"CVE_2010_2883"} = "DETECTED";
 					$status = "DETECTED";
+					
+					# TODO combine with previous test (bad_font_file_length) to detect CVE
 				}
 				
 						
