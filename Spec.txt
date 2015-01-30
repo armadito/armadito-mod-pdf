@@ -200,6 +200,7 @@ Pour se faire, plusieurs tests divisés en 3 catégories seront effectuées sur 
 		* $DANGEROUS_PATTERN_LOW = 20;
 		* $TIME_EXCEEDED = 20;
 		* $MALICIOUS_URI = 50;
+		* $MULTIPLE_HEADERS = 50;
 		
 	
 	NB: Ces coefficients doivent etre calibrés afin d'obtenir de meilleurs resultats.

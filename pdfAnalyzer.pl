@@ -37,8 +37,8 @@ my $BAD_OBJ_OFFSET = -3;
 my $pdf_version; # PDF version
 
 our %TESTS_CAT_1; # Document structure tests
-my %TESTS_CAT_2; # Objects analysis tests
-my %TESTS_CAT_3; # CVEs
+our %TESTS_CAT_2; # Objects analysis tests
+our %TESTS_CAT_3; # CVEs
 
 $TESTS_CAT_2{"Dangerous Pattern High"} = 0;
 $TESTS_CAT_2{"Dangerous Pattern Medium"} = 0;
@@ -476,6 +476,14 @@ sub ObjectAnalysis{
 		}
 		
 		# TODO embedded files
+		
+		
+		# URI path traversal detection 		​
+		if(exists($_->{"action"}) && $_->{"action"} eq "URI"){
+			print "Found URI in object $_->{ref}\n" unless $DEBUG eq "yes";
+			&ObjectAnalysis::URI_analysis($_);
+		}
+		
 				
 	}
 	
@@ -586,7 +594,7 @@ sub SuspiciousCoef{
 		}
 	}
 	
-	
+	# Multiple headers
 	if(exists($TESTS_CAT_1{"Multiple Headers"}) && $TESTS_CAT_1{"Multiple Headers"} > 1){
 		$SUSPICIOUS += $Config::MULTIPLE_HEADERS;
 	}
@@ -641,7 +649,11 @@ sub SuspiciousCoef{
 		$SUSPICIOUS += $Config::TIME_EXCEEDED;
 	}
 	
-
+	# Malicious URI
+	if(exists($TESTS_CAT_2{"Malicious URI"}) && $TESTS_CAT_2{"Malicious URI"} > 0){
+		$SUSPICIOUS += $Config::MALICIOUS_URI;
+	}
+	
 	# CVE_2010_2883
 	if(exists($TESTS_CAT_3{"CVE_2010_2883"}) &&  $TESTS_CAT_3{"CVE_2010_2883"} eq "DETECTED" ){
 		$SUSPICIOUS += $Config::CVE_2010_2883_DETECTED;

@@ -8,6 +8,7 @@ my $DEBUG = "no";
 
 
 # This function analyzes uri (for example detect a path traversal pattern in URI object.)
+# TODO to improve
 sub URI_analysis{
 
 	my $obj_ref = shift;
