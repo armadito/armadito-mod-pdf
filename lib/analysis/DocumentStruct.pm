@@ -85,13 +85,15 @@ sub CheckMagicNumber{
 
 
 # This function check if the pdf document is empty with only active content (js,embedded_file,openaction etc.)
-sub Empty_Pages_Document_detection{
+# TODO to improve
+sub Empty_Pages_Document_detection__old{
 
-	my $ref = shift;
+	#my $ref = shift;
+	my $pdfObjects = shift;
 	
 	#print "DEBUG = $ref\n";
 	
-	my %pdfObjects = %{$ref};
+	#my %pdfObjects = %{$ref};
 	
 	
 	my $ret=0;
@@ -100,7 +102,7 @@ sub Empty_Pages_Document_detection{
 	
 	print "\n\n ::: Empty Pages With Active Content detection ::: \n" unless $DEBUG eq "no";
 	
-	my @objs = values(%pdfObjects);
+	my @objs = values(%{$pdfObjects});
 	foreach(@objs){
 	
 		
@@ -115,37 +117,37 @@ sub Empty_Pages_Document_detection{
 			foreach(@pages){
 				my $page_ref = $_;
 				$page_ref =~ s/R/obj/;
-				#print "page ref = $page_ref\n";
+				print "page ref = $page_ref\n";
 				
 				# if the page exists and the /Content parameter is set
-				if(exists($pdfObjects{$page_ref}) && exists($pdfObjects{$page_ref}->{"pagecontent"})  ){
+				if(exists($pdfObjects->{$page_ref}) && exists($pdfObjects->{$page_ref}->{"pagecontent"})  ){
 				
 					# Check if it's not an empty content
 					#my $p_content = $pdfObjects{$page_ref}->{"pagecontent"};
 					
 					
 					# If the Contents fiels is an array
-					my @pcontents = $pdfObjects{$page_ref}->{"pagecontent"} =~ /(\d+\s\d\sR)/sg;
+					my @pcontents = $pdfObjects->{$page_ref}->{"pagecontent"} =~ /(\d+\s\d\sR)/sg;
 					
 					foreach (@pcontents){
 					
 						my $content_page_obj = $_;
 						$content_page_obj =~ s/R/obj/;
 						
-						#print ":: page content = $content_page_obj ::\n";#" $pdfObjects{$contentp}->{content}\n";
+						print ":: page content = $content_page_obj :: \n";#" $pdfObjects{$contentp}->{content}\n";
 						
-						if(exists($pdfObjects{$content_page_obj}) && exists($pdfObjects{$content_page_obj}->{"stream"}) && length($pdfObjects{$content_page_obj}->{"stream"}) > 0  ){
+						if(exists($pdfObjects->{$content_page_obj}) && exists($pdfObjects->{$content_page_obj}->{"stream"}) && length($pdfObjects->{$content_page_obj}->{"stream"}) > 0  ){
 							$ret ++;
 							print "Page $page_ref is not empty => OK\n"unless $DEBUG eq "no";
 						
-						}elsif(! exists($pdfObjects{$content_page_obj})){
+						}elsif(! exists($pdfObjects->{$content_page_obj})){
 							print "Warning : Content Object ($content_page_obj) of page $page_ref doesn\'t exist\n" unless $DEBUG eq "no";
 							
-						}elsif( exists($pdfObjects{$content_page_obj}->{content}) ){
+						}elsif( exists($pdfObjects->{$content_page_obj}->{content}) ){
 						
 							# Trigger the case when the object represents an array of objects Ex: [422 0 R 423 0 R 424 0 R 425 0 R 426 0 R 427 0 R 428 0 R 429 0 R]
 							
-							my @content_page_array = $pdfObjects{$content_page_obj}->{"content"} =~ /(\d+\s\d\sR)/sg;
+							my @content_page_array = $pdfObjects->{$content_page_obj}->{"content"} =~ /(\d+\s\d\sR)/sg;
 							
 							foreach(@content_page_array){
 								
@@ -153,13 +155,18 @@ sub Empty_Pages_Document_detection{
 								$content_page_obj_2 =~ s/R/obj/;
 								#print " Found obj :: $content_page_obj_2\n";
 								
-								if(exists($pdfObjects{$content_page_obj_2})){
+								if(exists($pdfObjects->{$content_page_obj_2})){
 								
-									if( exists($pdfObjects{$content_page_obj_2}->{"stream"}) && length($pdfObjects{$content_page_obj_2}->{"stream"}) > 0 ){
+									# TODEBUG print "";
+									my $test = $pdfObjects->{$content_page_obj_2} ;
+									
+									print "DEBUG ::  ".$pdfObjects->{$content_page_obj_2}->{stream}."\n";
+								
+									if( exists($pdfObjects->{$content_page_obj_2}->{"stream"}) && length($pdfObjects->{$content_page_obj_2}->{"stream"}) > 0 ){
 										$ret ++;
 										print "Found content of the page $page_ref in obj $content_page_obj_2 => OK\n"unless $DEBUG eq "no";
 									}else{
-										print "Warning :: Page content Object ($content_page_obj_2) is empty\n" unless $DEBUG eq "yes";
+										print "Warning :: Page content Object ($content_page_obj_2) is empty !!!!\n" unless $DEBUG eq "yes";
 									}
 								
 								}else{
@@ -176,7 +183,7 @@ sub Empty_Pages_Document_detection{
 					}
 				
 					
-				}elsif(! exists($pdfObjects{$page_ref})){
+				}elsif(! exists($pdfObjects->{$page_ref})){
 					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref does\'nt exist.\n" unless $DEBUG eq "o";
 				}else{
 					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref is empty\n" unless $DEBUG eq "o";
@@ -194,6 +201,124 @@ sub Empty_Pages_Document_detection{
 	return $ret;
 	
 }
+
+
+sub Empty_Pages_Document_detection{
+
+	#my $ref = shift;
+	my $pdfObjects = shift;
+	
+	#print "DEBUG = $ref\n";
+	
+	#my %pdfObjects = %{$ref};
+	
+	
+	my $ret=0;
+	my $numPages =0; # Number of pages found
+	my $active_content =0; # Number of js, embedded files
+	
+	print "\n\n ::: Empty Pages With Active Content detection ::: \n" unless $DEBUG eq "no";
+	
+	my @objs = values(%{$pdfObjects});
+	foreach(@objs){
+	
+		
+		if( exists($_->{"type"}) && $_->{"type"} eq "/Pages" ){
+		
+			print "FOUND Pages object :: $_->{ref} :: \n" unless $DEBUG eq "no";
+			
+			# Get kid node pages
+			my @pages = $_->{"kids"} =~ /(\d+\s\d\sR)/sg;
+			#print @pages;
+				
+			foreach(@pages){
+				my $page_ref = $_;
+				$page_ref =~ s/R/obj/;
+				#print "page ref = $page_ref\n";
+				
+				# if the page exists and the /Content parameter is set
+				if($pdfObjects->{$page_ref}->{"type"} eq "/Page" && exists($pdfObjects->{$page_ref}) && exists($pdfObjects->{$page_ref}->{"pagecontent"})  ){
+				
+					# Check if it's not an empty content
+					#my $p_content = $pdfObjects{$page_ref}->{"pagecontent"};
+					
+					
+					# If the Contents fiels is an array
+					my @pcontents = $pdfObjects->{$page_ref}->{"pagecontent"} =~ /(\d+\s\d\sR)/sg;
+					
+					foreach (@pcontents){
+					
+						my $content_page_obj = $_;
+						$content_page_obj =~ s/R/obj/;
+						
+						#print ":: page content = $content_page_obj :: \n";#" $pdfObjects{$contentp}->{content}\n";
+						
+						if(exists($pdfObjects->{$content_page_obj}) && exists($pdfObjects->{$content_page_obj}->{"stream"}) && length($pdfObjects->{$content_page_obj}->{"stream"}) > 0  ){
+							$ret ++;
+							print "Page $page_ref is not empty => OK\n"unless $DEBUG eq "no";
+						
+						}elsif(! exists($pdfObjects->{$content_page_obj})){
+							print "Warning : Content Object ($content_page_obj) of page $page_ref doesn\'t exist\n" unless $DEBUG eq "yes";
+							
+						}elsif( exists($pdfObjects->{$content_page_obj}->{content}) ){
+						
+							# Trigger the case when the object represents an array of objects Ex: [422 0 R 423 0 R 424 0 R 425 0 R 426 0 R 427 0 R 428 0 R 429 0 R]
+							
+							my @content_page_array = $pdfObjects->{$content_page_obj}->{"content"} =~ /(\d+\s\d\sR)/sg;
+							
+							foreach(@content_page_array){
+								
+								my $content_page_obj_2 = $_;
+								$content_page_obj_2 =~ s/R/obj/;
+								#print " Found obj :: $content_page_obj_2\n";
+								
+								if(exists($pdfObjects->{$content_page_obj_2})){
+								
+									# TODEBUG print "";
+									#my $test = $pdfObjects->{$content_page_obj_2};
+									
+									#print "DEBUG ::  ".$test->{stream}."\n";
+								
+									if( exists($pdfObjects->{$content_page_obj_2}->{"stream"}) && length($pdfObjects->{$content_page_obj_2}->{"stream"}) > 0 ){
+										$ret ++;
+										print "Found content of the page $page_ref in obj $content_page_obj_2 => OK\n"unless $DEBUG eq "no";
+									}else{
+										print "Warning :: Page content Object ($content_page_obj_2) is empty \n" unless $DEBUG eq "yes";
+									}
+								
+								}else{
+									print "Warning :: Empty_Pages_Document_detection :: Page content Object ($content_page_obj_2) is not defined\n" unless $DEBUG eq "yes";
+								}	
+							}
+							
+						
+						}else{
+							print "Warning :: Empty_Pages_Document_detection :: The Stream of the Content Object is empty\n" unless $DEBUG eq "yes";
+							
+						}	
+					
+					}
+				
+					
+				}elsif(! exists($pdfObjects->{$page_ref})){
+					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref does\'nt exist.\n" unless $DEBUG eq "o";
+				}elsif( (! exists($pdfObjects->{$page_ref}->{"pagecontent"})) && $pdfObjects->{$page_ref}->{"type"} eq "/Page" ){
+					print "Warning :: Empty_Pages_Document_detection :: Page $page_ref is empty\n" unless $DEBUG eq "o";
+				}
+				
+			
+			}
+			
+		}
+		
+		# TODO Verify that the number of treated pages is the number of pages in the document.
+	
+	}
+	
+	return $ret;
+	
+}
+
 
 
 

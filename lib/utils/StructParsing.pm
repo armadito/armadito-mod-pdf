@@ -202,7 +202,7 @@ sub GetStreamFilters{
 # Decode Object Stream using /Filters informations
 sub DecodeObjStream{
 
-	my $obj_ref = shift;
+	my ($obj_ref,$pdfObjects) = @_;
 	my @filters;
 	my $stream = $obj_ref->{"stream"};
 
@@ -238,7 +238,7 @@ sub DecodeObjStream{
 			}elsif(/CCITTFaxDecode/i or $_ eq "CCF"){
 				$stream = &Filters::CCITTFaxDecode($stream);
 			}elsif(/JBIG2Decode/i){
-				#TODO $stream_tmp = JBIG2Decode($stream_tmp);
+				#$stream = &Filters::JBIG2Decode($stream,$obj_ref,$pdfObjects);
 			}elsif(/DCTDecode/i){
 				#$stream = &Filters::DCTDecode($stream) if $obj_ref->{"ref"} eq "40 0 obj";
 			}elsif(/PXDecode/i){
@@ -626,6 +626,13 @@ sub GetObjectInfos{
 		}#elsif(){
 			
 		#}
+		if($dico =~ /\/Contents\s*(\d+\s\d\sR)/si){ # Single object content
+			$obj_ref->{"pagecontent"} = $1;
+		}elsif($dico =~ /\/Contents\s*(\[\s*(\d+\s\d\sR\s*)*\s*\])/si){ # array of objects contents
+			$obj_ref->{"pagecontent"} = $1;
+		}#elsif(){ # Stream content
+		
+		#}
 		
 		# Thumb
 		# TODO ... 
@@ -811,7 +818,7 @@ sub GetPDFObjects{
 		
 		if(exists($obj_tmp{"stream"})){
 			# Decode Object Stream;
-			&DecodeObjStream(\%obj_tmp);
+			&DecodeObjStream(\%obj_tmp,\%pdfObjects);
 		}
 		
 		# Add object in the list (key = obj indirect ref; value = object hash ref)

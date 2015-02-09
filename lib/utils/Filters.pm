@@ -13,9 +13,9 @@ my $DEBUG = "no";
 # LZWDecode
 # DCTDecode
 # TODO RunLengthDecode
-# TODO CCITTFaxDecode
+# CCITTFaxDecode
 # TODO JBIG2Decode
-# TODO PXDecode
+# TODO JPXDecode or PXDecode
 # TODO Crypt
 
 
@@ -240,6 +240,576 @@ my %EXTENDED_MAKE_UP_CODE = (
 	'000000011111'	=> 2560
 );
 
+
+# Get Symbole Dico segment from JBIG2BLOBALS entry in dico
+sub GetSymboleDico{
+
+	my ($obj,$pdfObjects) = @_;
+	my $dico_stream;
+	
+	#print "dico = $obj->{dico}\n";
+	
+	if($obj->{"dico"} =~ /\/JBIG2Globals\s*(\d+\s\d\sR)/sg){
+		my $jbig2globals = $1;
+		$jbig2globals =~ s/R/obj/;
+		#print "jbig2globals = $jbig2globals\n";
+		
+		# Get stream
+		#print "$pdfObjects :: ".keys(%{$pdfObjects})."\n";
+		if(exists($pdfObjects->{$jbig2globals})){
+			$dico_stream = $pdfObjects->{$jbig2globals}->{"stream"};
+		}else{
+			print "Warning :: GetSymboleDico :: Objects $jbig2globals is not defined yet...\n";
+		}
+		
+	}
+	
+	return $dico_stream;
+}
+
+sub DecodeSymboleDico{
+
+	my $stream = shift;
+	my $out;
+	
+	my $bitstream = unpack("B*",$stream);
+	print "bit stream = $bitstream\n\n";
+	my $hexstream = unpack("H*",$stream);
+	print "hex stream = $hexstream\n\n";
+	#print "bit stream hex = ".unpack("H*",$stream)."\n\n";
+	
+	
+	# ::: Segment header part :::
+	
+	
+	# Segment_number in segment header (4 bytes)
+	my $off = 0; # bit mode
+	my $off2 = 0; # hex mode
+	my $segment_number = substr($bitstream,$off,32);
+	print "segment number (bin) = $segment_number\n\n";
+	$segment_number = substr($hexstream,$off2,8);
+	print "segment number (hex) = $segment_number\n\n";
+	
+	
+	
+	# Segment headers flags
+	$off += 32;
+	$off2 += 8;
+	my $segment_header_flags = substr($bitstream,$off,8);
+	print "Segment header flag (bin)  = $segment_header_flags\n";
+	$segment_header_flags = substr($hexstream,$off2,2);
+	print "Segment header flag (hex) = $segment_header_flags\n\n";
+	
+	#$segment_header_flags = "4A";
+	#print "Segment header flag (test)  = $segment_header_flags :: ".unpack("B*",pack("H*",$segment_header_flags))."\n";
+	
+	# Segment type in segment headers flags (bits 0 to 5); 6 first less significant bits in segment header flags
+	my $segment_type = substr(unpack("B*",pack("H*",$segment_header_flags)), 2);
+	$segment_type = "00".$segment_type;
+	print "segment_type (bin) = $segment_type\n";
+	
+	$segment_type = hex(unpack("H*",pack("B*",$segment_type))); # unpack("H*",pack("B*",$segment_type) => converts binary into hexa
+	print "segment_type (dec) = $segment_type\n";
+	
+	if($segment_type != 0){
+		print "Warning :: DecodeSymboleDico :: This is not a  symbol dictionary segment\n";
+	}
+	
+	# Get page association field size flag (bit 6 in segment header flags)
+	my $page_association_size_flag = substr(unpack("B*",pack("H*",$segment_header_flags)),1,1);
+	print "page_association_size_flag = $page_association_size_flag\n";
+	
+	
+	# Reffered-to segment count (three most significant bits of the first byte of the reffered-to segment count and retention flag)
+	$off += 8;
+	$off2 += 2;
+	my $reffered_segment_count = substr($bitstream,$off,8);
+	print "reffered_segment_count (bin)  = $reffered_segment_count\n";
+	$reffered_segment_count = substr($hexstream,$off2,2);
+	print "Reffered_segment_count (hex) = $reffered_segment_count\n\n";
+	
+	$reffered_segment_count = substr(unpack("B*",pack("H*",$reffered_segment_count)), 0, 3);
+	print "Reffered_segment_count (bin) = $reffered_segment_count\n\n";
+	
+	$reffered_segment_count = hex(unpack("H*",pack("B*",$reffered_segment_count)));
+	print "Reffered_segment_count (dec) = $reffered_segment_count\n\n";
+	
+	my $number_of_bytes_ref_seg = 0;	# Use a better variable name
+	if($reffered_segment_count < 4){
+		$number_of_bytes_ref_seg = $reffered_segment_count + 1;	
+	}else{
+		#If this segment refers to between five and seven other segments, then the field is five bytes long;
+		#if it refers to between eight and fifteen other segments, then the field is six bytes long
+		print "Warning :: DecodeSymboleDico :: Treat the case when number of byte of reffered-to segment is greater than 4\n";
+		$number_of_bytes_ref_seg = 4+(($reffered_segment_count+1)/8);
+		
+	}
+
+
+	
+	# TODO Get Reffered-to segment numbers
+	for(my $i = 0; $i< $number_of_bytes_ref_seg ; $i++){
+		# TODO Get reffered-to segment number 
+	}
+	
+	$off += $number_of_bytes_ref_seg*8;
+	$off2 += $number_of_bytes_ref_seg*2;
+	
+	
+	
+	# Get segment page association
+	if($page_association_size_flag == 0){
+		
+		# TODO Get the number of page to which this segment belongs. (1 byte long) (page number)
+		print "Segment_association : ".substr($hexstream,$off2,2)."\n\n";
+		$off += 8;
+		$off2 += 2;
+	
+	}else{
+		# TODO Get the number of page to which this segment belongs. (4 bytes long)
+		print "Segment_association : ".substr($hexstream,$off2,8)."\n\n";
+		$off += 32;
+		$off2 += 8;
+	}
+	
+	
+	# Get Segment data length
+	my $segment_data_length = substr($bitstream,$off,32);
+	print "segment_data_length (bin)  = $segment_data_length\n";
+	$segment_data_length = substr($hexstream,$off2,8);
+	print "segment_data_length (hex) = $segment_data_length\n";
+	$segment_data_length = hex($segment_data_length);
+	print "segment_data_length (dec) = $segment_data_length bytes\n\n";
+	$off += 32;
+	$off2 += 8;
+	
+	
+	
+	# ::: Segment data part :::
+	
+	# Symbol dictionary flags (two bytes )
+	my $symbol_dictionary_flags = substr($bitstream,$off,16);
+	print "symbol_dictionary_flags (bin)  = $symbol_dictionary_flags\n";
+	$symbol_dictionary_flags = substr($hexstream,$off2,4);
+	print "symbol_dictionary_flags (hex)  = $symbol_dictionary_flags\n\n";
+	$off += 16;
+	$off2 += 4;
+	
+	#$symbol_dictionary_flags = "0802";
+	
+	# SDHUFF = Whether Huffman coding is used (bit 0 in symbol dico flags)
+	my $SDHUFF = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),15,1);
+	print "SDHUFF = $SDHUFF\n";
+	
+	#SDREFAGG = Whether refinement and aggregate coding are used (bit 1 in symbol dico flags)
+	my $SDREFAGG = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),14,1);
+	print "SDREFAGG = $SDREFAGG\n";
+	
+	# SDHUFFDH = The huffman table used to decode the difference in height between two height classes.( bit 2-3)
+	#my $SDHUFFDH="01";
+	#$SDHUFFDH = hex(unpack("H*",pack("b2",$SDHUFFDH)));
+	#rint "SDHUFFDH = $SDHUFFDH\n";
+	
+	my $SDHUFFDH;
+	if($SDHUFF == 0){
+		$SDHUFFDH = 0;
+		print "SDHUFFDH = $SDHUFFDH\n";
+	}else{
+		$SDHUFFDH = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),12,2);
+		print "SDHUFFDH = $SDHUFFDH\n";
+		$SDHUFFDH = hex(unpack("H*",pack("b2","000000".$SDHUFFDH)));
+	}
+	
+	my $SDHUFFDW;
+	if($SDHUFF == 0){
+		$SDHUFFDW = 0;
+		print "SDHUFFDW = $SDHUFFDW\n";
+	}else{
+		$SDHUFFDW = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),10,2);
+		print "SDHUFFDW = $SDHUFFDH\n";
+		$SDHUFFDW = hex(unpack("H*",pack("b2","000000".$SDHUFFDW)));
+	}
+	
+	# SDHUFFBMSIZE 	=> The Huffman table used to decode the size of a height class collective bitmaps (bit 6)
+	my $SDHUFFBMSIZE;
+	if($SDHUFF == 0){
+		$SDHUFFBMSIZE = 0;
+		print "SDHUFFBMSIZE = $SDHUFFBMSIZE\n";
+	}else{
+		my $SDHUFFBMSIZE = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),9,1);
+		print "SDHUFFBMSIZE = $SDHUFFBMSIZE\n";
+	}
+	
+	
+	# SDHUFFAGGINST	=> The Huffman table used to decode the number of symbol instances in an aggregation. (bit 7)
+	my $SDHUFFAGGINST;
+	if($SDHUFF == 0){
+		$SDHUFFAGGINST = 0;
+		print "SDHUFFAGGINST = $SDHUFFAGGINST\n";
+	}else{
+		my $SDHUFFAGGINST = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),8,1);
+		print "SDHUFFAGGINST = $SDHUFFAGGINST\n";
+	}
+	
+	# Bit map coding context ( bit 8)
+	my $bitmap_coding_context_used;
+	if($SDHUFF == 1 && $SDREFAGG == 0){
+		$bitmap_coding_context_used = 0;
+		print "bitmap_coding_context_used = $bitmap_coding_context_used\n";
+	}else{
+		my $bitmap_coding_context_used = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),7,1);
+		print "bitmap_coding_context_used = $bitmap_coding_context_used\n";
+	}
+	
+	# Bit map coding context ( bit 9)
+	my $bitmap_coding_context_retained;
+	if($SDHUFF == 1 && $SDREFAGG == 0){
+		$bitmap_coding_context_retained = 0;
+		print "bitmap_coding_context_retained = $bitmap_coding_context_retained\n";
+	}else{
+		my $bitmap_coding_context_retained = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),6,1);
+		print "bitmap_coding_context_retained = $bitmap_coding_context_retained\n";
+	}
+	
+	# SDTEMPLATE => The template identifier used to decode symbol bitmaps (bits 10-11)
+	my $SDTEMPLATE;
+	if($SDHUFF == 1){
+		$SDTEMPLATE = 0;
+		print "SDTEMPLATE = $SDTEMPLATE\n";
+	}else{
+		$SDTEMPLATE = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),4,2);
+		#print "SDTEMPLATE = $SDTEMPLATE\n";
+		#print "test :: ".pack('B8',$SDTEMPLATE)."\n";
+		#print "test :: ".unpack('H*',pack('B8',$SDTEMPLATE))."\n";
+		#$SDTEMPLATE = hex(unpack("H*",pack("b*",$SDTEMPLATE)));
+		$SDTEMPLATE = hex(unpack("H*",pack("B*","000000".$SDTEMPLATE))); # Bug fix : padd whith zeros.
+		print "SDTEMPLATE = $SDTEMPLATE\n";
+	}
+	
+	# SDRTEMPLATE => Template identifier for refinement coding of bitmaps (bit 12)
+	my $SDRTEMPLATE;
+	if($SDREFAGG == 0){
+		$SDRTEMPLATE = 0;
+		print "SDRTEMPLATE = $SDRTEMPLATE\n";
+	}else{
+		my $SDRTEMPLATE = substr(unpack("B*",pack("H*",$symbol_dictionary_flags)),3,1);
+		print "SDRTEMPLATE = $SDRTEMPLATE\n";
+	}
+	
+	
+	
+	# Symbole dictionary AT flags (only present if SDHUFF is 0)
+	
+	if($SDHUFF == 0){
+	
+		if($SDTEMPLATE == 0){
+			# TODO
+			print "TODO :: case when SDTEMPLATE = 0 \n";
+		}else{
+		
+			# two bytes field
+			my $SDATX1 = substr($bitstream,$off,8);
+			print "SDATX1 (bin)  = $SDATX1\n";
+			$SDATX1 = substr($hexstream,$off2,2);
+			print "SDATX1 (hex)  = $SDATX1\n\n";
+			$off += 8;
+			$off2 += 2;
+			
+			my $SDATY1 = substr($bitstream,$off,8);
+			print "SDATY1 (bin)  = $SDATY1\n";
+			$SDATY1 = substr($hexstream,$off2,2);
+			print "SDATY1 (hex)  = $SDATY1\n\n";
+			$off += 8;
+			$off2 += 2;
+			
+		
+		}
+	
+	}
+	
+	
+	# Symbol dictionary refinement AT flags 4-bytes (only present if SDREFAGG = 1 and SDRTEMPLATE = 0)
+	if( $SDREFAGG == 1 && $SDRTEMPLATE == 0){
+	
+		
+		my $SDRATX1 = substr($bitstream,$off,8);
+		print "SDRATX1 (bin)  = $SDRATX1\n";
+		$SDRATX1 = substr($hexstream,$off2,2);
+		print "SDRATX1 (hex)  = $SDRATX1\n\n";
+		$off += 8;
+		$off2 += 2;
+		
+		my $SDRATY1 = substr($bitstream,$off,8);
+		print "SDRATY1 (bin)  = $SDRATY1\n";
+		$SDRATY1 = substr($hexstream,$off2,2);
+		print "SDRATY1 (hex)  = $SDRATY1\n\n";
+		$off += 8;
+		$off2 += 2;
+		
+		my $SDRATX2 = substr($bitstream,$off,8);
+		print "SDRATX2 (bin)  = $SDRATX2\n";
+		$SDRATX2 = substr($hexstream,$off2,2);
+		print "SDRATX2 (hex)  = $SDRATX2\n\n";
+		$off += 8;
+		$off2 += 2;
+		
+		my $SDRATY2 = substr($bitstream,$off,8);
+		print "SDRATY2 (bin)  = $SDRATY2\n";
+		$SDRATY2 = substr($hexstream,$off2,2);
+		print "SDRATY2 (hex)  = $SDRATY2\n\n";
+		$off += 8;
+		$off2 += 2;
+		
+	}
+	
+	
+	# Number of exported symbols (4-bytes)
+	my $SDNUMEXSYMS = substr($bitstream,$off,32);
+	print "SDNUMEXSYMS (bin)  = $SDNUMEXSYMS\n";
+	$SDNUMEXSYMS = substr($hexstream,$off2,8);
+	print "SDNUMEXSYMS (hex)  = $SDNUMEXSYMS\n";
+	$SDNUMEXSYMS = hex($SDNUMEXSYMS);
+	print "SDNUMEXSYMS (dec)  = $SDNUMEXSYMS\n\n";
+	$off += 32;
+	$off2 += 8;
+	
+	
+	# Number of new symbols (4-bytes)
+	my $SDNUMNEWSYMS = substr($bitstream,$off,32);
+	print "SDNUMNEWSYMS (bin)  = $SDNUMNEWSYMS\n";
+	$SDNUMNEWSYMS = substr($hexstream,$off2,8);
+	print "SDNUMNEWSYMS (hex)  = $SDNUMNEWSYMS\n";
+	$SDNUMNEWSYMS = hex($SDNUMNEWSYMS);
+	print "SDNUMNEWSYMS (dec)  = $SDNUMNEWSYMS\n\n";
+	$off += 32;
+	$off2 += 8;
+	
+	
+	
+	# ::: Decoding procedure ::: #
+	
+	my @SDEXSYMS ; # The return array value from the symbol dictionary decoding procedure;
+	
+	my $HCHEIGHT = 0; # Height of the current height class
+	my $NSYMSDECODED = 0; # How many symbols have been decoded so far
+	
+	
+	# Decode each heigh class
+	while($NSYMSDECODED ne $SDNUMNEWSYMS){ # while all the symbols in the dictionary haven't been decoded
+	
+		my $HCDH; # The difference in height between two height classes
+		
+		
+		
+		my $OOB = "OOB";
+		my $IADH = "IADH";
+		
+		# decode the height class delta heigh: HCDH
+		# ...
+		my ($V,$S) = (0,0);
+		if($SDHUFF == 0){ #Decode the value using the IADH integer arithmetic decoding procedure
+			
+			#...
+			
+			
+			# Get integer (signed) form data.
+			my $INT = substr($bitstream,$off);
+			print "INT (bin)  = $INT\n";
+			#$INT = substr($hexstream,$off2,8);
+			#print "INT (hex)  = $INT\n\n";
+			#$off += 32;
+			#$off2 += 8;
+			
+			#my $CX = 0;
+			
+			# Decode S
+			$S = substr($bitstream,$off,1); # get the sign
+			$off ++;
+			
+			# decode bit
+			my $accu;
+			
+			
+			# flowchart implementation :
+			
+			my $PREV = 1;
+			my $bit = 1;
+			my $len=0;
+			
+			while ($bit == 1 or $len == 6){
+			
+				# decode bit
+				$bit = substr($bitstream,$off,1);
+				$off++;
+				$len++;
+				
+				
+				
+				
+				if( $PREV < 256 ){
+				
+					$PREV = ($PREV << 1)|$bit ;
+
+				}else{
+					$PREV = ((($PREV << 1)|$bit) & 511)|256 ;
+
+				
+				}
+			}
+			
+			
+			if($len == 1){
+			
+				$V = substr($bitstream,$off,2);
+				$off += 2;
+				$V = hex(unpack("H*",pack("B*","000000".$V)));
+				
+			}elsif($len == 2){
+			
+				$V = substr($bitstream,$off,4);
+				$off += 4;
+				$V = hex(unpack("H*",pack("B*","0000".$V))) + 4;
+			
+			}elsif($len == 3){
+			
+				$V = substr($bitstream,$off,6);
+				$off += 6;
+				$V = hex(unpack("H*",pack("B*","00".$V))) + 20;
+			
+			}elsif($len == 4){
+			
+				$V = substr($bitstream,$off,8);
+				$off += 8;
+				$V = hex(unpack("H*",pack("B*",$V))) + 84;
+			
+			}elsif($len == 5){
+			
+				$V = substr($bitstream,$off,12);
+				$off += 12;
+				$V = hex(unpack("H*",pack("B*","0000".$V))) + 340;
+			
+			}elsif($len == 6){
+			
+				$V = substr($bitstream,$off,32);
+				$off += 32;
+				$V = hex(unpack("H*",pack("B*",$V))) + 4436;
+			
+			}
+			
+			
+			#$CX = "IADH000000001";
+			
+			$PREV = ($PREV*2)^$V if ($PREV = );
+			
+			
+			
+			for(my $i=0; $i<32; $i++){
+				$CX = $IADH.$PREV;
+				print "CX = $CX\n";
+			}
+			
+			
+			$HDCDH = $V if ($S == 0);
+			$HDCDH = -1*$V if ($S == 1 && $V>0);
+			$HDCDH = $OOB if($S == 1 && $V == 0);
+			
+			
+		}else{
+			# TODO ... Decode a value using the huffman table specified by SDHUFFDH
+		}
+		
+		#print "HDCDH :: $HDCDH\n";
+		
+		$HCHEIGHT += $HCDH;
+		my $SYMWIDTH = 0;
+		my $TOTWIDTH = 0;
+		my $HCFIRSTSYM = $NSYMSDECODED;
+		
+		
+		#if($SDHUFF == 0){ # 
+			
+			#my $PREV = 1;
+			
+			# Get Integer data
+			#$INT = ; 
+			
+			
+			#$CX = $IADH.$PREV;
+				
+		#}
+	}
+	
+		
+		
+		$NSYMSDECODED ++;
+
+	}
+
+	
+	
+	
+	# Symbole dictionary segment type = 0
+	
+	
+	# Get symbole dictionary segment data header
+	
+	
+	# Get SDHUFF bit : Whether Huffman coding is used (1-bit)
+	
+	
+	# Get SDREFAGG bit : Whether refinement and aggregate coding are used (1-bit)
+	
+	
+	return $out;
+}
+
+
+sub JBIG2Decode{
+
+	my ($stream, $obj_ref, $pdfObjects) = @_;
+	
+	my $out;
+	
+	print "stream = $stream\n\n";
+	
+	
+	my $bitstream = unpack("B*",$stream);
+	
+	#print "bit stream = $bitstream\n\n";
+	
+	#print unpack("H*",$stream)."\n\n";
+	
+	
+	# Get Symbole Dictionary
+	my $sym_dico_stream = &GetSymboleDico($obj_ref,$pdfObjects);
+	print "Symbole dictionary = $sym_dico_stream\n\n";
+	
+	
+	my $res = &DecodeSymboleDico($sym_dico_stream);
+	#print "$res\n";
+	
+	
+	
+	#my $off = 0;
+	# Examine segment header (4 bytes)
+	#my $segment_number = substr($bitstream,0,32);
+	#print "Segment number  = $segment_number\n";
+	#print unpack("H*")."\n";
+	#$off = 32;
+	#my $segment_header_flags = substr($bitstream,$off,8);
+	#print "Segment header flag  = $segment_header_flags\n";
+	
+	#print "Segment type = ".substr($segment_header_flags,0,-5)."\n";
+	#Segment header flags ( 1byte field)
+	#* Bits 0-5 (Segment type)
+	#* Bit 6 (Page association field size)
+	#* Bit 7
+	
+	$out = $stream;
+	return $out;
+
+
+}
 
 
 # Decompress data encoded using 

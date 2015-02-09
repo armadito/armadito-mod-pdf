@@ -90,6 +90,9 @@ my $DEBUG = "no"; # Print debug infos
 # TODO Only analyze updated trailer. (do not get all trailers because the previous are deprecated)
 
 # TODO Bug fix: Get Type entries in dictionary (several sub-dictionaries)
+
+
+# TODO write function Getarray (which get an array in a object) or GetIndirectRef 
 ############################################################
 
 
@@ -480,7 +483,7 @@ sub ObjectAnalysis{
 		
 		# URI path traversal detection 		​
 		if(exists($_->{"action"}) && $_->{"action"} eq "URI"){
-			print "Found URI in object $_->{ref}\n" unless $DEBUG eq "yes";
+			print "Found URI in object $_->{ref}\n" unless $DEBUG eq "no";
 			&ObjectAnalysis::URI_analysis($_);
 		}
 		
@@ -778,10 +781,10 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	#PrintSingleObject("30 0 obj");
-	#PrintSingleObject("25 0 obj");
+	PrintSingleObject("9 0 obj");
+	#PrintSingleObject("85 0 obj");
 	#PrintSingleObject("1 0 obj");
-	#PrintSingleObject("10 0 obj");
+	#PrintSingleObject("2 0 obj");
 	#PrintSingleObject("534 0 obj");
 	#PrintSingleObject("368 0 obj");
 	
