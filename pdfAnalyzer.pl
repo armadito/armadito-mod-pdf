@@ -752,8 +752,8 @@ sub main(){
 	# Get the trailer definition accoring to PDF version below 1.5
 	@trailers = &StructParsing::GetPDFTrailers_until_1_4($content,\%pdfObjects); # Get PDF trailer (works for pdf version below 1.5)
 
-	# If no trailer have been found	
-	if($#trailers <0 && $version =~ /\%PDF-1\.[5|6|7]/){
+	# If no trailer have been found
+	if($#trailers < 0 && $version =~ /\%PDF-1\.[5|6|7]/){
 		@trailers = &StructParsing::GetPDFTrailers_from_1_5($content,\%pdfObjects); #  Get PDF trailer (works for pdf version starting from 1.5)
 	}
 
