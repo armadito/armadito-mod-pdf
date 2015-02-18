@@ -11,11 +11,7 @@ void Helper(){
 }
 
 
-// This function extracts objects embedded in onject streams
-int extractObjectFromObjStream(struct pdfDocument * pdf){
 
-	return 0;
-}
  
 
 

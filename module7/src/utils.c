@@ -154,6 +154,7 @@ struct pdfObject* initPDFObject(){
 	obj->next = NULL;
 	obj->stream_size = 0;
 	obj->content_size = 0;
+	obj->decoded_stream_size = 0;
 	
 		
 	
@@ -195,7 +196,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	//printf("pat = %s\n",pat);
 	//printf("hey! %d :: %d\n",src, size);
 	if( size < pat_size || src == NULL || pat == NULL || pat_size == 0 || size == 0){
-		printf("Err :: hey!\n");
+		printf("Error :: searchPattern :: Bad arguments\n");
 		return NULL;
 	}
 	
@@ -234,3 +235,156 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 }
 
 
+
+// Print object in a debug file (debug.txt)
+void printObject(struct pdfObject * obj){
+
+
+	FILE * debug = NULL;
+
+	// Open en file
+	if(!(debug = fopen("debug.txt","wb+"))){
+		printf("open failed\n");
+		return ;
+	}
+
+	//printf("DEBUG ::: \n");
+
+
+	fputc('\n',debug);
+	fputc('\n',debug);
+	fputc('\n',debug);
+	fwrite("---------------------------------------------",sizeof(char),45,debug);
+	fputc('\n',debug);
+
+	// Reference
+	fwrite(obj->reference,sizeof(char),strlen(obj->reference),debug);
+
+	
+	
+
+	// Dictionary
+	if(obj->dico != NULL){
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fwrite(obj->dico,sizeof(char),strlen(obj->dico),debug);
+	}
+	
+
+	
+	// Type
+	if(obj->type != NULL){
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fwrite(obj->type,sizeof(char),strlen(obj->type),debug);
+	}
+	
+
+
+
+	// Filters
+	if(obj->filters != NULL){
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fwrite(obj->filters,sizeof(char),strlen(obj->filters),debug);
+	}
+
+	
+
+	// Stream 
+	if(obj->stream != NULL){
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fputc('\n',debug);
+		fwrite(obj->stream, sizeof(char),obj->stream_size,debug);
+	}
+		
+	//printf("\n\n::: Object :::\n\n");
+
+
+	fputc('\n',debug);
+	fputc('\n',debug);
+	fputc('\n',debug);
+
+	// Decoded Stream 
+	if(obj->decoded_stream != NULL){
+		fwrite(obj->decoded_stream, sizeof(char),obj->decoded_stream_size,debug);	
+	}
+	
+	
+
+	
+
+
+
+
+	//printf("Reference = %s\n",);
+
+
+	fclose(debug);
+	debug = NULL;
+
+	return;
+}
+
+
+// This function return a number in a string or stream at a given pointer
+int getNumber(char* ptr, int size){
+
+	int num;
+	char * num_a;
+	char * end;
+	int len = 0;
+
+	end = ptr;
+
+	do{
+		//printf("end[0] = %c\n",end[0]);
+		len ++;
+		end ++;
+	}while( (end[0] >= 48 && end[0] <= 57) || len >= size );
+
+
+
+	num_a = (char*)calloc(len,sizeof(char));
+	memcpy(num_a,ptr,len);
+	//printf("num_a = %s\n",num_a);
+
+	num = atoi(num_a);
+	//printf("num = %d\n",num);
+
+
+	return num;
+}
+
+// This function return a number (in ascii string) in a string or stream at a given pointer
+char* getNumber_a(char* ptr, int size){
+
+	//int num;
+	char * num_a;
+	char * end;
+	int len = 0;
+
+	end = ptr;
+
+	do{
+		//printf("end[0] = %c\n",end[0]);
+		len ++;
+		end ++;
+	}while( (end[0] >= 48 && end[0] <= 57) &&  len < size );
+
+
+
+	num_a = (char*)calloc(len,sizeof(char));
+	memcpy(num_a,ptr,len);
+
+	//num = atoi(num_a);
+	//printf("num = %d\n",num);
+
+
+	return num_a;
+
+}

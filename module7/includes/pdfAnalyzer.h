@@ -26,6 +26,7 @@ struct pdfObject{
 	char * decoded_stream;
 	int offset;	// offset (in byte) in the file
 	int stream_size;	// Size in byte of the object's stream
+	int decoded_stream_size;	// Size in byte of the object's decoded stream
 	int content_size;	// size in byte of the object's content
 	//enum efilter * filter;
 	//filter* stream_filter[];
@@ -83,6 +84,9 @@ struct pdfDocument* initPDFDocument();
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
 int analyze(char * filename);
+void printObject(struct pdfObject * obj);
+int getNumber(char* ptr, int size);
+char* getNumber_a(char* ptr, int size);
 
 
 /***** pdf Parsing functions *****/
@@ -92,15 +96,18 @@ char * getObjectDictionary(struct pdfObject * obj);
 char * getObjectType(struct pdfObject * obj);
 char * getObjectStream(struct pdfObject * obj);
 char * getStreamFilters(struct pdfObject * obj);
-int extractObjectFromObjStream(struct pdfDocument * pdf);
+int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
 int getObjectInfos(struct pdfObject * obj);
 int getPDFObjects(struct pdfDocument * pdf);
 int getPDFTrailers_1(struct pdfDocument * pdf);
 int getPDFTrailers_2(struct pdfDocument * pdf);
 int decodeObjectStream(struct pdfObject * obj);
 
+
 /***** filters functions *****/
-//char * 
+char * FlateDecode(char * stream, struct pdfObject* obj);
+char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
+
 
 /***** pdf Structure analysis functions *****/
 

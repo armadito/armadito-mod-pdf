@@ -1223,7 +1223,6 @@ sub AsciiHexDecode{
 	$out = $stream;
 	$out =~ s/([0-9A-Fa-f]{2})/pack("C", hex($1))/ge;
 	
-	
 	return $out;
 }
 
