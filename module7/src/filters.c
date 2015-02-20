@@ -25,9 +25,15 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	//streamd_len = obj->stream_size;
 	//streamd_len = 10000;
 
-	// printf("Stream size = %d...\n",obj->stream_size);	
+	// printf("Stream size = %d...\n",obj->stream_size);
+
+
 
 	streamd  = (char*)calloc(streamd_len,sizeof(char));
+
+	/*if(strncmp(obj->reference,"13 0 obj",8) == 0){
+		printf("data = --%s--\n",stream);
+	}*/
 
 	res = uncompress(streamd,&streamd_len,stream,obj->stream_size);
 
@@ -40,6 +46,10 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 
 	obj->decoded_stream_size = streamd_len;
 
+
+	/*if(strncmp(obj->reference,"13 0 obj",8) == 0){
+		printf("decoded data = %s\n",streamd);
+	}*/
 	//printf("decoded data = %s\n",streamd);
 
 	return streamd;

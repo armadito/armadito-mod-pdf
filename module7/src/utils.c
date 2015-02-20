@@ -364,17 +364,29 @@ int getNumber(char* ptr, int size){
 char* getNumber_a(char* ptr, int size){
 
 	//int num;
-	char * num_a;
-	char * end;
+	char * num_a = NULL;
+	char * end = NULL;
 	int len = 0;
 
 	end = ptr;
 
+	/*
 	do{
 		//printf("end[0] = %c\n",end[0]);
 		len ++;
 		end ++;
 	}while( (end[0] >= 48 && end[0] <= 57) &&  len < size );
+	*/
+
+	while( (end[0] >= 48 && end[0] <= 57) &&  len < size ){
+		len ++;
+		end ++;
+	}
+
+
+	if(len == 0){
+		return NULL;
+	}
 
 
 
@@ -387,4 +399,199 @@ char* getNumber_a(char* ptr, int size){
 
 	return num_a;
 
+}
+
+// This function get the indirect reference in a string at a given pointer
+char * getIndirectRef(char * ptr, int size){
+
+	char * ref = NULL;
+	char * obj_num = NULL; // object number
+	char * gen_num = NULL; // generation number
+
+	//char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+
+
+	end = ptr;
+	len = size;
+
+	if(size < 5){
+		return NULL;
+	}
+
+	// Get the object number
+	obj_num = getNumber_a(end,len);
+	
+
+	if(obj_num == NULL)
+		return NULL;
+
+	//printf("obj_num = %s\n",obj_num);
+
+	end += strlen(obj_num);
+	len -=  strlen(obj_num);
+
+	// Move ptr for white space
+	end ++ ;
+
+	//printf("end[0] = %c\n",end[0]);
+
+	gen_num = getNumber_a(end,len);
+	if(gen_num == NULL)
+		return NULL;
+	//printf("gen_num = %s\n",gen_num);
+
+	end += strlen(gen_num);
+	len -=  strlen(gen_num);
+
+
+	// Move ptr for white space
+	end ++ ;
+	
+	// Check the presence of R => 12 0 R 
+	if(end[0] != 'R'){
+		return NULL;
+	}
+	//printf("end[0] = %c\n",end[0]);
+
+	len = strlen(obj_num) + strlen(gen_num) + 5 ;
+	ref = (char*)calloc(len,sizeof(char));
+
+	strncat(ref, obj_num, strlen(obj_num));
+	strncat(ref, " ", strlen(obj_num));
+	strncat(ref, gen_num, strlen(gen_num));
+	strncat(ref, " obj", 4);
+	//printf("ref = %s\n",ref);	
+
+	return ref;
+
+}
+
+// this function get a string delimited by a given character/pattern (take into account sub delimiters) Ex : << foo << bar >> >>
+char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter2, int src_len){
+
+	char * content = NULL;
+	int sub = 1;
+	char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+	char * tmp = NULL;
+	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"
+
+	tmp = (char*)calloc(strlen(delimiter1),sizeof(char));
+
+
+	start = src;
+	//printf("start = %d\n",start);
+	strncpy(tmp,start,strlen(delimiter1));
+
+	// find start point
+	while(strncmp(tmp,delimiter1,strlen(delimiter1)) != 0){
+
+		start ++;
+		strncpy(tmp,start,strlen(delimiter1));
+
+	}
+	//printf("start = %d\n",start);
+
+	end = start + strlen(delimiter1);
+
+	free(tmp);
+	tmp = NULL;
+	tmp = (char*)calloc(strlen(delimiter2),sizeof(char));
+	strncpy(tmp,start,strlen(delimiter2));
+
+
+	//while( strncmp(tmp,delimiter2,strlen(delimiter2)) != 0  && sub = 0){
+	while( sub > 0  && len <= src_len){
+
+
+		strncpy(tmp,end,strlen(delimiter2));
+		echap = end-1;
+
+
+		if( strncmp(tmp,delimiter1,strlen(delimiter1)) == 0 && echap[0]!='\\'){
+			//printf("clic\n");
+			//printf("echap = %c\n",echap[0]);
+			sub ++;
+			end += strlen(delimiter1);
+		}else{
+
+			if( strncmp(tmp,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
+				//printf("clac\n");
+				//printf("echap = %c\n",echap[0]);
+				sub --;
+				end += strlen(delimiter1);
+			}else{
+				end ++;
+			}
+
+
+
+		}
+
+		
+
+		//end ++;
+		len ++;
+
+
+	}
+
+	end += (strlen(delimiter2)-1);
+
+	//printf("end = %d :: %c\n",end,end[0]);
+	//printf("len = %d\n",len);
+	
+
+
+	if(len > src_len){
+		printf("Error :: getDelimitedStringContent :: len > src_len\n");
+		return NULL;
+	}
+
+
+	
+
+	len = (int)(end - start);
+	printf("len = %d\n",len);
+
+	content = (char*)calloc(len,sizeof(char));
+
+	strncpy(content,start,len);
+	//printf("content = %s\n", );
+
+
+
+
+
+	return content;
+}
+
+// This function get a indirect reference in a string starting in "ptr" :: return NULL if there is not
+char * getIndirectRefInString(char * ptr, int size){
+
+	char * ref = NULL;
+	char * start = NULL;
+	//char * end = NULL;
+	int len = 0;
+
+	if(size < 5){
+		return NULL;
+	}
+
+	start = ptr;
+	len = size;
+	//printf("len = %d\n",len);
+
+	while(ref == NULL && len >= 5 ){
+
+		ref = getIndirectRef(start, len);
+		start ++;
+		len --;
+
+	}
+
+	return ref;
 }

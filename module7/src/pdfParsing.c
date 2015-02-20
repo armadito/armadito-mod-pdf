@@ -73,9 +73,42 @@ int getPDFContent(struct pdfDocument * pdf){
 	
 }
 
-
 //This function get the object dictionary
 char * getObjectDictionary(struct pdfObject * obj){
+	
+	char  * dico = NULL;
+	char * content =  obj->content;
+	char * dico_start = NULL;
+	//char * dico_end = NULL;
+	int len = 0;
+	
+	
+	
+	//char* src, char* pat , int pat_size ,  int size
+	
+	// Search the beginning of the
+	dico_start = searchPattern(content,"<<",2,obj->content_size);
+	
+	if(dico_start == NULL){
+		//printf("No dictionary found in object %s!!\n", obj->reference);
+		return NULL;
+	}
+	
+	// TODO search other occurencies of "<<" to detect sub dictionaries
+	// TODO Found the same number of occurencies of stream ">>"
+	
+	len = (int)(dico_start - obj->content);
+	len = obj->content_size - len;
+
+	dico =  getDelimitedStringContent(dico_start,"<<", ">>", len);
+	
+	return dico;
+	
+}
+
+
+//This function get the object dictionary
+char * getObjectDictionary_old(struct pdfObject * obj){
 	
 	char  * dico = NULL;
 	char * content =  obj->content;
@@ -126,6 +159,8 @@ char * getObjectDictionary(struct pdfObject * obj){
 }
 
 
+
+
 char * getObjectType(struct pdfObject * obj){
 
 	char * type = NULL;
@@ -171,7 +206,12 @@ char * getObjectType(struct pdfObject * obj){
 	len = (int)(start - obj->dico);
 	//printf("len2 = %d :: %d :: %d\n",len, start, obj->dico);
 	
-	start += 1;
+	start += 5;
+
+	// White space
+	if(start[0] == ' '){
+		start ++;
+	}
 	//printf("len = %d \t start = %d \t obj->dico = %d\n",len, start,obj->dico);
 	
 	end = memchr(start,'/',strlen(obj->dico)-len);
@@ -192,7 +232,8 @@ char * getObjectType(struct pdfObject * obj){
 	
 	type = (char*)calloc(len,sizeof(char));
 	//printf("len = %d \n",len);
-	start += 4;
+	//start += 4;
+	len = (int)(end-start);
 	strncpy(type,start,len);
 	
 	
@@ -230,6 +271,13 @@ char * getObjectStream(struct pdfObject * obj){
 	}*/
 	
 	len = (int)(end-start) -1;
+	if(len <= 0 ){
+		printf("Warning :: Empty stream content in object %s\n", obj->reference);
+		return NULL;
+	}
+
+	//printf("len = %d\n",len);
+
 	obj->stream_size = len; // -1 for the white space
 	
 	stream = (char*)calloc(len,sizeof(char));
@@ -305,8 +353,12 @@ char * getStreamFilters(struct pdfObject * obj){
 	
 	//filters = (char*)malloc(len*sizeof(char));
 	filters = (char*)calloc(len,sizeof(char));
-	//printf("len = %d \n",len);
+	printf("len = %d \n",len);
+
 	start += 6;
+	len = (int)(end - start);
+	printf("len = %d \n",len);
+
 	strncpy(filters,start,len);
 	
 	printf("filters = %s \n",filters);
@@ -375,35 +427,35 @@ int decodeObjectStream(struct pdfObject * obj){
 		// Apply decode filter
 		
 		//TODO
-		if(strncmp(filter,"/FlateDecode",len) == 0){
+		if(strncmp(filter,"/FlateDecode",12) == 0){
 				printf("Decode fladetecode \n");
 				stream = FlateDecode(stream, obj);
 		}
 		
 		//TODO
-		if(strncmp(filter,"/ASCIIHexDecode",len) == 0){
+		if(strncmp(filter,"/ASCIIHexDecode",15) == 0){
 				printf("Decode ASCIIHexDecode \n");
 				stream = ASCIIHexDecode(stream, obj);
 			
 		}
 		
 		//TODO
-		if(strncmp(filter,"/ASCII85Decode",len) == 0){
+		if(strncmp(filter,"/ASCII85Decode",14) == 0){
 			
 		}
 		
 		//TODO
-		if(strncmp(filter,"/LZWDecode",len) == 0){
+		if(strncmp(filter,"/LZWDecode",10) == 0){
 			
 		}
 		
 		//TODO
-		if(strncmp(filter,"/RunLengthDecode",len) == 0){
+		if(strncmp(filter,"/RunLengthDecode",16) == 0){
 						
 		}
 		
 		//TODO
-		if(strncmp(filter,"/CCITTFaxDecode",len) == 0){
+		if(strncmp(filter,"/CCITTFaxDecode",15) == 0){
 			
 		}
 		
@@ -452,14 +504,14 @@ int getObjectInfos(struct pdfObject * obj){
 		obj->type = type;
 	}
 	
+
 	// Get stream content
 	stream  = getObjectStream(obj);
 	if(stream != NULL){
 		//printf("stream = %s--\n\n",stream);
 		obj->stream = stream;
 	}
-
-
+	
 	
 	// Get stream filters
 	filters = getStreamFilters(obj);
@@ -550,6 +602,11 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	printf("::: extractObjectFromObjStream :::\n");
 	//printf("strm len = %d\n",strlen(obj->dico));
 
+	/*
+	if(strncmp(obj->reference,"15 0 obj",8) == 0){
+			printf("stream = %s\n\n",stream);
+	}
+	*/
 
 	// Get the number of object embedded in the stream => N in the dictionary
 	start = searchPattern(obj->dico,"/N",2,strlen(obj->dico));
@@ -641,25 +698,30 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 	
 	start = stream;
-	printf("start[0] = %c\n",start[0]);
+	//printf("start[0] = %c\n",start[0]);
 
 
-	len = strlen(obj->stream);
+	len = strlen(stream);
 
 	obj_offsets = (int*)calloc(num,sizeof(int));
+
+	//printf("len_obj_stream = %d\n",len);
 	
 
 	// Get objects number and offset
 	for(i = 0 ; i< num; i++){
 
-
+		//printf("hey!!\n");
+		//printf("start[0] = %c\n",start[0]);
 		// Get the object number
 		obj_num_a = getNumber_a(start,len);
 
-		len -=  strlen(obj_num_a);
+		//printf("Hey :: %d :: %d\n",start,len);
 
+		len -=  strlen(obj_num_a);
 		start += strlen(obj_num_a);
-		printf("obj_num = %s\n",obj_num_a);
+
+		//printf("obj_num = %s\n",obj_num_a);
 
 
 		// Move ptr for white space
@@ -672,19 +734,23 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		obj_offsets[i] = off;
 
 
-		len -=  strlen(obj_num_a);
-		start += strlen(obj_num_a);
-		printf("off = %s\n",off_a);
+		len -=  strlen(off_a);
+		start += strlen(off_a);
 
-		// calc the length of the object according to the offset of the next object.
+		//printf("off = %s\n",off_a);
 
-		// Get objects content
+		// Move ptr for white space
+		start ++ ;
+		//printf("start[0] = %c\n",start[0]);
+
+
+		// calc the length of the object according to the offset of the next object.		
 	}
 
 	printf("\n\n");
 
 	start = stream;
-	len = strlen(obj->stream);
+	len = strlen(stream);
 
 	// // Get objects content
 	for(i = 0 ; i< num; i++){
@@ -719,7 +785,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		start += strlen(obj_num_a);
 
 
-		printf("obj_num = %s\n",obj_num_a);
+		//printf("obj_num = %s\n",obj_num_a);
 
 
 		// Move ptr for white space
@@ -729,9 +795,12 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		off_a = getNumber_a(start,len);
 		off = atoi(off_a);
 
-		len -=  strlen(obj_num_a);
-		start += strlen(obj_num_a);
-		printf("off = %s\n",off_a);
+		len -=  strlen(off_a);
+		start += strlen(off_a);
+		//printf("off = %s\n",off_a);
+
+		// Move ptr for white space
+		start ++ ;
 
 
 		// offset in stream = off + first
@@ -739,12 +808,12 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		// calc the length of the object according to the offset of the next object.
 		if( i != num-1 ){
-			obj_len  = ( obj_offsets[i+1]  - off);
-			printf("obj_len = %d\n",obj_len);
+			obj_len  = ( obj_offsets[i+1] - off);
+			//printf("obj_len = %d\n",obj_len);
 		}else{
 			// calc according to the end of the stream
 			obj_len =  strlen(stream) - ( (stream + first + off) - stream ) ;
-			printf("obj_len = %d\n",obj_len);
+			//printf("obj_len = %d\n",obj_len);
 		}
 		
 		obj_content = (char*)calloc(obj_len,sizeof(char));
@@ -915,7 +984,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 // Get pdf trailer according to PDF
 int getPDFTrailers_1(struct pdfDocument * pdf){
 
-	char * trailer_content = NULL;
+	char * content = NULL;
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
@@ -939,18 +1008,19 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 	}
 	len = (int)(end - start);
 	
-	trailer_content = (char*)calloc(len,sizeof(char));
+	content = (char*)calloc(len,sizeof(char));
 	
-	memcpy(trailer_content,start,len);
+	memcpy(content,start,len);
 	
 	if(!(trailer = initPDFTrailer())){
 		printf("Error :: while initilaizing pdfTrailer structure\n");
 		return -1;
 	}
 	
+	trailer->content = content;
 	pdf->trailers = trailer;
 	
-	printf("trailer content = %s\n",trailer_content);
+	printf("trailer content = %s\n",trailer->content);
 	
 	
 	// TODO get several trailers

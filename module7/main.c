@@ -53,6 +53,19 @@ int analyze(char * filename){
 	printf("DEBUG :: version %s\n",pdf->version);
 	
 	// TODO Get XRef
+
+
+	// Object analysis
+	
+
+	if(pdf->objects != NULL){
+		printf("-------------------------------\n");
+		printf("\n\n::: OBJECT ANALYSIS :::\n\n");
+		getDangerousContent(pdf);	
+	}
+
+	
+
 	
 	freePDFDocumentStruct(pdf);
 	//fclose(f);

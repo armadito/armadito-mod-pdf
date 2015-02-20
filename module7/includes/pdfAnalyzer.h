@@ -87,6 +87,9 @@ int analyze(char * filename);
 void printObject(struct pdfObject * obj);
 int getNumber(char* ptr, int size);
 char* getNumber_a(char* ptr, int size);
+char * getIndirectRef(char * ptr, int size);
+char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter2, int src_len);
+char * getIndirectRefInString(char * ptr, int size);
 
 
 /***** pdf Parsing functions *****/
@@ -109,9 +112,16 @@ char * FlateDecode(char * stream, struct pdfObject* obj);
 char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
 
 
+
 /***** pdf Structure analysis functions *****/
 
 
+
 /***** pdf Objects analysis functions *****/
+int getDangerousContent(struct pdfDocument* pdf);
+int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj);
+int getXFA(struct pdfDocument * pdf, struct pdfObject* obj);
+int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj);
+int getInfoObject(struct pdfDocument * pdf);
 
 #endif
