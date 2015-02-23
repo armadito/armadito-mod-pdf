@@ -114,7 +114,8 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
 
 
 /***** pdf Structure analysis functions *****/
-
+int documentStructureAnalysis(struct pdfDocument * pdf);
+int checkXRef(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions *****/

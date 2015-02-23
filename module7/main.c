@@ -48,6 +48,9 @@ int analyze(char * filename){
 	
 	// TODO Get Trailer
 	getPDFTrailers_1(pdf);
+	if(pdf->trailers == NULL){
+		getPDFTrailers_2(pdf);
+	}
 	
 	
 	printf("DEBUG :: version %s\n",pdf->version);
@@ -56,15 +59,14 @@ int analyze(char * filename){
 
 
 	// Object analysis
-	
-
 	if(pdf->objects != NULL){
 		printf("-------------------------------\n");
 		printf("\n\n::: OBJECT ANALYSIS :::\n\n");
 		getDangerousContent(pdf);	
 	}
 
-	
+	// Document structure analysis
+	documentStructureAnalysis(pdf);
 
 	
 	freePDFDocumentStruct(pdf);

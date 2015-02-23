@@ -341,12 +341,22 @@ int getNumber(char* ptr, int size){
 
 	end = ptr;
 
+	while( (end[0] >= 48 && end[0] <= 57) &&  len < size ){
+		len ++;
+		end ++;
+	}
+
+	if(len == 0){
+		return -1;
+	}
+
+	/*
 	do{
 		//printf("end[0] = %c\n",end[0]);
 		len ++;
 		end ++;
 	}while( (end[0] >= 48 && end[0] <= 57) || len >= size );
-
+	*/
 
 
 	num_a = (char*)calloc(len,sizeof(char));
@@ -477,9 +487,11 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	char * end = NULL;
 	int len = 0;
 	char * tmp = NULL;
+	char * tmp2 = NULL;
 	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"
 
 	tmp = (char*)calloc(strlen(delimiter1),sizeof(char));
+	tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
 
 
 	start = src;
@@ -497,17 +509,20 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 	end = start + strlen(delimiter1);
 
-	free(tmp);
-	tmp = NULL;
-	tmp = (char*)calloc(strlen(delimiter2),sizeof(char));
-	strncpy(tmp,start,strlen(delimiter2));
+	//free(tmp);
+	//tmp = NULL;
+
+
+	tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
+	strncpy(tmp2,start,strlen(delimiter2));
 
 
 	//while( strncmp(tmp,delimiter2,strlen(delimiter2)) != 0  && sub = 0){
 	while( sub > 0  && len <= src_len){
 
 
-		strncpy(tmp,end,strlen(delimiter2));
+		strncpy(tmp,end,strlen(delimiter1));
+		strncpy(tmp2,end,strlen(delimiter2));
 		echap = end-1;
 
 
@@ -518,44 +533,38 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 			end += strlen(delimiter1);
 		}else{
 
-			if( strncmp(tmp,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
+			if( strncmp(tmp2,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
 				//printf("clac\n");
 				//printf("echap = %c\n",echap[0]);
 				sub --;
-				end += strlen(delimiter1);
+				end += strlen(delimiter2);
+
 			}else{
 				end ++;
 			}
-
-
-
 		}
 
-		
 
 		//end ++;
-		len ++;
+		//len ++;
 
 
 	}
 
-	end += (strlen(delimiter2)-1);
+	//end += (strlen(delimiter2)-1);
 
 	//printf("end = %d :: %c\n",end,end[0]);
 	//printf("len = %d\n",len);
 	
 
 
+	len = (int)(end - start);
+	printf("len = %d\n",len);
+
 	if(len > src_len){
 		printf("Error :: getDelimitedStringContent :: len > src_len\n");
 		return NULL;
 	}
-
-
-	
-
-	len = (int)(end - start);
-	printf("len = %d\n",len);
 
 	content = (char*)calloc(len,sizeof(char));
 

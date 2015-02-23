@@ -1033,11 +1033,47 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 // Get pdf trailer according to PDF version starting from 1.5
 int getPDFTrailers_2(struct pdfDocument * pdf){
 
-	char * trailer_content = NULL;
+	char * content = NULL;
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
 	struct pdfTrailer * trailer;
+
+
+	end = pdf->content;
+	len = pdf->size;
+
+	while( (start = searchPattern(end,"startxref",9,len) ) != NULL ){
+
+		len = (int)(start - end);
+		len = pdf->size -len ;
+		end = searchPattern(start,"%%EOF",5,len);
+		end += 5;
+		
+
+		len = (int)(end - start);
+		content = (char*)calloc(len,sizeof(char));
+
+		memcpy(content,start,len);
+	
+		if(!(trailer = initPDFTrailer())){
+			printf("Error :: while initilaizing pdfTrailer structure\n");
+			return -1;
+		}
+		
+		trailer->content = content;
+		pdf->trailers = trailer;
+		printf("trailer content = %s\n",content);
+
+		len = (int)( end - pdf->content);
+		len = pdf->size - len ;
+
+		printf("\n\n");
+
+
+	}
+
+	/*
 	
 	start = searchPattern(pdf->content,"startxref",9,pdf->size);
 	
@@ -1049,7 +1085,7 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 	//len = obj->content_size - len;
 	
 	end = searchPattern(start,"%%EOF",5,pdf->size-len);
-	end += 5;
+	
 	
 	if(end == NULL){
 		return -1;
@@ -1057,19 +1093,21 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 	
 	len = (int)(end - start);
 	
-	trailer_content = (char*)calloc(len,sizeof(char));
+	content = (char*)calloc(len,sizeof(char));
 	
-	memcpy(trailer_content,start,len);
+	memcpy(content,start,len);
 	
 	if(!(trailer = initPDFTrailer())){
 		printf("Error :: while initilaizing pdfTrailer structure\n");
 		return -1;
 	}
 	
+	trailer->content = content;
 	pdf->trailers = trailer;
+
 	
-	printf("trailer content = %s\n",trailer_content);
-	
+	printf("trailer content = %s\n",content);
+	*/
 	
 	// TODO get several trailers
 

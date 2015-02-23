@@ -233,7 +233,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 	// Get by Type or by Filespec (EF entry)
 
-	if( strncmp(obj->type,"/EmbeddedFile",13) == NULL){
+	if( strncmp(obj->type,"/EmbeddedFile",13) == 0){
 
 
 		printf("Found EmbeddedFile object %s\n",obj->reference);
@@ -256,7 +256,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 
 	
-	if( strncmp(obj->type,"/Filespec",9) == NULL){
+	if( strncmp(obj->type,"/Filespec",9) == 0){
 
 		// Get EF entry in dico
 		start = searchPattern(obj->dico, "/EF" , 3 , strlen(obj->dico));
@@ -289,7 +289,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 			if(ef_obj->dico == NULL){
 				printf("Warning :: No dictionary found in object %s\n",ef_obj_ref);
-				return NULL;
+				return -1;
 			}
 			// Get the /F entry in the dico
 			start = searchPattern(ef_obj->dico, "/F" , 2 , strlen(ef_obj->dico));
@@ -356,7 +356,7 @@ int getInfoObject(struct pdfDocument * pdf){
 	char * info_ref = 0;
 	struct pdfObject * info_obj = NULL;
 	char * start = NULL;
-	char * end = NULL;
+	//char * end = NULL;
 	int len = 0;
 	struct pdfTrailer* trailer = NULL;
 
@@ -364,7 +364,7 @@ int getInfoObject(struct pdfDocument * pdf){
 	// Get the trailer
 	if(pdf->trailers == NULL){
 		printf("Warning :: getInfoObject :: No trailer found !");
-		return NULL;
+		return -1;
 	}
 
 	trailer = pdf->trailers;
@@ -375,6 +375,12 @@ int getInfoObject(struct pdfDocument * pdf){
 		//printf("trailer content = %s\n",trailer->content );
 		//printf("trailer size = %d\n",strlen(trailer->content));
 
+		if(trailer->content == NULL){
+			printf("Error :: getInfoObject :: Empty trailer content\n");
+			trailer = trailer->next;
+			continue;
+		}
+
 		start = searchPattern(trailer->content, "/Info" , 5 , strlen(trailer->content));
 
 		if(start == NULL){
@@ -382,7 +388,6 @@ int getInfoObject(struct pdfDocument * pdf){
 			return 0;
 		}
 
-		
 
 		start += 5;
 
