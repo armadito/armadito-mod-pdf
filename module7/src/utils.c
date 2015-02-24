@@ -559,7 +559,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 
 	len = (int)(end - start);
-	printf("len = %d\n",len);
+	//printf("len = %d\n",len);
 
 	if(len > src_len){
 		printf("Error :: getDelimitedStringContent :: len > src_len\n");
@@ -603,4 +603,100 @@ char * getIndirectRefInString(char * ptr, int size){
 	}
 
 	return ref;
+}
+
+
+// get a pattern of length (size)  in ptr and skip white spaces
+char * getPattern(char * ptr, int size, int len){
+
+	char * pattern = NULL;
+	int i = 0;
+	int white_spaces = 0;
+	//int tmp = 0;
+	//int tmp_len = 0;
+
+
+	if(len < size){
+		return NULL;
+	}
+
+	//tmp = len;
+
+	pattern = (char*)calloc(size,sizeof(char));
+
+	for(i=0; i< size ; i++){
+
+		/*
+		// Skip white spaces
+		while(ptr[0] == '\n' || ptr[0] == '\r' || ptr[0] == ' '){
+			ptr ++;
+			white_spaces ++;
+			len--;
+			if( (size - i)  > len )
+				return NULL;
+		}*/
+
+		/*
+		len --;
+		if( (size - i)  > len )
+				return NULL;
+		*/
+
+		pattern[i] = ptr[0];
+
+		ptr++;
+	}
+
+
+	return pattern;
+
+}
+
+
+// This function return the first unicode string if present in the stream given in parameters
+char * getUnicodeInString(char * stream, int size){
+
+	char * unicode = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+	
+	start = stream;
+	len = size ;
+
+
+	while( unicode == NULL && len > 6){
+
+		start = searchPattern(stream, "%u", 2, len);
+		
+
+		if(start == NULL){
+			//printf("No unicode detected\n");
+			return NULL;
+		}
+
+		end = start +2 ;
+
+		len = 0;
+		while( (end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57) || len != 4 ){
+			len ++;
+			end ++ ;
+		}
+
+		if(len == 4){			
+			unicode = start;
+			return unicode;
+		}
+
+
+		len = (int)(start - stream);
+		len = size - len;
+
+		start ++;
+
+	}
+
+
+
+	return NULL;
 }

@@ -92,7 +92,10 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 
 	// TODO Launch analysis on content
-
+	if(js != NULL){
+		unknownPatternRepetition(js, strlen(js), obj);
+		findDangerousKeywords(js,obj);
+	}
 
 
 
@@ -172,7 +175,7 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 			printf("xfa_obj_ref = %s\n",xfa_obj_ref);
 
-			end = searchPattern(end, xfa_obj_ref , 4 , len2);
+			end = searchPattern(end, xfa_obj_ref , 4 , len2); // change value 4
 			end += strlen(xfa_obj_ref) - 2;
 
 			len2 = (int)(end - obj_list);
@@ -196,6 +199,7 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			if(xfa != NULL){
 				//printf("XFA content = %s\n",xfa);	
 				// TODO Analyze xfa content
+				unknownPatternRepetition(xfa, strlen(xfa), xfa_obj);
 			}else{
 				printf("Warning :: Empty XFA content in object %s\n",xfa_obj_ref);
 			}
@@ -203,10 +207,48 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 		}
 
+	}else{
+				
+		len2 = (int)(start - obj->dico);
+		len2 = strlen(obj->dico) - len2;
+
+
+		xfa_obj_ref = getIndirectRefInString(start, len2);
+
+		if(xfa_obj_ref == NULL){
+			printf("Error :: getXFA :: get xfa object indirect reference failed\n");
+			return -1;
+		}
+
+		printf("xfa_obj_ref = %s\n",xfa_obj_ref);
+
+		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
+
+		if(xfa_obj == NULL){
+			printf("Error :: getXFA :: Object %s not found\n",xfa_obj_ref);
+			return -1;
+		}
+
+		// get xfa content
+		if(xfa_obj->decoded_stream != NULL ){
+			xfa = xfa_obj->decoded_stream;
+		}else{
+			xfa = xfa_obj->stream;
+		}
+
+		if(xfa != NULL){
+			//printf("XFA content = %s\n",xfa);	
+			// TODO Analyze xfa content
+			unknownPatternRepetition(xfa, strlen(xfa), xfa_obj);
+		}else{
+			printf("Warning :: Empty XFA content in object %s\n",xfa_obj_ref);
+		}
+
+
 	}
+
 	
-
-
+	
 	printf("\n\n");
 	return 1;
 
@@ -343,6 +385,10 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 	}
 
+	/*if(ef != NULL){
+		ptr2_len > pattern_size
+	}*/
+
 
 
 	return 1;
@@ -446,7 +492,7 @@ int getDangerousContent(struct pdfDocument* pdf){
 
 		//printf("Analysing object :: %s\n",obj->reference);
 
-		//getJavaScript(pdf,obj);
+		getJavaScript(pdf,obj);
 
 		//getXFA(pdf,obj);
 
@@ -460,5 +506,182 @@ int getDangerousContent(struct pdfDocument* pdf){
 	getInfoObject(pdf);
 
 	return res;
+
+}
+
+
+
+
+// This function detects when a string (unknown) is repeted in the stream with a high frequency.
+// TODO remove white spaces to improve results.
+int unknownPatternRepetition(char * stream, int size, struct pdfObject * obj){
+
+	//int ret = 0;
+	char * pattern = NULL;
+	int pattern_size = 5;
+	//char * start = NULL;
+	//char * end = NULL;
+	//char * len = 0;
+	int rep = 0;
+	int lim_rep = 100;
+	//int off = 0;
+	char * ptr = NULL;
+	char * ptr_bis = NULL;
+	int ptr_len = 0;
+	int ptr2_len = 0;
+	char * tmp = NULL;
+
+
+	printf("\n\nDebug :: unknownPatternRepetition \n");
+
+
+	// remove white space in stream ? 
+	//ptr = removeWhiteSpace(stream,size);
+
+
+
+	ptr = stream;
+	ptr_len = strlen(stream);
+
+	ptr_bis = stream;
+	ptr2_len = strlen(stream);
+
+
+
+	/*
+	printf("ptr[0] = %c\n", ptr[0] );
+	printf("ptr[1] = %c\n", ptr[1] );
+	printf("ptr[2] = %c\n", ptr[2] );
+	printf("ptr[3] = %c\n", ptr[3] );
+	printf("ptr[4] = %c\n", ptr[4] );
+	*/
+
+
+
+	// get pattern
+	while( ptr_len > pattern_size && (pattern = getPattern(ptr,pattern_size,ptr_len)) != NULL ){
+
+		rep = 0;
+		//printf("pattern = %s :: ptr_len = %d:: ptr = %d\n",pattern,ptr_len, ptr);
+		ptr ++;
+		ptr_len --;
+
+		// search occurrences
+		ptr_bis = ptr+5;
+		ptr2_len = ptr_len-5;
+
+		while( ptr2_len > pattern_size && (tmp = getPattern(ptr_bis,pattern_size,ptr2_len)) != NULL){
+
+			if(strncmp(pattern,tmp,pattern_size) == 0){
+				rep ++;
+			}
+
+			if(rep > lim_rep){
+				printf("Warning :: unknownPatternRepetition :: Found pattern repetition in object %s\n",obj->reference);
+				printf("pattern = %s :: rep = %d--\n\n",pattern,rep);
+				return rep;
+			}
+
+			ptr_bis ++;
+			ptr2_len --;
+			
+		}
+
+		/*
+		if(rep > 100){
+			return 100;
+		}
+		*/
+
+	}
+
+
+	return 0 ;
+
+}
+
+
+
+
+
+
+
+
+// Find a potentially dangerous pattern in the given stream; return High = 3 ; Medium = 2 ; Low = 1 ; none = 0
+int findDangerousKeywords(char * stream , struct pdfObject * obj){
+
+	int i = 0;
+	char * high_keywords[] = {"HeapSpray","heap","spray","hack","shellcode", "shell", "Execute", "pointers", "byteToChar", "system32", "payload", "console"};
+	int num_high = 12;
+	int num_medium = 10;
+	char * medium_keywords[] = {"toString", "substring", "split", "eval", "addToolButton", "String.replace", "unscape", "exportDataObject", "StringFromChar", "util.print"};
+	char * start = NULL;
+	int len = 0;
+	int unicode_count = 0;
+	char* unicode = NULL;
+
+
+
+	//stream = "hackbonjour";
+
+	//printf("Test :: %s\n",high_keywords[i]);
+
+	for(i = 0; i< num_high ; i++){
+
+		//printf("Test :: %s\n",high_keywords[i]);
+		//if(strnstr(stream,high_keywords[i],strlen(high_keywords[i])) != NULL ){
+		if(searchPattern(stream,high_keywords[i],strlen(high_keywords[i]),strlen(stream)) != NULL ){
+			printf("Warning :: findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);
+			return 3;
+		}
+
+	}
+
+	// find unicode strings
+	//stream = "%ufadeqsdqdqsdqsdqsdqsdqsd";
+	start = stream ;
+	len = strlen(stream);
+
+	unicode = (char*)calloc(6,sizeof(char));
+
+	while( len >= 6 && (start = getUnicodeInString(start,len)) != NULL ){
+
+		memcpy(unicode, start, 6);
+		printf("Found unicode string %s\n",unicode);
+
+		unicode_count ++ ;
+		start ++;
+
+		len = (int)(start - stream);
+		len = strlen(stream) - len;
+		//printf("len = %d\n",len);
+
+	}
+
+	if(unicode_count > 10){
+		printf("Warning :: findDangerousKeywords :: Unicode string found in object %s\n", obj->reference);
+
+	}
+	
+
+
+
+
+
+	for(i = 0; i< num_medium ; i++){
+
+		//printf("Test :: %s\n",medium_keywords[i]);
+		//if(strnstr(stream,medium_keywords[i],strlen(medium_keywords[i])) != NULL ){
+		if(  searchPattern(stream,medium_keywords[i],strlen(medium_keywords[i]),strlen(stream)) != NULL ){
+			printf("Warning :: findDangerousKeywords :: Medium dangerous keyword (%s) found in object %s\n",medium_keywords[i], obj->reference);
+			return 2;
+		}
+
+	}
+
+
+
+	return 0;
+
 
 }

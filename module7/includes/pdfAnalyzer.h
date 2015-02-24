@@ -90,6 +90,8 @@ char* getNumber_a(char* ptr, int size);
 char * getIndirectRef(char * ptr, int size);
 char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter2, int src_len);
 char * getIndirectRefInString(char * ptr, int size);
+char * getPattern(char * ptr, int size, int len);
+char * getUnicodeInString(char * stream, int size);
 
 
 /***** pdf Parsing functions *****/
@@ -116,6 +118,7 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
 /***** pdf Structure analysis functions *****/
 int documentStructureAnalysis(struct pdfDocument * pdf);
 int checkXRef(struct pdfDocument * pdf);
+int checkEmptyDocument(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions *****/
@@ -124,5 +127,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj);
 int getXFA(struct pdfDocument * pdf, struct pdfObject* obj);
 int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj);
 int getInfoObject(struct pdfDocument * pdf);
+int unknownPatternRepetition(char * stream, int size, struct pdfObject * obj);
+int findDangerousKeywords(char * stream , struct pdfObject * obj);
 
 #endif

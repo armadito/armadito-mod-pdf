@@ -271,13 +271,219 @@ int checkXRef(struct pdfDocument * pdf){
 
 
 
+// This function checks if pages contituting the document are not all empty. => returns 1 if not empty
+// TODO :: Improve this function by creating a function getPagesKids which could be called recursively when the Kids objects reffers also to a /Pages object.
+int checkEmptyDocument(struct pdfDocument * pdf){
 
-// This function check if the document respects the PDF reference recommendations...
+
+	struct pdfObject * obj = NULL;
+	int ret = 0;
+	char * start = NULL;
+	char * end = NULL;
+	char * kids = NULL;
+	char * kid_obj_ref = NULL;
+	struct pdfObject * kid_obj = NULL;
+	char * pageContents = NULL;
+	char * pageContent_obj_ref = NULL;
+	struct pdfObject * pageContent_obj = NULL;
+	//char * contentStream = NULL;
+	//char * tmp = NULL;
+	int len = 0;
+	int len2 = 0;
+
+	if(pdf == NULL){
+		printf("Error :: checkEmptyDocument :: NULL pdf object in parameter\n");
+		return -1;
+	}
+
+
+	obj = pdf->objects;
+
+	while(obj != NULL){
+
+		if(obj->type != NULL && strncmp(obj->type,"/Pages",6) == 0){
+
+			printf("Found /Pages object :: %s\n",obj->reference);
+			printf("Dico = %s\n",obj->dico);
+
+			// get kids pages
+			start = searchPattern(obj->dico, "/Kids", 5 , strlen(obj->dico));
+
+			if(start == NULL){
+				printf("Warning :: no kids entry in pages dictionary %s\n",obj->reference);
+				obj = obj->next; // go to the next object
+				continue;
+			}
+
+			start += 5;
+
+			len = (int)(start - obj->dico);
+			len = strlen(obj->dico) -len;
+
+			//while
+			kids = getDelimitedStringContent(start,"[","]",len);
+			printf("kids = %s\n",kids);
+
+
+			len = strlen(kids);
+			end = kids;
+
+			while( (kid_obj_ref = getIndirectRefInString(end,len)) != NULL){
+
+				//printf("kid ref = %s :: %d\n",kid_obj_ref,kid_obj_ref);
+
+				printf("kid ref = %s\n",kid_obj_ref);
+				
+
+				end = searchPattern(end,kid_obj_ref,strlen(kid_obj_ref)-3,len);
+
+				if(end == NULL){
+					printf("Error :: checkEmptyDocument :: end == NULL\n" );
+					return -1;
+				}
+
+				end += strlen(kid_obj_ref) - 2;
+
+				len = (int)(end - kids);
+				len = strlen(kids) - len;
+				//printf("kids = %d :: end = %d :: len = %d\n",kids, end, len );
+
+				if((kid_obj = getPDFObjectByRef(pdf,kid_obj_ref)) == NULL){
+						printf("Warning :: checkEmptyDocument :: Object not found %s\n", kid_obj_ref);
+						continue;
+				}
+
+				// check the type of the object
+				
+				if(kid_obj->dico != NULL && kid_obj->type != NULL && strncmp(kid_obj->type,"/Page",5) == 0){
+
+					start = searchPattern(kid_obj->dico, "/Contents", 9 , strlen(kid_obj->dico));
+					printf("Page dico = %s\n",kid_obj->dico);
+
+					if(start == NULL){
+						printf("Warning :: checkEmptyDocument :: No page content in object %s\n",kid_obj_ref);
+						continue;
+					}
+
+					start += 9;
+
+					// skip white spaces
+					while(start[0] == ' '){
+						start ++;
+					}
+
+					printf("start[0] = %c\n",start[0]);
+
+					// if there is serveral content objects
+					if(start[0] == '['){
+
+						len2 = (int)(start - kid_obj->dico);
+						len2 = strlen(kid_obj->dico) - len2;
+						pageContents = getDelimitedStringContent(start,"[","]",len2);
+
+						if(pageContents == NULL){
+							printf("Warning :: checkEmptyDocument ::getting Page content array failed !\n");
+							continue;
+						}
+
+						len2 = strlen(pageContents);
+						start = pageContents;
+
+						// get page content objects ref
+						while( (pageContent_obj_ref = getIndirectRefInString(start,len2)) != NULL){
+
+							printf(" page content ref = %s\n",pageContent_obj_ref);
+
+							start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
+
+							if(start == NULL){
+								printf("Error :: checkEmptyDocument :: end == NULL\n" );
+								return -1;
+							}
+
+							start += strlen(pageContent_obj_ref) - 2;
+
+							len2 = (int)(end - pageContents);
+							len2 = strlen(pageContents) - len2;
+
+
+							if((pageContent_obj = getPDFObjectByRef(pdf,pageContent_obj_ref)) == NULL){
+									printf("Warning :: checkEmptyDocument :: Object not found %s\n", pageContent_obj_ref);
+									continue;
+							}
+
+							// get the stream
+							if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
+								printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+								//return 1;
+								ret = 1;
+							}else{
+								printf("Warning :: checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
+							}
+
+
+						}
+
+
+					}else{
+
+						len2 = (int)(start - kid_obj->dico);
+						len2 = strlen(kid_obj->dico) - len2;
+						pageContent_obj_ref = getIndirectRef(start, len2);
+
+						if(pageContent_obj_ref == NULL){
+							printf("Warning :: checkEmptyDocument :: Error while getting page content object reference \n");
+							continue;
+						}
+
+						if((pageContent_obj = getPDFObjectByRef(pdf,pageContent_obj_ref)) == NULL){
+								printf("Warning :: checkEmptyDocument :: Object not found %s\n", pageContent_obj_ref);
+								continue;
+						}
+
+						// get the stream
+						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
+							//return 1;
+							printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+							ret = 1;
+
+						}else{
+							printf("Warning :: checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
+						}
+
+
+					}
+
+
+				}
+
+				
+			}
+
+
+		}
+
+
+		obj = obj->next;
+
+	}
+
+
+	return ret;
+
+}
+
+
+
+// This function check ifs the document respects the PDF reference recommendations...
 int documentStructureAnalysis(struct pdfDocument * pdf){
 
 	printf("\n\n::: DOCUMENT STRUCTURE ANALYSIS :::\n\n");
 
-	checkXRef(pdf);
+	//checkXRef(pdf);
+	//checkEmptyDocument(pdf);
+
+
 
 
 	return 0;
