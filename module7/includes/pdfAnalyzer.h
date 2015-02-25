@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 //#include <regex.h>
 
 // FILTERS
@@ -13,6 +14,27 @@
 #define
 */
 
+
+// Define Tests Coefficients
+
+//#define bad_header 
+//#define encrypted
+#define EMPTY_PAGE_CONTENT 99
+#define OBJECT_COLLISION 10
+#define OBJECT_COLLISION_AND_BAD_XREF 70
+#define BAD_TRAILER 40
+#define BAD_XREF_OFFSET 30
+#define BAD_OBJ_OFFSET 20
+#define OBFUSCATED_OBJECT 50 
+#define MULTIPLE_HEADERS 50
+
+#define ACTIVE_CONTENT 40
+#define SHELLCODE 40
+#define PATTERN_HIGH_REPETITION 40
+#define DANGEROUS_KEYWORD_HIGH 90
+#define DANGEROUS_KEYWORD_MEDIUM 40
+#define DANGEROUS_KEYWORD_LOW 20
+#define TIME_EXCEEDED 20
 
 // PDF object structure
 struct pdfObject{
@@ -55,6 +77,47 @@ struct pdfXRef{
 };
 
 
+// Suit of tests according to the PDF structure specifications.
+struct testsPDFStruct{
+
+	int bad_header;	// when the PDF header is incorrect
+	int encrypted;	//  when the document is encrypted
+	int empty_page_content;	// when all pages are empty of content
+	int object_collision;	// when two objects have the same reference in the document.
+	int bad_trailer;	// when the trailer is in an incorrect form
+	int bad_xref_offset; // when the offset of the xref table is incorrect;
+	int bad_obj_offset; // When at least an object's offset in the reference table is incorrect
+	int obfuscated_object;	// when an object dictionary is obfuscated within hexa
+	int multiple_headers; // when several headers are found in the document.
+
+};
+
+
+struct testsPDFObjAnalysis{
+
+	int active_content;	// presence of js, embedded files, or forms.
+	int shellcode;	// presence of shellcode in an object stream content
+	int pattern_high_repetition;	// high scale repetition of a pattern in a stream content
+	int dangerous_keyword_high;	// potentially dangerous keyword (high level)
+	int dangerous_keyword_medium;	// potentially dangerous keyword (medium level)
+	int dangerous_keyword_low;	// potentially dangerous keyword (lowlevel)
+	int time_exceeded;	// when the analysis of an object stream exceed a given duration.
+
+	int js; // number of js content
+	int xfa; // number of xfa objects
+	int ef; // number of ef objects
+
+
+};
+
+/*
+struct testCVEs{
+
+};
+*/
+
+
+
 // PDF Document structure
 struct pdfDocument{
 	
@@ -65,25 +128,33 @@ struct pdfDocument{
 	int size;	// size in bytes of the PDF
 	char * version;	// PDF specification version
 	struct pdfTrailer* trailers;
-	struct pdfXRef* xref;	
+	struct pdfXRef* xref;
+	struct testsPDFStruct * testStruct;
+	struct testsPDFObjAnalysis * testObjAnalysis;
 
 };
 
 
 /* Functions */
-
+void Helper();
+int analyze(char * filename);
+int calcSuspiciousCoefficient(struct pdfDocument * pdf);
+int analysisReport(struct pdfDocument * pdf, char * filename);
 
 
 /***** Utils functions *****/
-void Helper();
 void freePDFDocumentStruct(struct pdfDocument * pdf);
+void freePDFObjectStruct(struct pdfObject * obj);
+void freePDFTrailerStruct(struct pdfTrailer * trailer);
 void * searchPattern(char* src, char* pat , int pat_size ,  int size);
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
+int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer);
 struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref);
 struct pdfDocument* initPDFDocument();
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
-int analyze(char * filename);
+struct testsPDFStruct * initTestsPDFStruct();
+struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
 void printObject(struct pdfObject * obj);
 int getNumber(char* ptr, int size);
 char* getNumber_a(char* ptr, int size);
@@ -92,22 +163,24 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 char * getIndirectRefInString(char * ptr, int size);
 char * getPattern(char * ptr, int size, int len);
 char * getUnicodeInString(char * stream, int size);
+char * getHexa(char * dico, int size);
+char * replaceInString(char * src, char * toReplace , char * pat);
 
 
 /***** pdf Parsing functions *****/
 int checkMagicNumber(struct pdfDocument * pdf);
 int getPDFContent(struct pdfDocument * pdf);
-char * getObjectDictionary(struct pdfObject * obj);
+char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf);
 char * getObjectType(struct pdfObject * obj);
 char * getObjectStream(struct pdfObject * obj);
 char * getStreamFilters(struct pdfObject * obj);
 int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
-int getObjectInfos(struct pdfObject * obj);
+int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf);
 int getPDFObjects(struct pdfDocument * pdf);
 int getPDFTrailers_1(struct pdfDocument * pdf);
 int getPDFTrailers_2(struct pdfDocument * pdf);
 int decodeObjectStream(struct pdfObject * obj);
-
+char * hexaObfuscationDecode(char * dico);
 
 /***** filters functions *****/
 char * FlateDecode(char * stream, struct pdfObject* obj);
@@ -127,7 +200,8 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj);
 int getXFA(struct pdfDocument * pdf, struct pdfObject* obj);
 int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj);
 int getInfoObject(struct pdfDocument * pdf);
-int unknownPatternRepetition(char * stream, int size, struct pdfObject * obj);
-int findDangerousKeywords(char * stream , struct pdfObject * obj);
+int unknownPatternRepetition(char * stream, int size,struct pdfDocument * pdf, struct pdfObject * obj);
+int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfObject * obj);
+int getURI(struct pdfDocument * pdf, struct pdfObject * obj);
 
 #endif

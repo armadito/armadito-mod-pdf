@@ -378,10 +378,11 @@ sub GetObjectInfos{
 	
 	if($status eq "hex_obfuscation"){
 	
-		if(exists($main::TESTS_CAT_1->{"Obfuscated Objects"})){
-			$main::TESTS_CAT_1->{"Obfuscated Objects"} ++ ;
+		if(exists($main::TESTS_CAT_1{"Obfuscated Objects"})){
+			print "Found :: hexa obfuscated Dictionary !! ".$main::TESTS_CAT_1{"Obfuscated Objects"}."\n";
+			$main::TESTS_CAT_1{"Obfuscated Objects"} ++ ;
 		}else{
-			$main::TESTS_CAT_1->{"Obfuscated Objects"}=1;
+			$main::TESTS_CAT_1{"Obfuscated Objects"}=1;
 		}
 		
 	}

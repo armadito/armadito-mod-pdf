@@ -1,48 +1,91 @@
 #include "pdfAnalyzer.h"
 
+// This function free the memory allocated for an object structure
+void freePDFObjectStruct(struct pdfObject * obj){
 
+	struct pdfObject * tmp = NULL;
+
+
+	if(obj == NULL){
+		return ;
+	}
+
+
+	while(obj != NULL){
+
+		tmp = obj;
+		obj = obj->next;
+
+		// free all elements
+
+		//printf("free object  %s\n",tmp->reference);
+		free(tmp->reference);
+		free(tmp->content);
+		free(tmp->dico);
+		free(tmp->type);
+		free(tmp->stream);
+		free(tmp->filters);
+		free(tmp->decoded_stream);
+		
+		free(tmp);
+		tmp = NULL;
+
+	}
+
+	return;
+
+}
+
+// This function free the memory allocated for a trailer structure
+void freePDFTrailerStruct(struct pdfTrailer * trailer){
+
+	struct pdfTrailer * tmp = NULL;
+
+	if(trailer == NULL){
+		return ;
+	}
+
+	while(trailer!= NULL){
+
+		
+		tmp = trailer;
+		trailer = trailer->next;
+
+		free(tmp->content);
+				
+		free(tmp);
+		tmp = NULL;
+
+	}
+
+	return;
+
+}
 
 // This function free the memory allocated for the pdf structure
 void freePDFDocumentStruct(struct pdfDocument * pdf){
 
-	struct pdfObject * obj_tmp;
-	struct pdfTrailer * trailer_tmp;
 	
 	if(pdf == NULL){
 		return ;
 	}
 	
-	//Close file handle
-	fclose(pdf->fh);
-	
 	// Free objects
-	if(pdf->objects){
+	if(pdf->objects != NULL)
+		freePDFObjectStruct(pdf->objects);
 	
-		//tmp = pdf->objects;
-		while(pdf->objects){
-			obj_tmp = pdf->objects;
-			pdf->objects = pdf->objects->next;
-			free(obj_tmp);
-			obj_tmp = NULL;
-		}
-	}
 	
 	// Free trailer
-	if(pdf->trailers){
+	if(pdf->trailers != NULL)
+		freePDFTrailerStruct(pdf->trailers);
 	
-		while(pdf->trailers){
-			trailer_tmp = pdf->trailers;
-			pdf->trailers = pdf->trailers->next;
-			free(trailer_tmp);
-			trailer_tmp = NULL;
-		}
-	}
-	
-	// Free xref
-	if(pdf->xref){
-		
-	}
-	
+
+	fclose(pdf->fh); //Close file handle
+	free(pdf->version);
+	free(pdf->content);
+
+	free(pdf->testStruct);
+	free(pdf->testObjAnalysis);
 	free(pdf);
 	
 
@@ -106,19 +149,80 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 }
 
 
+
+// Init 
+struct testsPDFStruct * initTestsPDFStruct(){
+
+	struct testsPDFStruct * testStruct = NULL;
+
+	if( !(testStruct = (struct testsPDFStruct *)malloc(sizeof(struct testsPDFStruct)) ) ){
+		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
+		return NULL;
+	}
+
+	testStruct->bad_header = 0;
+	testStruct->encrypted = 0;
+	testStruct->empty_page_content = 0;
+	testStruct->object_collision = 0;
+	testStruct->bad_trailer = 0;
+	testStruct->bad_xref_offset = 0;
+	testStruct->bad_obj_offset = 0;
+	testStruct->obfuscated_object = 0;
+	testStruct->multiple_headers = 0;
+
+	return testStruct;
+}
+
+// Init 
+struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
+
+	struct testsPDFObjAnalysis * testObjAnalysis = NULL;
+
+	if( !(testObjAnalysis = (struct testsPDFObjAnalysis *)malloc(sizeof(struct testsPDFObjAnalysis)) ) ){
+		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
+		return NULL;
+	}
+
+	testObjAnalysis->active_content = 0;
+	testObjAnalysis->shellcode = 0;
+	testObjAnalysis->pattern_high_repetition = 0;
+	testObjAnalysis->dangerous_keyword_high = 0;
+	testObjAnalysis->dangerous_keyword_medium = 0;
+	testObjAnalysis->dangerous_keyword_low = 0;
+	testObjAnalysis->time_exceeded = 0;
+
+	testObjAnalysis->js = 0;
+	testObjAnalysis->xfa = 0;
+	testObjAnalysis->ef = 0;
+
+	return testObjAnalysis;
+}
+
+
 // Init a pdfDocument object structure
 struct pdfDocument* initPDFDocument(){
 
 	struct pdfDocument* pdf = NULL;
 	
-	if( !(pdf = (struct pdfDocument *)malloc(sizeof(struct pdfDocument)) ) ){
+	if( (pdf = (struct pdfDocument *)malloc(sizeof(struct pdfDocument))) == NULL ){
 		printf("Error :: initPDFDocument :: memory allocation failed\n");
 		return NULL;
 	}
-	
+
+	if( (pdf->testStruct = initTestsPDFStruct()) == NULL ){
+		printf("Error :: initPDFDocument :: memory allocation1 failed\n");
+		return NULL;
+	}
+
+	if( (pdf->testObjAnalysis = initTestsPDFObjAnalysisStruct()) == NULL ){
+		printf("Error :: initPDFDocument :: memory allocation2 failed\n");
+		return NULL;
+	}
+
+
 	
 	// Initialize entries
-	pdf->fh = NULL;
+	pdf->fh = NULL;	
 	pdf->content = NULL;
 	pdf->objects =NULL;
 	pdf->coef = 0;
@@ -126,6 +230,8 @@ struct pdfDocument* initPDFDocument(){
 	pdf->version = NULL;
 	pdf->trailers = NULL;
 	pdf->xref = NULL;
+
+
 	
 	return pdf;
 
@@ -149,6 +255,7 @@ struct pdfObject* initPDFObject(){
 	obj->dico = NULL;
 	obj->type = NULL;
 	obj->stream = NULL;
+	obj->filters = NULL;
 	obj->decoded_stream = NULL;
 	obj->offset = 0;
 	obj->next = NULL;
@@ -196,11 +303,13 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	//printf("pat = %s\n",pat);
 	//printf("hey! %d :: %d\n",src, size);
 	if( size < pat_size || src == NULL || pat == NULL || pat_size == 0 || size == 0){
-		printf("Error :: searchPattern :: Bad arguments\n");
+		//printf("Error :: searchPattern :: Bad arguments\n");
 		return NULL;
 	}
 	
-	tmp =  (char*)malloc(pat_size*sizeof(char));
+	//tmp =  (char*)malloc(pat_size*sizeof(char));
+	tmp =  (char*)calloc(pat_size+1,sizeof(char));
+	tmp[pat_size] = '\0';
 	//printf("hey2!\n");
 	
 	while(i < size - pat_size ){
@@ -466,7 +575,8 @@ char * getIndirectRef(char * ptr, int size){
 	//printf("end[0] = %c\n",end[0]);
 
 	len = strlen(obj_num) + strlen(gen_num) + 5 ;
-	ref = (char*)calloc(len,sizeof(char));
+	ref = (char*)calloc(len+1,sizeof(char));
+	ref[len] = '\0';
 
 	strncat(ref, obj_num, strlen(obj_num));
 	strncat(ref, " ", strlen(obj_num));
@@ -490,8 +600,11 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	char * tmp2 = NULL;
 	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"
 
-	tmp = (char*)calloc(strlen(delimiter1),sizeof(char));
-	tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
+	tmp = (char*)calloc(strlen(delimiter1) +1,sizeof(char));
+	tmp2 = (char*)calloc(strlen(delimiter2) +1,sizeof(char));
+
+	tmp[strlen(delimiter1)] = '\0';
+	tmp2[strlen(delimiter2)] = '\0';
 
 
 	start = src;
@@ -513,7 +626,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	//tmp = NULL;
 
 
-	tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
+	//tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
 	strncpy(tmp2,start,strlen(delimiter2));
 
 
@@ -563,16 +676,24 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 	if(len > src_len){
 		printf("Error :: getDelimitedStringContent :: len > src_len\n");
+		free(tmp);
+		free(tmp2);
+		tmp = NULL;
+		tmp2 = NULL;
 		return NULL;
 	}
 
-	content = (char*)calloc(len,sizeof(char));
+	content = (char*)calloc(len+1,sizeof(char));
+	content[len] = '\0';
 
 	strncpy(content,start,len);
 	//printf("content = %s\n", );
 
 
-
+	free(tmp);
+	free(tmp2);
+	tmp = NULL;
+	tmp2 = NULL;
 
 
 	return content;
@@ -611,7 +732,7 @@ char * getPattern(char * ptr, int size, int len){
 
 	char * pattern = NULL;
 	int i = 0;
-	int white_spaces = 0;
+	//int white_spaces = 0;
 	//int tmp = 0;
 	//int tmp_len = 0;
 
@@ -699,4 +820,143 @@ char * getUnicodeInString(char * stream, int size){
 
 
 	return NULL;
+}
+
+// This function replace all occurrences of the pattern in the stream, returns the new string with a new length.
+// TODO improve by replacing all occurrences
+char * replaceInString(char * src, char * toReplace , char * pat){
+
+	char * dest = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+	int off = 0;
+
+	if(src == NULL || toReplace == NULL || pat == NULL)
+		return NULL;
+
+
+	//printf("\nreplace in string\n");
+	//printf("src = %s\n",src );
+
+	// calc the number of occurrencies of the pattern to replace
+
+	// get the positions
+	start = searchPattern(src,toReplace,strlen(toReplace),strlen(src));
+
+	if(start == NULL){
+		printf("Error :: String to replace (%s) not found in src \n",toReplace);
+		return src;
+	}
+
+
+	// calc the new length = len - diff(pat et pat2)
+	len = strlen(src) - (strlen(toReplace) - strlen(pat));
+
+	//printf("src_len = %d :: len = %d\n",strlen(src),len);
+
+	dest = (char*)calloc(len+1,sizeof(char));
+	dest[len] = '\0';
+
+
+	// get the position
+	off = (int)(start - src);
+	//printf("off = %d\n",off);
+
+
+	memcpy(dest, src, off);
+	//strncpy(dest, src, off-1);
+	//printf("dest = %s\n",dest);
+
+	// replace
+	strncat(dest,pat,strlen(pat));
+	//printf("dest = %s\n",dest);
+
+	end = start + strlen(toReplace);
+	//printf("end0 = %c\n",end[0]);
+
+
+
+	//len = (int)(end - src);
+	//len = strlen(src) - len ;
+	//printf("len = %d\n",len);
+
+	len = strlen(src) - off - strlen(toReplace);
+	//printf("off = %d\n",off);
+
+	strncat(dest,end,len);
+	//printf("dest = %s\n",dest);	
+
+
+	return dest;
+}
+
+
+//  this function return a pointer to the first hexa string (#F6) or NULL not;
+char * getHexa(char * dico, int size){
+
+	char *  start = NULL;
+	char * end = NULL;
+	char * hexa = NULL;
+	int len = 0;
+
+	len = size ;
+	start = dico;
+
+	while( hexa == NULL && len >= 3  ){
+
+	
+		start = searchPattern(dico,"#",1,len);
+		
+		if(start == NULL){
+			
+			return NULL;
+		}
+
+		end = start +1 ;
+
+		//len = 0;
+		//printf("end0 =  %c :: end1 =  %c\n",end[0],end[1]);
+
+		// test the two next characters
+		if( ((end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57)) && ((end[1] >= 65 && end[1] <=70) || (end[1] >= 97 && end[1] <= 102) || (end[1] >= 48 && end[1] <= 57)) ){
+			return start;
+		}
+
+
+		len = (int)(start - dico);
+		len = size - len;
+
+
+	}
+
+
+	return NULL;
+}
+
+// add a trailer in the list of trailers
+int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
+
+	struct pdfTrailer * tmp =  NULL;
+
+
+	if(pdf == NULL || trailer == NULL){
+		printf("Error :: addTrailerInPDF :: Bad arguments pdf and trailer \n");
+		return -1;
+	}
+
+	
+	if(pdf->trailers == NULL){
+		pdf->trailers = trailer;
+	}else{
+		
+		tmp = pdf->trailers;
+		while(tmp->next != NULL){
+			tmp = tmp->next;	
+		}
+		tmp->next = trailer;
+		
+	}
+
+	return 0;
 }

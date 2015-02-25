@@ -699,31 +699,31 @@ sub DecodeSymboleDico{
 			
 			#$CX = "IADH000000001";
 			
-			$PREV = ($PREV*2)^$V if ($PREV = );
+			#$PREV = ($PREV*2)^$V if ($PREV = );
 			
 			
 			
-			for(my $i=0; $i<32; $i++){
-				$CX = $IADH.$PREV;
-				print "CX = $CX\n";
-			}
+#			for(my $i=0; $i<32; $i++){
+#				$CX = $IADH.$PREV;
+#				print "CX = $CX\n";
+#			}
 			
 			
-			$HDCDH = $V if ($S == 0);
-			$HDCDH = -1*$V if ($S == 1 && $V>0);
-			$HDCDH = $OOB if($S == 1 && $V == 0);
-			
-			
-		}else{
-			# TODO ... Decode a value using the huffman table specified by SDHUFFDH
-		}
-		
-		#print "HDCDH :: $HDCDH\n";
-		
-		$HCHEIGHT += $HCDH;
-		my $SYMWIDTH = 0;
-		my $TOTWIDTH = 0;
-		my $HCFIRSTSYM = $NSYMSDECODED;
+#			$HDCDH = $V if ($S == 0);
+#			$HDCDH = -1*$V if ($S == 1 && $V>0);
+#			$HDCDH = $OOB if($S == 1 && $V == 0);
+#			
+#			
+#		}else{
+#			# TODO ... Decode a value using the huffman table specified by SDHUFFDH
+#		}
+#		
+#		#print "HDCDH :: $HDCDH\n";
+#		
+#		$HCHEIGHT += $HCDH;
+#		my $SYMWIDTH = 0;
+#		my $TOTWIDTH = 0;
+#		my $HCFIRSTSYM = $NSYMSDECODED;
 		
 		
 		#if($SDHUFF == 0){ # 
@@ -741,7 +741,7 @@ sub DecodeSymboleDico{
 	
 		
 		
-		$NSYMSDECODED ++;
+#		$NSYMSDECODED ++;
 
 	}
 

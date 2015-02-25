@@ -140,7 +140,7 @@ int checkXRef(struct pdfDocument * pdf){
 			num_entries_a = getNumber_a(xref,len);
 			num_entries = atoi(num_entries_a);
 
-			printf("num_entries = %d\n",num_entries);
+			//printf("num_entries = %d\n",num_entries);
 
 			len -= strlen(num_entries_a);
 			xref += strlen(num_entries_a);
@@ -173,7 +173,7 @@ int checkXRef(struct pdfDocument * pdf){
 
 				ref = (char*)calloc(10,sizeof(char));
 				sprintf(ref,"%d 0 obj",obj_num);
-				printf("ref = %s at %d\n",ref, off);
+				//printf("ref = %s at %d\n",ref, off);
 
 				// get object by ref
 				if(obj_num > 0){
@@ -188,6 +188,7 @@ int checkXRef(struct pdfDocument * pdf){
 					if( free_obj == 'n' && off != obj->offset ){
 
 						printf("Warning :: checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
+						pdf->testStruct->bad_obj_offset ++;
 						ret = 0;
 
 					}
@@ -200,9 +201,6 @@ int checkXRef(struct pdfDocument * pdf){
 				printf("\n");
 
 			}
-
-
-
 
 		}else{
 
@@ -223,13 +221,21 @@ int checkXRef(struct pdfDocument * pdf){
 
 			//  Check if the offset point to a Xref Object type /XRef
 			obj_num_a = getNumber_a(start,len);
+
+			if(obj_num_a == NULL){
+				pdf->testStruct->bad_xref_offset ++;
+				trailer = trailer->next;
+				continue;
+			}
+
 			//printf("obj num = %s\n",obj_num_a);
 			obj_num = atoi(obj_num_a);
 
 			len = strlen(obj_num_a) + 7;
 			//printf("len = %d\n",len);
 
-			ref = (char*)calloc(len,sizeof(char));
+			ref = (char*)calloc(len+1,sizeof(char));
+			ref[len] = '\0';
 
 			sprintf(ref,"%d 0 obj",obj_num);
 			//printf("xref object = %s\n",ref);
@@ -245,17 +251,24 @@ int checkXRef(struct pdfDocument * pdf){
 					printf("Warning :: Wrong Xref table (or xref object) offset %d\n",xref_offset);
 					printf("type = %s\n",obj->type);
 					ret = 0;
+					pdf->testStruct->bad_xref_offset ++;
 
+				}else{ // if the xref object is found
+
+					pdf->testStruct->bad_xref_offset = 0;
 				}
 
 			}else{
 
 				printf("Warning :: checkXRef :: object not found %s\n",ref);
+				//pdf->testStruct->bad_xref_offset ++;
 
 			}
 
 		}
 
+		free(obj_num_a);
+		free(ref);
 		trailer = trailer->next;
 
 	}
@@ -478,11 +491,20 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 // This function check ifs the document respects the PDF reference recommendations...
 int documentStructureAnalysis(struct pdfDocument * pdf){
 
-	printf("\n\n::: DOCUMENT STRUCTURE ANALYSIS :::\n\n");
+	int res = 0;
 
-	//checkXRef(pdf);
-	//checkEmptyDocument(pdf);
+	printf("-----------------------------------------\n");
+	printf("--- DOCUMENT STRUCTURE ANALYSIS ---\n");
+	printf("-----------------------------------------\n\n");
 
+	res = checkXRef(pdf);
+
+
+
+	res = checkEmptyDocument(pdf);
+	if(res == 0){
+		pdf->testStruct->empty_page_content ++;
+	}
 
 
 
