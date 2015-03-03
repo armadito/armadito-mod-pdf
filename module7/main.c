@@ -223,6 +223,9 @@ int analyze(char * filename){
 
 	// Get objects described in pdf document
 	getPDFObjects(pdf);
+
+	
+
 	
 
 	// Object analysis
@@ -239,6 +242,9 @@ int analyze(char * filename){
 	time(&end_time);
 	time_elapsed = difftime(end_time,start_time);
 
+
+	// print all objects references
+	//printObjectReferences(pdf);
 
 
 	// Analysis summary

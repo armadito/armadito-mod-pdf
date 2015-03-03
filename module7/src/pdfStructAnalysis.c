@@ -80,7 +80,7 @@ int checkXRef(struct pdfDocument * pdf){
 		// check xref keyword in file
 		xref = (char*)calloc(4,sizeof(char));
 		fread(xref,1,4,pdf->fh);
-		printf("xref keyword = %s\n",xref);
+		//printf("xref keyword = %s\n",xref);
 
 
 		
@@ -89,6 +89,7 @@ int checkXRef(struct pdfDocument * pdf){
 		if(strncmp(xref,"xref",4) == 0){
 
 
+			printf("Good xref table offset : %d\n",xref_offset);
 			start = pdf->content;
 			start += xref_offset;
 
@@ -101,7 +102,7 @@ int checkXRef(struct pdfDocument * pdf){
 
 			// Get xref table content from pdf document content
 			xref = getDelimitedStringContent( start, "xref" , "trailer" , len);
-			printf("xref table content = \n%s\n",xref);
+			//printf("xref table content = \n%s\n",xref);
 
 			// shift xref keyword
 			xref += 4;
@@ -124,7 +125,7 @@ int checkXRef(struct pdfDocument * pdf){
 			first_obj_num = atoi(first_obj_num_a);
 
 
-			printf("first_obj_num = %d\n",first_obj_num);
+			//printf("first_obj_num = %d\n",first_obj_num);
 
 			len -= strlen(first_obj_num_a);
 			xref += strlen(first_obj_num_a);
@@ -198,7 +199,7 @@ int checkXRef(struct pdfDocument * pdf){
 				// go to the next entry
 				xref += 3;
 
-				printf("\n");
+				//printf("\n");
 
 			}
 

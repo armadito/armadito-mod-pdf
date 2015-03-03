@@ -404,7 +404,7 @@ char * getObjectStream(struct pdfObject * obj){
 	//printf("len = %d\n",len);
 
 	obj->stream_size = len; // -1 for the white space
-
+	obj->tmp_stream_size = obj->stream_size;
 
 	stream = (char*)calloc(len+1,sizeof(char));
 	stream[len]='\0';
@@ -560,6 +560,8 @@ int decodeObjectStream(struct pdfObject * obj){
 		if(strncmp(filter,"/FlateDecode",12) == 0){
 				printf("Decode fladetecode \n");
 				stream = FlateDecode(stream, obj);
+				//f(strncmp(obj->reference,"11 0 obj",8) == 0)
+					printf("stream _flatedecode = %s\n",stream);
 				filter_applied ++;
 		}else{
 
@@ -572,13 +574,15 @@ int decodeObjectStream(struct pdfObject * obj){
 
 				//TODO
 				if(strncmp(filter,"/ASCII85Decode",14) == 0){
-					filter_applied = 0;
+					//if(strncmp(obj->reference,"44 0 obj",8) == 0)
+					stream = ASCII85Decode(stream, obj);
+					filter_applied ++;
 				}else{
 
-					//TODO
+					
 					if(strncmp(filter,"/LZWDecode",10) == 0){
-						stream = NULL;
-						filter_applied = 0;
+						stream = LZWDecode(stream,obj);
+						filter_applied ++;
 					}else{
 
 						//TODO
@@ -588,9 +592,12 @@ int decodeObjectStream(struct pdfObject * obj){
 						}else{
 
 							//TODO
-							if(strncmp(filter,"/CCITTFaxDecode",15) == 0){
 
-								filter_applied = 0;
+							if(strncmp(filter,"/CCITTFaxDecode",15) == 0){
+								//if(strncmp(obj->reference,"11 0 obj",8) == 0)
+									stream = CCITTFaxDecode(stream,obj);
+
+								filter_applied ++;
 								
 							}else{
 
@@ -1024,9 +1031,14 @@ int getPDFObjects(struct pdfDocument * pdf){
 	//startobj_ptr = (char*)malloc(gen_num_len*sizeof(char));
 	
 	endobj_ptr = pdf->content;
+	//tmp = pdf->size;
+	//len = pdf->size;
 
 	
 	while( (startobj_ptr = strstr(endobj_ptr,"obj")) != NULL){
+	//while( (startobj_ptr = searchPattern(endobj_ptr,"obj",3,len) ) != NULL) {
+	
+
 	
 		//printf("search offset = %d\n",endobj_ptr);
 		gen_num_len = 0;
@@ -1037,7 +1049,6 @@ int getPDFObjects(struct pdfDocument * pdf){
 		while(startobj_ptr[0] >= 48 && startobj_ptr[0] <= 57  ){
 		
 			//printf("Warning :: Treat this case 1 :: \n");
-			
 			startobj_ptr--;
 			//printf("Warning :: Treat this case 1 :: %c\n", startobj_ptr[0] );
 			gen_num_len++;

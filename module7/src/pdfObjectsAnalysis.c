@@ -73,6 +73,15 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 		if(js != NULL){
 			printf("Found JS content in object %s\n",js_obj_ref);
 			//printf("Javascript content = %s\n",js);	
+			// TODO Launch analysis on content
+
+			
+			pdf->testObjAnalysis->active_content ++;
+			pdf->testObjAnalysis->js ++;
+			unknownPatternRepetition(js, strlen(js),pdf, js_obj);
+			findDangerousKeywords(js,pdf,js_obj);
+			
+
 		}else{
 			printf("Empty js content in object %s\n",js_obj_ref);
 		}
@@ -89,6 +98,12 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 		if(js != NULL){
 			printf("Found JS content in object %s\n",obj->reference);
+
+			pdf->testObjAnalysis->active_content ++;
+			pdf->testObjAnalysis->js ++;
+			unknownPatternRepetition(js, strlen(js),pdf,obj);
+			findDangerousKeywords(js,pdf,obj);
+
 		}
 
 
@@ -96,13 +111,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 	}
 
 
-	// TODO Launch analysis on content
-	if(js != NULL){
-		pdf->testObjAnalysis->active_content ++;
-		pdf->testObjAnalysis->js ++;
-		unknownPatternRepetition(js, strlen(js),pdf, obj);
-		findDangerousKeywords(js,pdf,obj);
-	}
+	
 
 
 
@@ -581,6 +590,73 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
+// This function remove whites space in a given stream
+char * removeWhiteSpace(char * stream, int size){
+
+	char * out = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+	int len2 = 0;
+	int count = 0;
+	int i = 0;
+	// count white spaces
+
+	
+
+	for(i = 0; i<size; i++){
+		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == '\n' || stream[i] == ' ' ){
+			count ++;
+		}
+
+	}
+
+	//printf("There are %d white space in this stream\n",count);
+
+	// calc the new len
+	len = size - count;
+
+	out = (char*)calloc(len+1,sizeof(char));
+	out[len] = '\0';
+
+	
+
+	start = stream;
+	end = start;
+	len = 0;
+
+	//printf("end0 = %c\n",end[0]);
+
+	
+	
+	while( len < (size - count) ){
+
+		
+		len2 = len;
+		while(end[0] != '\n' && end[0] != '\r' && end[0] != '\n' && end[0] != ' ' && len2 < (size-count)){
+			end ++;
+			len2 ++;
+		}
+
+		len2 = (int)(end-start);
+		//memcpy(out,start,len2);
+		strncat(out, start, len2);
+		len += len2;
+
+		// skip white spaces
+		start = end;
+		while(start[0] == '\n' || start[0] == '\r' || start[0] == '\n' || start[0] == ' ' ){
+			start ++;
+		}
+
+		end = start;
+	}
+
+	
+
+
+	return out;
+}
 
 
 
@@ -602,22 +678,37 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	int ptr_len = 0;
 	int ptr2_len = 0;
 	char * tmp = NULL;
+	char * whithout_space = NULL;
+	//char * test = "Bonjour je suis une stream de test";
 
 
 	//printf("\n\nDebug :: unknownPatternRepetition \n");
 
 
 	// remove white space in stream ? 
-	//ptr = removeWhiteSpace(stream,size);
+	
+	//whithout_space =  removeWhiteSpace(test,strlen(test));
+
+	//printf("whithout_space = %s\n",whithout_space);
 
 
+	whithout_space =  removeWhiteSpace(stream,size);
+	//printf("whithout_space = %s\n",ptr);
+	
+	ptr = whithout_space;
+	ptr_len = strlen(whithout_space);
 
+	ptr_bis = whithout_space;
+	ptr2_len = strlen(whithout_space);
+
+
+	/*
 	ptr = stream;
 	ptr_len = strlen(stream);
 
 	ptr_bis = stream;
 	ptr2_len = strlen(stream);
-
+	*/
 
 
 	/*
@@ -650,7 +741,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 			if(rep > lim_rep){
 				printf("Warning :: unknownPatternRepetition :: Found pattern repetition in object %s\n",obj->reference);
-				//printf("pattern = %s :: rep = %d--\n\n",pattern,rep);
+				printf("pattern = %s :: rep = %d--\n\n",pattern,rep);
 				pdf->testObjAnalysis->pattern_high_repetition ++;
 				return rep;
 			}
@@ -668,6 +759,8 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 	}
 
+	free(whithout_space);
+
 
 	return 0 ;
 
@@ -676,18 +769,14 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 
 
-
-
-
-
 // Find a potentially dangerous pattern in the given stream; return High = 3 ; Medium = 2 ; Low = 1 ; none = 0
 int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfObject * obj){
 
 	int i = 0;
-	char * high_keywords[] = {"HeapSpray","heap","spray","hack","shellcode", "shell", "Execute", "pointers", "byteToChar", "system32", "payload", "console"};
+	char * high_keywords[] = {"HeapSpray","heap","spray","memory","hack","shellcode", "shell", "Execute", "pointers", "byteToChar", "system32", "payload", "console"};
 	int num_high = 12;
 	int num_medium = 10;
-	char * medium_keywords[] = {"toString", "substring", "split", "eval", "addToolButton", "String.replace", "unscape", "exportDataObject", "StringFromChar", "util.print"};
+	char * medium_keywords[] = {"toString", "substring", "split", "eval", "addToolButton", "String.replace", "unescape", "exportDataObject", "StringFromChar", "util.print"};
 	char * start = NULL;
 	int len = 0;
 	int unicode_count = 0;
@@ -695,6 +784,9 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	int ret = 0;
 
 
+	printf(":: Searching Dangerous Keywords in %s\n",obj->reference);
+
+	//printf("\n\n content to analyze = %s\n",stream);
 
 	//stream = "hackbonjour";
 

@@ -155,7 +155,7 @@ struct testsPDFStruct * initTestsPDFStruct(){
 
 	struct testsPDFStruct * testStruct = NULL;
 
-	if( !(testStruct = (struct testsPDFStruct *)malloc(sizeof(struct testsPDFStruct)) ) ){
+	if( !(testStruct = (struct testsPDFStruct *)calloc(1,sizeof(struct testsPDFStruct)) ) ){
 		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
 		return NULL;
 	}
@@ -178,7 +178,7 @@ struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
 
 	struct testsPDFObjAnalysis * testObjAnalysis = NULL;
 
-	if( !(testObjAnalysis = (struct testsPDFObjAnalysis *)malloc(sizeof(struct testsPDFObjAnalysis)) ) ){
+	if( !(testObjAnalysis = (struct testsPDFObjAnalysis *)calloc(1,sizeof(struct testsPDFObjAnalysis)) ) ){
 		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
 		return NULL;
 	}
@@ -204,7 +204,7 @@ struct pdfDocument* initPDFDocument(){
 
 	struct pdfDocument* pdf = NULL;
 	
-	if( (pdf = (struct pdfDocument *)malloc(sizeof(struct pdfDocument))) == NULL ){
+	if( (pdf = (struct pdfDocument *)calloc(1,sizeof(struct pdfDocument))) == NULL ){
 		printf("Error :: initPDFDocument :: memory allocation failed\n");
 		return NULL;
 	}
@@ -244,7 +244,7 @@ struct pdfObject* initPDFObject(){
 	struct pdfObject* obj = NULL;
 	
 	
-	if( !(obj = (struct pdfObject*)malloc(sizeof(struct pdfObject)) ) ){
+	if( !(obj = (struct pdfObject*)calloc(1,sizeof(struct pdfObject)) ) ){
 		printf("Error :: initPDFDocument :: memory allocation failed\n");
 		return NULL;
 	}
@@ -260,6 +260,7 @@ struct pdfObject* initPDFObject(){
 	obj->offset = 0;
 	obj->next = NULL;
 	obj->stream_size = 0;
+	obj->tmp_stream_size = 0;
 	obj->content_size = 0;
 	obj->decoded_stream_size = 0;
 	
@@ -274,7 +275,7 @@ struct pdfTrailer* initPDFTrailer(){
 
 	struct pdfTrailer* trailer = NULL;
 	
-	if( !(trailer = (struct pdfTrailer *)malloc(sizeof(struct pdfTrailer)) ) ){
+	if( !(trailer = (struct pdfTrailer *)calloc(1,sizeof(struct pdfTrailer)) ) ){
 		printf("Error :: initPDFTrailer :: memory allocation failed\n");
 		return NULL;
 	}
@@ -799,9 +800,9 @@ char * getUnicodeInString(char * stream, int size){
 		end = start +2 ;
 
 		len = 0;
-		while( (end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57) || len != 4 ){
+		while( ((end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57)) && len != 4 ){
 			len ++;
-			end ++ ;
+			end ++;
 		}
 
 		if(len == 4){			
@@ -959,4 +960,154 @@ int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 	}
 
 	return 0;
+}
+
+void printObjectReferences(struct pdfDocument* pdf){
+
+	if(pdf->objects == NULL)
+		return;
+
+
+	while(pdf->objects){
+		printf("object = %s\n",pdf->objects->reference);
+
+		pdf->objects = pdf->objects->next;
+	}
+
+	return;
+
+}
+
+void debugPrint(char * stream, int len){
+
+	FILE * debug = NULL;
+
+	// Open en file
+	if(!(debug = fopen("debug","wb+"))){
+		printf("open failed\n");
+		return ;
+	}
+
+	//printf("DEBUG ::: \n");
+
+
+	//fputc('\n',debug);
+	//fputc('\n',debug);
+	//fputc('\n',debug);
+	//fwrite("---------------------------------------------",sizeof(char),45,debug);
+	//fputc('\n',debug);
+
+	// Reference
+	fwrite(stream,sizeof(char),len,debug);
+
+
+	fclose(debug);
+	debug = NULL;
+
+
+	return;
+}
+
+
+
+// This function convert a string into binary.
+char * toBinary(char * stream, int size){
+
+
+	char * binary = NULL;
+	int len = 0;
+	//char * byte = NULL;
+	int bit = 0;
+	int i = 0, j = 0;
+	char bit_s = 0;
+	int off = 0;
+
+
+
+	len = 8*size;
+
+	binary = (char*)calloc(len+1,sizeof(char));
+	binary[len] = '\0';
+
+
+	len = 0;
+	for(i = 0; i < size; i++){
+
+		//printf("stream[i] = %c\n",stream[i]);
+
+		for(j = 0; j < 8; j++){
+
+			bit = stream[i] & (1 << (7-j));
+			bit = bit >> (7-j);
+			//printf("%d ",bit);
+
+			//bit_s = bit + ()
+			bit_s = bit - '\0' + 48;
+			//off = i*10+j;
+
+			binary[off] = bit_s;
+			off ++;
+		}
+		//byte = strtol(stream[i],NULL,2) = ;
+		
+		//printf("\n\n");
+
+	}
+
+
+	//printf("binary = %s\n",binary);
+
+
+	return binary;
+
+}
+
+
+// Converts a binary string to a char string
+char * binarytoChar(char * binary, int size, int * returned_size){
+
+	char * string = NULL;
+	int i =0,j=0;
+	int len = 0;
+	int off = 0;
+	char * byte = NULL;
+	char res = 0;
+
+
+
+
+	len = size/8;
+	if(size%8 != 0){
+		printf("Warning :: binarytoChar :: len not a multiple of 8 :: padding with zero :: size %d :: len = %d\n",size,len);
+		//TODO Padd with 0
+	}
+
+	byte = (char*)calloc(9,sizeof(char));
+	byte[8]='\0';
+
+	//printf("len = %d :: size = %d\n",len, size);
+	string = (char*)calloc(len+1,sizeof(char));
+	string[len] = '\0';
+
+	for(i= 0; i<len; i++){
+
+		for(j=0;j<8;j++){		
+			//printf("%c",binary[j]);
+			byte[j]=binary[j];
+		}
+		res = strtol(byte,NULL,2);
+		//printf("%s ==> %c\n\n",byte,res);
+		string[off] = res;
+		off ++;
+		binary+=8;
+
+	}
+
+	*returned_size = len;
+
+	printf("string = %s\n",string);
+
+	free(byte);
+
+	return string;
 }

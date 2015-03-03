@@ -48,6 +48,7 @@ struct pdfObject{
 	char * decoded_stream;
 	int offset;	// offset (in byte) in the file
 	int stream_size;	// Size in byte of the object's stream
+	int tmp_stream_size; // temp size of the stream (between two decoding process)
 	int decoded_stream_size;	// Size in byte of the object's decoded stream
 	int content_size;	// size in byte of the object's content
 	//enum efilter * filter;
@@ -118,6 +119,7 @@ struct testCVEs{
 
 
 
+
 // PDF Document structure
 struct pdfDocument{
 	
@@ -140,6 +142,7 @@ void Helper();
 int analyze(char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
 int analysisReport(struct pdfDocument * pdf, char * filename);
+void debugPrint(char * stream, int len); // print in a debug file
 
 
 /***** Utils functions *****/
@@ -165,6 +168,9 @@ char * getPattern(char * ptr, int size, int len);
 char * getUnicodeInString(char * stream, int size);
 char * getHexa(char * dico, int size);
 char * replaceInString(char * src, char * toReplace , char * pat);
+char * toBinary(char * stream, int size);
+char * binarytoChar(char * binary, int size, int * returned_size);
+
 
 
 /***** pdf Parsing functions *****/
@@ -185,6 +191,9 @@ char * hexaObfuscationDecode(char * dico);
 /***** filters functions *****/
 char * FlateDecode(char * stream, struct pdfObject* obj);
 char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
+char * LZWDecode(char* stream, struct pdfObject * obj);
+char * ASCII85Decode(char * stream, struct pdfObject * obj);
+char * CCITTFaxDecode(char* stream, struct pdfObject * obj);
 
 
 
