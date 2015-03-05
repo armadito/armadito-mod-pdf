@@ -54,8 +54,16 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 
 
 	printf("\n\n");
-	printf("::: Suspicious Coefficient :::\n\n");	
-	printf("Coef = %d\n",pdf->coef);
+	printf("::: Suspicious Coefficient :::\n\n");
+
+	if(pdf->testStruct->encrypted > 0)
+		printf("Coef = Encrypted_PDF\n");
+	else
+		printf("Coef = %d\n",pdf->coef);
+
+
+	printf("-------------------------------------------------------\n");
+	printf("-------------------------------------------------------\n\n");
 
 	return 0;
 
@@ -85,7 +93,7 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 
 	if(pdf->testStruct->encrypted > 0 ){
 		pdf->coef = -2;
-		return 0;
+		return -2;
 	}
 
 	if(pdf->testStruct->empty_page_content > 0){
@@ -168,6 +176,10 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 
 }
 
+
+
+
+
 int analyze(char * filename){
 
 
@@ -176,6 +188,7 @@ int analyze(char * filename){
 	struct pdfDocument * pdf = NULL;
 	time_t start_time, end_time;
 	double time_elapsed = 0;
+	int res = 0;
 
 
 	time(&start_time);
@@ -202,37 +215,24 @@ int analyze(char * filename){
 		return -2;
 	}
 
-	
-	// Get the content of the document
-	getPDFContent(pdf);
+
+	res = parsePDF(pdf);
+
+	#ifdef DEBUG
+		printPDFObjects(pdf);
+	#endif
 
 	
-	// Get Trailers
-	getPDFTrailers_1(pdf);
-	if(pdf->trailers == NULL){
-		getPDFTrailers_2(pdf);
-	}
-
-
-	// if the document is encrypted
-	if( pdf->testStruct->encrypted > 0 ){
+	
+	if(res == -2){		
 		analysisReport(pdf,filename);
 		freePDFDocumentStruct(pdf);
-		return ret;
+		return -2;
 	}
-
-	// Get objects described in pdf document
-	getPDFObjects(pdf);
-
-	
-
 	
 
 	// Object analysis
 	if(pdf->objects != NULL){
-		printf("\n-------------------------------\n");
-		printf("::: OBJECT ANALYSIS :::\n");
-		printf("-------------------------------\n\n");
 		getDangerousContent(pdf);
 	}
 
@@ -252,7 +252,8 @@ int analyze(char * filename){
 	analysisReport(pdf,filename);
 	printf("\nExecution time : %.2lf sec \n",time_elapsed);
 
-
+	//ret = pdf->coef;
+	
 	
 	freePDFDocumentStruct(pdf);
 	//fclose(f);
@@ -265,7 +266,8 @@ int main (int argc, char ** argv){
 
 	int ret;
 	
-	printf("UHURU PDF ANALYZER\n\n");
+
+	printf("\nUHURU PDF ANALYZER\n\n");
 	
 	if(argc < 2){
 		Helper();

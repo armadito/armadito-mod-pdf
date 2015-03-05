@@ -287,6 +287,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	struct pdfObject * ef_obj = NULL;
 	char * ef_obj_ref = NULL;
 	char * start = NULL;
+	//char * isDico = NULL;
 	//char * end = NULL;
 	int len = 0;
 
@@ -343,13 +344,34 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 		}
 
 
-		len = (int)(start - obj->dico);
-		len = strlen(obj->dico) - len;
-		// get indirect ref of the 
-		ef_obj_ref = getIndirectRef(start,len);
-		//printf("ef_obj_ref = %s\n",ef_obj_ref);
+		// The case <</EF <</F 3 0 R>>
+		//isDico = searchPattern
+		printf("start[0] = %c\n",start[0]);
 
-		ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
+		if(start[0] == '<' && start[1] == '<'){
+
+			len = (int)(start - obj->dico);
+			len = strlen(obj->dico) - len;
+
+			ef_obj_ref = obj->reference;
+			ef_obj = obj;
+
+
+
+		}else{
+
+			len = (int)(start - obj->dico);
+			len = strlen(obj->dico) - len;
+			// get indirect ref of the 
+			ef_obj_ref = getIndirectRef(start,len);
+			//printf("ef_obj_ref = %s\n",ef_obj_ref);
+			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
+
+		}
+
+
+
+		
 
 		if(ef_obj != NULL){
 
@@ -679,11 +701,20 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	int ptr2_len = 0;
 	char * tmp = NULL;
 	char * whithout_space = NULL;
+	time_t start_time, end_time;
+	double time_elapsed = 0;
+
+	/*
+	if(pdf != NULL){
+		return 0;
+	}*/
+
+
+	time(&start_time);
 	//char * test = "Bonjour je suis une stream de test";
 
 
-	//printf("\n\nDebug :: unknownPatternRepetition \n");
-
+	printf("\n\nDebug :: unknownPatternRepetition \n");
 
 	// remove white space in stream ? 
 	
@@ -691,8 +722,10 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 	//printf("whithout_space = %s\n",whithout_space);
 
-
+	
 	whithout_space =  removeWhiteSpace(stream,size);
+	
+
 	//printf("whithout_space = %s\n",ptr);
 	
 	ptr = whithout_space;
@@ -733,7 +766,11 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 		ptr_bis = ptr+5;
 		ptr2_len = ptr_len-5;
 
+
+
 		while( ptr2_len > pattern_size && (tmp = getPattern(ptr_bis,pattern_size,ptr2_len)) != NULL){
+
+			//printf("tmp = %s\n",tmp);
 
 			if(strncmp(pattern,tmp,pattern_size) == 0){
 				rep ++;
@@ -748,14 +785,47 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 			ptr_bis ++;
 			ptr2_len --;
+
+			time(&end_time);
+
+			time_elapsed = difftime(end_time,start_time);
+			
+			//printf("\ntmp = %s, %.2lf sec \n",tmp,time_elapsed);
+
+			if(time_elapsed > 5){
+				printf("Warning :: unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference );
+				pdf->testObjAnalysis->time_exceeded++;
+				free(whithout_space);
+				return 0;
+			}
+
+
 			
 		}
+
+		
+
+		//printf("heyhey :: %d :: %d :: %d :: \n",ptr2_len,pattern_size,rep, );
 
 		/*
 		if(rep > 100){
 			return 100;
 		}
 		*/
+
+		time(&end_time);
+
+		time_elapsed = difftime(end_time,start_time);
+
+		//printf("heyhoo :: %d\n",time_elapsed);
+		//printf("\nExecution time : %.2lf sec \n",time_elapsed);
+
+		if(time_elapsed > 5){
+			printf("Warning :: unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference );
+			pdf->testObjAnalysis->time_exceeded++;
+			free(whithout_space);
+			return 0;
+		}
 
 	}
 
@@ -796,6 +866,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 		//printf("Test :: %s\n",high_keywords[i]);
 		//if(strnstr(stream,high_keywords[i],strlen(high_keywords[i])) != NULL ){
+		
 		if(searchPattern(stream,high_keywords[i],strlen(high_keywords[i]),strlen(stream)) != NULL ){
 			printf("Warning :: findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);
 			pdf->testObjAnalysis->dangerous_keyword_high ++;
@@ -811,17 +882,24 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 	unicode = (char*)calloc(6,sizeof(char));
 
-	while( len >= 6 && (start = getUnicodeInString(start,len)) != NULL ){
+	printf("heyhey\n");
+
+	while( len >= 6 && (start = getUnicodeInString(start,len)) != NULL && unicode_count < 50 ){
+
 
 		memcpy(unicode, start, 6);
-		printf("Found unicode string %s\n",unicode);
+		printf("Found unicode string %s in object %s\n",unicode,obj->reference);
 
 		unicode_count ++ ;
 		start ++;
 
 		len = (int)(start - stream);
 		len = strlen(stream) - len;
-		//printf("len = %d\n",len);
+
+
+		printf("len = %d\n",len);
+
+
 
 	}
 
@@ -845,6 +923,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 	}
 
+	free(unicode);
 	return ret;
 
 
@@ -860,6 +939,10 @@ int getDangerousContent(struct pdfDocument* pdf){
 		printf("Error :: getDangerousContent :: Null Arguments\n");
 		return -1;
 	}
+
+	printf("\n-------------------------\n");
+	printf("---  OBJECT ANALYSIS  ---\n");
+	printf("-------------------------\n\n");
 
 	//printf("pdfobjects %d\n",pdf->objects);
 	obj = pdf->objects;

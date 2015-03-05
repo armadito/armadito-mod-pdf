@@ -100,8 +100,13 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 	struct pdfObject * obj = NULL;
 
 
-	if(pdf == NULL || ref == NULL){
-		printf("Bad argument in function get PDFObjectByRef\n");
+	if(pdf == NULL ){
+		printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
+		return NULL;
+	}
+
+	if(ref == NULL ){
+		printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
 		return NULL;
 	}
 
@@ -117,7 +122,7 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 		obj = obj->next;	
 	}
 	
-	printf("Object \"%s\" not found\n",ref);
+	//printf("Object \"%s\" not found\n",ref);
 
 	return NULL;
 }
@@ -138,8 +143,24 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 	}else{
 		
 		tmp = pdf->objects;
+
+		// Object collision detection
+		if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
+			printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+			pdf->testStruct->object_collision ++;
+		}
+
+
 		while(tmp->next != NULL){
-			tmp = tmp->next;	
+
+			// Object collision detection
+			
+			tmp = tmp->next;
+
+			if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
+				printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+				pdf->testStruct->object_collision ++;
+			}	
 		}
 		tmp->next = obj;
 		
@@ -297,6 +318,8 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	int i =0;
 	char * tmp = NULL;
 	int diff = 0;
+	char * end = NULL;
+	int len = 0;
 	
 	
 	
@@ -312,7 +335,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	tmp =  (char*)calloc(pat_size+1,sizeof(char));
 	tmp[pat_size] = '\0';
 	//printf("hey2!\n");
-	
+	/*
 	while(i < size - pat_size ){
 	
 		//i = 0;
@@ -332,14 +355,49 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 			return res;
 		}
 		
-		diff = res - src;
-		i+=diff;
-		
+		//diff = (int)(res - src);
+		//i+=diff;
+		i=(int)(res-src);
+
 		src = res + 1;
+
+	}*/
+
+
+	len = size; 
+	end = src;
+	while(len > pat_size){
+	
+		//i = 0;
+		res = memchr(end,pat[0],len);
+		//printf("src  = %d && res = %d\n",src,res);
+		//i++;
 		
+		if(res == NULL){
+			free(tmp);
+			//printf("Not found\n");
+			return NULL;
+		}
+		
+		
+		memcpy(tmp,res,pat_size);
+		
+		if( memcmp(tmp,pat,pat_size) == 0){
+			free(tmp);
+			return res;
+		}
+		
+		//diff = (int)(res - src);
+		//i+=diff;
+
+		end = res +1;
+
+		len=(int)(end-src);
+		len = size - len;
+
 	}
 	
-	
+	free(tmp);
 	
 	return NULL;
 }
@@ -347,7 +405,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 
 
 // Print object in a debug file (debug.txt)
-void printObject(struct pdfObject * obj){
+void printObjectInFile(struct pdfObject * obj){
 
 
 	FILE * debug = NULL;
@@ -438,6 +496,85 @@ void printObject(struct pdfObject * obj){
 	debug = NULL;
 
 	return;
+}
+
+
+
+// Print object in a debug file (debug.txt)
+void printObject(struct pdfObject * obj){
+
+	
+	if(obj == NULL){
+		return ;
+	}
+
+
+
+	// Reference
+	printf("\n\nObject :: %s\n", obj->reference);
+	
+
+	// Dictionary
+	if(obj->dico != NULL)
+		printf("\tDictionary = %s\n",obj->dico);
+	
+
+	
+	// Type
+	if(obj->type != NULL)
+		printf("\tType = %s\n",obj->type);
+
+
+
+	// Filters
+	if(obj->filters != NULL)
+		printf("\tFilters = %s\n",obj->filters);
+	
+
+	// Stream 
+	if(obj->stream != NULL){
+		//printf("\tStream = %s\n", obj->stream); // Print in debug file
+		printf("\tStream size = %d\n",obj->stream_size);
+	}
+	
+	if(obj->decoded_stream != NULL){
+		//printf("\tDecoded Stream = %s\n", obj->stream);	// Print in debug file
+		printf("\tDecoded Stream size = %d\n",obj->decoded_stream_size);
+	}
+		
+
+	return;
+}
+
+
+// Prints all object described in the PDF Document
+void printPDFObjects(struct pdfDocument * pdf){
+
+
+	struct pdfObject * obj =  NULL;
+
+	if(pdf->objects == NULL)
+		return;
+
+
+	printf("\n::: Objects Lists :::\n");
+
+
+	obj = pdf->objects;
+
+	
+
+	while(obj){
+
+		printObject(obj);
+		obj = obj->next;
+		printf("------------------------------------\n");
+		printf("------------------------------------\n\n");
+	}
+
+	return;
+
+
 }
 
 
@@ -600,6 +737,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	char * tmp = NULL;
 	char * tmp2 = NULL;
 	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"
+	//int found = NULL;
 
 	tmp = (char*)calloc(strlen(delimiter1) +1,sizeof(char));
 	tmp2 = (char*)calloc(strlen(delimiter2) +1,sizeof(char));
@@ -608,86 +746,102 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	tmp2[strlen(delimiter2)] = '\0';
 
 
+
 	start = src;
 	//printf("start = %d\n",start);
-	strncpy(tmp,start,strlen(delimiter1));
+	memcpy(tmp,start,strlen(delimiter1));
 
 	// find start point
-	while(strncmp(tmp,delimiter1,strlen(delimiter1)) != 0){
+	while(memcmp(tmp,delimiter1,strlen(delimiter1)) != 0){
 
 		start ++;
-		strncpy(tmp,start,strlen(delimiter1));
+		memcpy(tmp,start,strlen(delimiter1));
 
 	}
+
+	len = (int)(start - src);
 	//printf("start = %d\n",start);
 
 	end = start + strlen(delimiter1);
+
 
 	//free(tmp);
 	//tmp = NULL;
 
 
 	//tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
-	strncpy(tmp2,start,strlen(delimiter2));
+	memcpy(tmp2,start,strlen(delimiter2));
 
 
 	//while( strncmp(tmp,delimiter2,strlen(delimiter2)) != 0  && sub = 0){
-	while( sub > 0  && len <= src_len){
+	while( sub > 0  && len <= src_len-2){
 
-
-		strncpy(tmp,end,strlen(delimiter1));
-		strncpy(tmp2,end,strlen(delimiter2));
+		//printf("hey\n");
+		memcpy(tmp,end,strlen(delimiter1));
+		memcpy(tmp2,end,strlen(delimiter2));
 		echap = end-1;
 
 
-		if( strncmp(tmp,delimiter1,strlen(delimiter1)) == 0 && echap[0]!='\\'){
+		if( memcmp(tmp,delimiter1,strlen(delimiter1)) == 0 && echap[0]!='\\'){
 			//printf("clic\n");
 			//printf("echap = %c\n",echap[0]);
 			sub ++;
 			end += strlen(delimiter1);
+			len += strlen(delimiter1);
 		}else{
 
-			if( strncmp(tmp2,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
+			if( memcmp(tmp2,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
 				//printf("clac\n");
 				//printf("echap = %c\n",echap[0]);
 				sub --;
 				end += strlen(delimiter2);
+				len += strlen(delimiter2);
 
 			}else{
 				end ++;
+				len++;
 			}
 		}
 
-
 		//end ++;
 		//len ++;
-
-
 	}
+
+
 
 	//end += (strlen(delimiter2)-1);
 
 	//printf("end = %d :: %c\n",end,end[0]);
 	//printf("len = %d\n",len);
 	
-
-
-	len = (int)(end - start);
-	//printf("len = %d\n",len);
-
-	if(len > src_len){
-		printf("Error :: getDelimitedStringContent :: len > src_len\n");
+	
+	if( sub > 0){
+		printf("Warning :: getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s\n",sub,src);
 		free(tmp);
 		free(tmp2);
 		tmp = NULL;
 		tmp2 = NULL;
 		return NULL;
 	}
+	
 
+	if(len > src_len){
+		printf("Error :: getDelimitedStringContent :: delimiter2 not found :: len > src_len\n");
+		free(tmp);
+		free(tmp2);
+		tmp = NULL;
+		tmp2 = NULL;
+		return NULL;
+	}
+	//printf("len = %d\n",len);
+
+	//printf("hey \n");
+	len = (int)(end - start);
+	
 	content = (char*)calloc(len+1,sizeof(char));
 	content[len] = '\0';
 
-	strncpy(content,start,len);
+	memcpy(content,start,len);
 	//printf("content = %s\n", );
 
 
@@ -783,13 +937,15 @@ char * getUnicodeInString(char * stream, int size){
 	char * end = NULL;
 	int len = 0;
 	
-	start = stream;
+	//start = stream;
 	len = size ;
+	end = stream;
 
 
 	while( unicode == NULL && len > 6){
 
-		start = searchPattern(stream, "%u", 2, len);
+
+		start = searchPattern(end, "%u", 2, len);
 		
 
 		if(start == NULL){
@@ -903,14 +1059,17 @@ char * getHexa(char * dico, int size){
 
 	len = size ;
 	start = dico;
+	end = dico;
 
 	while( hexa == NULL && len >= 3  ){
 
+		//printf("heyhey %d :: %d \n",len,size);
 	
-		start = searchPattern(dico,"#",1,len);
+		start = searchPattern(end,"#",1,len);
+
+		//printf("oooh\n");
 		
 		if(start == NULL){
-			
 			return NULL;
 		}
 
@@ -924,8 +1083,9 @@ char * getHexa(char * dico, int size){
 			return start;
 		}
 
+		//start ++;
 
-		len = (int)(start - dico);
+		len = (int)(end - dico);
 		len = size - len;
 
 
@@ -968,7 +1128,7 @@ void printObjectReferences(struct pdfDocument* pdf){
 		return;
 
 
-	while(pdf->objects){
+	while(pdf->objects != NULL){
 		printf("object = %s\n",pdf->objects->reference);
 
 		pdf->objects = pdf->objects->next;
@@ -982,6 +1142,11 @@ void debugPrint(char * stream, int len){
 
 	FILE * debug = NULL;
 
+	if(stream == NULL || len <= 0){
+		printf("Error :: debugPrint :: NULL parameters \n");
+		return;
+	}
+
 	// Open en file
 	if(!(debug = fopen("debug","wb+"))){
 		printf("open failed\n");
@@ -990,7 +1155,7 @@ void debugPrint(char * stream, int len){
 
 	//printf("DEBUG ::: \n");
 
-
+	printf("stream in debug = %s\n",stream);
 	//fputc('\n',debug);
 	//fputc('\n',debug);
 	//fputc('\n',debug);
@@ -1105,7 +1270,7 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 
 	*returned_size = len;
 
-	printf("string = %s\n",string);
+	//printf("string = %s\n",string);
 
 	free(byte);
 

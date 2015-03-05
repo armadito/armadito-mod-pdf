@@ -24,12 +24,14 @@ int checkXRef(struct pdfDocument * pdf){
 	char free_obj = 'n';
 	int off = 0;
 
-
+	printf("\n\nDebug :: checkXRef \n");
 
 	if(pdf->trailers == NULL){
 		printf("Warning :: checkXRef :: No trailer found in pdfDocument\n");
 		return -1;
 	}
+
+
 
 	trailer = pdf->trailers;
 
@@ -45,6 +47,7 @@ int checkXRef(struct pdfDocument * pdf){
 		
 
 		start = searchPattern(trailer->content, "startxref", 9 , strlen(trailer->content));
+
 
 		if(start == NULL){
 			printf("Error :: checkXRef :: XRef offset not found in trailer\n");
@@ -63,9 +66,6 @@ int checkXRef(struct pdfDocument * pdf){
 		xref_offset = getNumber(start,len);
 
 		// TODO test the value of xref_offset ( modify get number to return -1 if error);
-
-		printf("xref offset = %d\n",xref_offset);
-
 		
 		if(pdf->fh == NULL){
 			printf("Error :: pdf file handle is NULL\n");
@@ -76,20 +76,20 @@ int checkXRef(struct pdfDocument * pdf){
 		fseek(pdf->fh,xref_offset,SEEK_SET);
 
 
-
 		// check xref keyword in file
-		xref = (char*)calloc(4,sizeof(char));
+		xref = (char*)calloc(5,sizeof(char));
+		xref[4] = '\0';
 		fread(xref,1,4,pdf->fh);
 		//printf("xref keyword = %s\n",xref);
 
-
+		
 		
 
 
 		if(strncmp(xref,"xref",4) == 0){
 
 
-			printf("Good xref table offset : %d\n",xref_offset);
+			//printf("DEBUG :: checkXRef :: Good xref table offset : %d\n",xref_offset);
 			start = pdf->content;
 			start += xref_offset;
 
@@ -205,11 +205,20 @@ int checkXRef(struct pdfDocument * pdf){
 
 		}else{
 
+			// if the offset is higher than th PDF size
+			if(xref_offset > pdf->size){
+				printf("Warning :: Wrong Xref table (or xref object) offset %d\n",xref_offset);				
+				ret = 0;
+				pdf->testStruct->bad_xref_offset ++;
+				trailer = trailer->next;
+				continue;
+			}
 			
 			//printf("xref keyword = %s\n",xref);
 
 			start = pdf->content;
 			start += xref_offset;
+
 
 			len = (int)(start - pdf->content);
 			len = pdf->size -len ;
@@ -222,6 +231,8 @@ int checkXRef(struct pdfDocument * pdf){
 
 			//  Check if the offset point to a Xref Object type /XRef
 			obj_num_a = getNumber_a(start,len);
+
+
 
 			if(obj_num_a == NULL){
 				pdf->testStruct->bad_xref_offset ++;
@@ -250,7 +261,7 @@ int checkXRef(struct pdfDocument * pdf){
 				if(obj->type == NULL || strncmp(obj->type,"/XRef",5) != 0){
 
 					printf("Warning :: Wrong Xref table (or xref object) offset %d\n",xref_offset);
-					printf("type = %s\n",obj->type);
+					//printf("type = %s\n",obj->type);
 					ret = 0;
 					pdf->testStruct->bad_xref_offset ++;
 
@@ -274,10 +285,10 @@ int checkXRef(struct pdfDocument * pdf){
 
 	}
 
-
+	/*
 	if(ret != 0){
 		printf("The XRef table is OK\n");
-	}
+	}*/
 
 	return ret;
 
@@ -305,6 +316,9 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 	int len = 0;
 	int len2 = 0;
 
+
+	printf("\n\nDebug :: checkEmptyDocument \n");
+
 	if(pdf == NULL){
 		printf("Error :: checkEmptyDocument :: NULL pdf object in parameter\n");
 		return -1;
@@ -318,7 +332,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 		if(obj->type != NULL && strncmp(obj->type,"/Pages",6) == 0){
 
 			printf("Found /Pages object :: %s\n",obj->reference);
-			printf("Dico = %s\n",obj->dico);
+			//printf("Dico = %s\n",obj->dico);
 
 			// get kids pages
 			start = searchPattern(obj->dico, "/Kids", 5 , strlen(obj->dico));
@@ -336,7 +350,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 			//while
 			kids = getDelimitedStringContent(start,"[","]",len);
-			printf("kids = %s\n",kids);
+			//printf("kids = %s\n",kids);
 
 
 			len = strlen(kids);
@@ -346,7 +360,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 				//printf("kid ref = %s :: %d\n",kid_obj_ref,kid_obj_ref);
 
-				printf("kid ref = %s\n",kid_obj_ref);
+				//printf("kid ref = %s\n",kid_obj_ref);
 				
 
 				end = searchPattern(end,kid_obj_ref,strlen(kid_obj_ref)-3,len);
@@ -372,7 +386,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 				if(kid_obj->dico != NULL && kid_obj->type != NULL && strncmp(kid_obj->type,"/Page",5) == 0){
 
 					start = searchPattern(kid_obj->dico, "/Contents", 9 , strlen(kid_obj->dico));
-					printf("Page dico = %s\n",kid_obj->dico);
+					//printf("Page dico = %s\n",kid_obj->dico);
 
 					if(start == NULL){
 						printf("Warning :: checkEmptyDocument :: No page content in object %s\n",kid_obj_ref);
@@ -386,7 +400,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 						start ++;
 					}
 
-					printf("start[0] = %c\n",start[0]);
+					//printf("start[0] = %c\n",start[0]);
 
 					// if there is serveral content objects
 					if(start[0] == '['){
@@ -406,7 +420,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 						// get page content objects ref
 						while( (pageContent_obj_ref = getIndirectRefInString(start,len2)) != NULL){
 
-							printf(" page content ref = %s\n",pageContent_obj_ref);
+							//printf(" page content ref = %s\n",pageContent_obj_ref);
 
 							start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
 
@@ -428,7 +442,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 							// get the stream
 							if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
-								printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+								//printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
 								//return 1;
 								ret = 1;
 							}else{
@@ -458,7 +472,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 						// get the stream
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							//return 1;
-							printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+							//printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
 							ret = 1;
 
 						}else{
@@ -494,13 +508,13 @@ int documentStructureAnalysis(struct pdfDocument * pdf){
 
 	int res = 0;
 
-	printf("-----------------------------------------\n");
+	printf("\n");
+	printf("-----------------------------------\n");
 	printf("--- DOCUMENT STRUCTURE ANALYSIS ---\n");
-	printf("-----------------------------------------\n\n");
+	printf("-----------------------------------\n");
+	printf("\n");
 
 	res = checkXRef(pdf);
-
-
 
 	res = checkEmptyDocument(pdf);
 	if(res == 0){

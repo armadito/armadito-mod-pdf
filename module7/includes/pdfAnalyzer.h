@@ -36,6 +36,8 @@
 #define DANGEROUS_KEYWORD_LOW 20
 #define TIME_EXCEEDED 20
 
+#define DEBUG 1
+
 // PDF object structure
 struct pdfObject{
 	
@@ -159,6 +161,8 @@ struct pdfTrailer* initPDFTrailer();
 struct testsPDFStruct * initTestsPDFStruct();
 struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
 void printObject(struct pdfObject * obj);
+void printObjectInFile(struct pdfObject * obj);
+void printPDFObjects(struct pdfDocument * pdf);
 int getNumber(char* ptr, int size);
 char* getNumber_a(char* ptr, int size);
 char * getIndirectRef(char * ptr, int size);
@@ -174,8 +178,9 @@ char * binarytoChar(char * binary, int size, int * returned_size);
 
 
 /***** pdf Parsing functions *****/
-int checkMagicNumber(struct pdfDocument * pdf);
-int getPDFContent(struct pdfDocument * pdf);
+int parsePDF(struct pdfDocument * pdf);
+int checkMagicNumber(struct pdfDocument * pdf);	// Check
+int getPDFContent(struct pdfDocument * pdf);	// check
 char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf);
 char * getObjectType(struct pdfObject * obj);
 char * getObjectStream(struct pdfObject * obj);
