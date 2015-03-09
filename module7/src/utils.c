@@ -315,9 +315,9 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 
 	char* res = NULL;
 	
-	int i =0;
+	//int i =0;
 	char * tmp = NULL;
-	int diff = 0;
+	//int diff = 0;
 	char * end = NULL;
 	int len = 0;
 	
@@ -366,7 +366,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 
 	len = size; 
 	end = src;
-	while(len > pat_size){
+	while(len >= pat_size){
 	
 		//i = 0;
 		res = memchr(end,pat[0],len);
@@ -1275,4 +1275,38 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 	free(byte);
 
 	return string;
+}
+
+
+// This function print a stream with a null characters
+void printStream(char * stream, int size){
+
+	int len = 0;
+	char * ptr = NULL;
+
+	if(stream == NULL || size <= 0){
+		return;
+	}
+
+	ptr = stream;
+
+	while (len < size){
+
+		if(ptr[0] == '\0'){
+			printf("<NUL>");
+		}else{
+			printf("%c",ptr[0]);
+		}
+
+		len ++;
+		ptr ++;
+
+	}
+
+	printf("\n");
+
+	return ;
+	
+
+
 }

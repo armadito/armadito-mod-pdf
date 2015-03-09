@@ -82,11 +82,8 @@ int checkXRef(struct pdfDocument * pdf){
 		fread(xref,1,4,pdf->fh);
 		//printf("xref keyword = %s\n",xref);
 
-		
-		
 
-
-		if(strncmp(xref,"xref",4) == 0){
+		if(memcmp(xref,"xref",4) == 0){
 
 
 			//printf("DEBUG :: checkXRef :: Good xref table offset : %d\n",xref_offset);
@@ -95,13 +92,20 @@ int checkXRef(struct pdfDocument * pdf){
 
 			len = (int)(start - pdf->content);
 			len = pdf->size -len ;
-			//printf("start = %s\n",start);
+
+
+			printf("DEBUG :: start = %s\n",start);
 
 			free(xref);
 			xref = NULL;
 
 			// Get xref table content from pdf document content
 			xref = getDelimitedStringContent( start, "xref" , "trailer" , len);
+
+			if(xref == NULL){
+				printf("Error :: checkXRef :: Error while getting the xref table\n");
+				return -1;
+			}
 			//printf("xref table content = \n%s\n",xref);
 
 			// shift xref keyword

@@ -255,6 +255,7 @@ int analyze(char * filename){
 	//ret = pdf->coef;
 	
 	
+	
 	freePDFDocumentStruct(pdf);
 	//fclose(f);
 	return ret;

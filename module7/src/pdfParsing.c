@@ -323,6 +323,7 @@ char * getObjectType(struct pdfObject * obj){
 
 	// Fix bug => /Subtype /Type1 /Type/Font
 	tmp = obj->dico;
+
 	while(flag == 0){
 
 		start = searchPattern(tmp,"/Type",5,strlen(obj->dico));
@@ -357,9 +358,10 @@ char * getObjectType(struct pdfObject * obj){
 	start += 5;
 
 	// White space
-	if(start[0] == ' '){
+	while(start[0] == ' ' ){
 		start ++;
 	}
+	
 	//printf("len = %d \t start = %d \t obj->dico = %d\n",len, start,obj->dico);
 	
 	end = memchr(start,'/',strlen(obj->dico)-len);
@@ -369,6 +371,7 @@ char * getObjectType(struct pdfObject * obj){
 		//printf("Err :: end = NULL\n");
 		return NULL;
 	}
+	start = end;
 	
 	len = 0;
 	do{
@@ -383,7 +386,7 @@ char * getObjectType(struct pdfObject * obj){
 	//printf("getObjectType :: len = %d \n",len);
 	//start += 4;
 	len = (int)(end-start);
-	strncpy(type,start,len);
+	memcpy(type,start,len);
 	
 	
 	return type;
@@ -1405,33 +1408,358 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 }
 
 
-// This function remove all PostScript comments in the pdf document
-int removeComments(struct pdfDocument * pdf){
 
-/*
-	char * content = NULL;
-	char * whithout_comments = NULL;
-	char * comments = NULL;
-	char * start = NULL;
-	char * end = NULL;
+// This function remove the comment in the src stream
+// Returns NULL if there is no comment in this line
+char *removeCommentLine(char * src, int size, int * ret_len){
+
+	char * start= NULL;
+	char * out = NULL;
 	int len = 0;
 
-	len = pdf->size;
-	
 
-	while(len > 0){
+	// No comment in this line
+	if((start = searchPattern(src,"%",1,size)) == NULL){
+		return NULL;
+	}
 
-		
-
-		len --;
+	if(start[1] == '%'){
+		return NULL;
 	}
 
 
-*/
+	len = (int)(start - src);
+	/*if(len == 0){
 
+	}*/
+
+	* ret_len = len;
+
+	out = (char*)calloc(len+1,sizeof(char));
+	out[len]='\0';
+
+	memcpy(out,src,len);
+
+	return out;
+}
+
+
+
+// This function remove all PostScript comments in the pdf document
+int removeComments(struct pdfDocument * pdf){
+
+
+	char * new_content = NULL;
+	char * tmp = NULL;
+	int content_len = 0;
+	int tmp_len = 0;
+	char * uncomment = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	char * line = NULL;
+	
+	int len = 0;
+	int line_size = 0;	
+	int uncomment_len =0;
+	char white_space = 0;	
+	char * ptr = NULL;
+	
+
+	int inStream = 0;
+	int inString = 0; // todo multi line string
+	int inQuotes = 0;
+	int after_header = 0; // line juste after header tag
+
+	int i = 0;
+
+
+
+	len = pdf->size;
+	
+	//content = pdf->content;
+
+	if(pdf->content == NULL || pdf->size <= 0){
+		printf("Warning :: removeComments :: pdf content is NULL \n");
+		return -1;
+	}
+
+
+	start = pdf->content;
+	end = start;
+
+	/*
+	printf("size = %d\n",pdf->size);
+	printf("start = %d\n",start);
+	printf("end[0] = %c\n",end[0]);
+	*/
+
+
+	//for each line
+	while(len > 0){
+
+		//printf("len = %d\n",len);
+
+		start = end;
+
+		// scan line
+		while(end[0] != '\r' && end[0] != '\n' && end[0] != '\f'){
+			end ++;
+		}
+
+		white_space = end[0];
+		
+
+		// line
+		line_size = (int)(end-start);
+		line = (char*)calloc(line_size+1,sizeof(char));
+		line[line_size] = '\0';
+
+		
+
+		memcpy(line,start,line_size);
+		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
+
+
+
+		//-----------------------------------------------------
+		// Remove comment in line
+		//-----------------------------------------------------
+
+		uncomment_len = 0;
+
+		// line after the heaer flag
+		after_header = (after_header == 1)?2:0;
+
+			
+		ptr = line;
+		// Scan the line
+		for(i= 0; i< line_size ; i++){
+
+			// String delimiter
+			if(inStream == 0 && ptr[i] == '(' && inQuotes == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\')) ){
+				inString ++;
+			}
+
+			// String delimiter 2
+			if(inStream == 0 && ptr[i] == ')' && inQuotes == 0 && inString > 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
+				inString --;
+			}
+
+			// Quotes delimiter
+			if(inStream == 0 && ptr[i] == '"' && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
+				inQuotes = (inQuotes == 0)?1:0;
+			}				
+
+			// If % is not in string
+			if(ptr[i] == '%' && inString == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
+				// remove conmment
+
+				// %%EOF
+				// %PDF-version
+				if(line_size -i >= 5 && memcmp(ptr,"%%EOF",5) == 0){
+					//printf("pdf end of file\n");
+					i = line_size;
+					continue;
+				}else{
+
+					if(line_size - i >= 8 && memcmp(ptr,"%PDF-1.",7) == 0){
+						after_header = 1;
+						//printf("PDF Header !!\n");
+						continue;
+					}else{
+
+						if(after_header == 2  && (line_size - i) >= 5 && (unsigned char)ptr[i+1]>=128  && (unsigned char)ptr[i+2]>=128 && (unsigned char)ptr[i+3]>=128 && (unsigned char)ptr[i+4]>=128 ){ // header line immediatly followed by 
+							after_header = 0;
+							i = line_size;
+							continue;
+						}else{
+							uncomment = (char*)calloc(i+1,sizeof(char));
+							uncomment[i]='\0';
+							memcpy(uncomment,line,i);
+							uncomment_len = i;
+							i = line_size;
+							continue;
+
+						}
+
+						
+
+					}
+
+				}
+				
+				
+
+			}
+
+		}
+
+		
+
+
+		//--------------------------------------------------------------
+
+		
+		// remove comments in line
+		//uncomment = removeCommentLine(line,line_size,&uncomment_len);
+		//printf("uncomment = %s :: len = %d \n", uncomment,uncomment_len);
+
+		// 
+		if(uncomment  == NULL){
+			uncomment = (char*)calloc(line_size,sizeof(char));
+			//uncomment = line;
+			memcpy(uncomment,line,line_size);
+			uncomment_len = line_size;
+			
+		}
+
+		//printf("uncomment = %s :: uncomment_len = %d \n", uncomment,uncomment_len);
+
+
+		//look if I'm in a stream content before adding the uncommented line
+		if(searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){
+			//printf("removeComments :: Out Stream = 0\n");
+			inStream = 0;
+
+		}else{
+			if(searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
+				//printf("removeComments :: In Stream = 1\n");
+				inStream = 1;
+			}
+		}
+
+
+		//printf("to write = %s \n", uncomment);
+
+
+		//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
+
+
+
+		if(inStream == 0){
+
+			//printf("I can write the uncommented line\n");
+			//write uncommented line
+			if(content_len > 0){
+
+				tmp = (char*)calloc(content_len+1,sizeof(char));
+				tmp_len = content_len;
+				tmp[content_len]='\0';
+				memcpy(tmp,new_content,content_len);
+			}
+			
+
+
+			free(new_content);
+			new_content = NULL;
+
+			content_len += (uncomment_len +1);
+			//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
+
+			//content_len ++; // due to white space
+			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
+			new_content[content_len]='\0';
+
+			ptr=new_content;
+
+			if(tmp != NULL)
+				memcpy(ptr,tmp,content_len-uncomment_len-1);
+
+			//printf("New content1 = %s\n",new_content);
+
+			ptr += tmp_len;
+
+			//ptr = new_content + (content_len - uncomment_len);
+			memcpy(ptr,uncomment,uncomment_len);
+			//printf("New content2 = %s\n",new_content);
+
+			ptr = new_content + content_len - 1;
+			ptr[0]=white_space;
+
+			//memset(new_content+content_len-1,'\n',1);
+			//strncat(new_content,uncomment,uncomment_len);
+			//printf("New content = %s\n",new_content);
+
+
+		}else{
+
+			//printf("stream content line\n");
+			//write uncommented line
+			
+			if(content_len > 0){
+				tmp = (char*)calloc(content_len+1,sizeof(char));
+				tmp_len = content_len;
+				tmp[content_len]='\0';
+				memcpy(tmp,new_content,content_len);
+			}
+			
+
+			free(new_content);
+			new_content = NULL;
+
+			content_len += (line_size +1);
+			//printf("content_len = %d :: line_len = %d\n",content_len,line_size );
+
+			//content_len ++; // due to white space
+			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
+			new_content[content_len]='\0';
+
+			ptr=new_content;
+
+			if(tmp != NULL)
+				memcpy(ptr,tmp,tmp_len);
+
+			//printf("New content1 = %s\n",new_content);
+
+			ptr += tmp_len;
+
+			//ptr = new_content + (content_len - uncomment_len);
+			memcpy(ptr,line,line_size);
+			//printf("New content2 = %s\n",new_content);
+
+			ptr = new_content + content_len - 1;
+			ptr[0]='\n';
+
+		}
+
+
+		end ++;
+		//printf("\n");
+		len = (int)(end - pdf->content);
+		len = pdf->size - len;
+
+
+				
+		free(tmp);
+		free(line);
+		free(uncomment);
+		tmp = NULL;
+		line = NULL;
+		uncomment = NULL;		
+
+		//printf("\n\n");
+
+		
+
+	}
+
+	printf("Debug :: removeComments :: Old size :: %d\n",pdf->size);
+	printf("Debug :: removeComments :: New size :: %d\n",content_len);
+
+	printf("new content = \n");
+	printStream(new_content,content_len);
+
+	free(pdf->content);
+	pdf->content = NULL;
+
+
+	// Set the uncommented content
+	pdf->content = new_content;
+	pdf->size = content_len;
 
 	return 0;
 }
+
 
 
 int parsePDF(struct pdfDocument * pdf){
@@ -1449,8 +1777,10 @@ int parsePDF(struct pdfDocument * pdf){
 	// Get the content of the document
 	getPDFContent(pdf);
 
+
+
 	// Remove comments
-	//removeComments(pdf);
+	removeComments(pdf);
 
 	// Get Trailers
 	
@@ -1463,7 +1793,7 @@ int parsePDF(struct pdfDocument * pdf){
 			pdf->testStruct->bad_trailer ++;
 	}
 
-
+	
 	// if the document is encrypted
 	if( pdf->testStruct->encrypted > 0 ){		
 		return -2;

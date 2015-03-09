@@ -174,6 +174,7 @@ char * getHexa(char * dico, int size);
 char * replaceInString(char * src, char * toReplace , char * pat);
 char * toBinary(char * stream, int size);
 char * binarytoChar(char * binary, int size, int * returned_size);
+void printStream(char * stream, int size);
 
 
 
