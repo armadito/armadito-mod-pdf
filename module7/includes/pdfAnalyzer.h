@@ -36,6 +36,8 @@
 #define DANGEROUS_KEYWORD_LOW 20
 #define TIME_EXCEEDED 20
 
+#define LARGE_FILE_SIZE 3000000
+
 #define DEBUG 1
 
 // PDF object structure
@@ -53,6 +55,8 @@ struct pdfObject{
 	int tmp_stream_size; // temp size of the stream (between two decoding process)
 	int decoded_stream_size;	// Size in byte of the object's decoded stream
 	int content_size;	// size in byte of the object's content
+
+	int errors;		// errors in parsing
 	//enum efilter * filter;
 	//filter* stream_filter[];
 	
@@ -65,6 +69,7 @@ struct pdfTrailer{
 
 	int offset;	// offset in the document
 	char * content; // content of the trailer
+	char * dico;
 	struct pdfTrailer* next;	// next trailer in the document
 	
 };
@@ -92,6 +97,7 @@ struct testsPDFStruct{
 	int bad_obj_offset; // When at least an object's offset in the reference table is incorrect
 	int obfuscated_object;	// when an object dictionary is obfuscated within hexa
 	int multiple_headers; // when several headers are found in the document.
+	int large_file;
 
 };
 
@@ -104,7 +110,7 @@ struct testsPDFObjAnalysis{
 	int dangerous_keyword_high;	// potentially dangerous keyword (high level)
 	int dangerous_keyword_medium;	// potentially dangerous keyword (medium level)
 	int dangerous_keyword_low;	// potentially dangerous keyword (lowlevel)
-	int time_exceeded;	// when the analysis of an object stream exceed a given duration.
+	int time_exceeded;	// when the analysis of an object stream exceed a given duration.	
 
 	int js; // number of js content
 	int xfa; // number of xfa objects
@@ -161,6 +167,7 @@ struct pdfTrailer* initPDFTrailer();
 struct testsPDFStruct * initTestsPDFStruct();
 struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
 void printObject(struct pdfObject * obj);
+void printObjectByRef(struct pdfDocument * pdf, char * ref);
 void printObjectInFile(struct pdfObject * obj);
 void printPDFObjects(struct pdfDocument * pdf);
 int getNumber(char* ptr, int size);
@@ -193,6 +200,9 @@ int getPDFTrailers_1(struct pdfDocument * pdf);
 int getPDFTrailers_2(struct pdfDocument * pdf);
 int decodeObjectStream(struct pdfObject * obj);
 char * hexaObfuscationDecode(char * dico);
+char *removeCommentLine(char * src, int size, int * ret_len);
+int removeComments(struct pdfDocument * pdf);
+
 
 /***** filters functions *****/
 char * FlateDecode(char * stream, struct pdfObject* obj);
@@ -207,6 +217,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj);
 int documentStructureAnalysis(struct pdfDocument * pdf);
 int checkXRef(struct pdfDocument * pdf);
 int checkEmptyDocument(struct pdfDocument * pdf);
+int checkTrailer(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions *****/

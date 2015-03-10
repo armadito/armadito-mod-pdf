@@ -16,14 +16,15 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	int dest_len = 16384;
 	int res = 0;
 
-
+	//printf("stream = --%s--\n",stream );
+	//printStream(stream,obj->tmp_stream_size);
 	//unsigned long streamd_len = 163840; // TODO TOFIX search a way to find the right length
 	
 	src_len = obj->tmp_stream_size;
 
 	// verify parameters
 	if (stream == NULL || src_len == 0){
-		printf("Error :: Null stream to decode in object %s\n", obj->reference);
+		printf("Error :: FlateDecode :: Null stream to decode in object %s\n", obj->reference);
 		return NULL;
 	}
 
@@ -56,7 +57,8 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	obj->tmp_stream_size = len;
 
 	
-	//printf("decoded data = %s\n",streamd);
+	//printf("decoded data = %s :: len  = %d\n",out,len);
+
 
 	printf("\n\n");
 	free(dest);

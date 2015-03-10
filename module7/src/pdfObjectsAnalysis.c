@@ -27,7 +27,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 		return 0;
 	}
 
-	//printf("JavaScript Entry in dictionary detected in object %s\n", obj->reference);
+	printf("JavaScript Entry in dictionary detected in object %s\n", obj->reference);
 	//printf("dictionary = %s\n", obj->dico);
 
 
@@ -75,6 +75,8 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			//printf("Javascript content = %s\n",js);	
 			// TODO Launch analysis on content
 
+			//printf("js = %s\n",js);
+
 			
 			pdf->testObjAnalysis->active_content ++;
 			pdf->testObjAnalysis->js ++;
@@ -83,7 +85,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			
 
 		}else{
-			printf("Empty js content in object %s\n",js_obj_ref);
+			printf("Debug :: getJavaScript :: Empty js content in object %s\n",js_obj_ref);
 		}
 
 
@@ -91,13 +93,13 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 	}else{
 
 		// TODO process js script directly
-		printf("Warning :: JS object reference is null\n");
+		//printf("Warning :: getJavaScript :: JS object reference is null\n");
 
 		js = getDelimitedStringContent(start,"(",")",len);
 		//printf("JavaScript content = %s\n",js);
 
 		if(js != NULL){
-			printf("Found JS content in object %s\n",obj->reference);
+			printf("Debug :: getJavaScript :: Found JS content in object %s\n",obj->reference);
 
 			pdf->testObjAnalysis->active_content ++;
 			pdf->testObjAnalysis->js ++;
@@ -109,11 +111,6 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 
 	}
-
-
-	
-
-
 
 	printf("\n\n");
 	return 1;
@@ -714,7 +711,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	//char * test = "Bonjour je suis une stream de test";
 
 
-	printf("\n\nDebug :: unknownPatternRepetition \n");
+	//printf("\n\nDebug :: unknownPatternRepetition \n");
 
 	// remove white space in stream ? 
 	
@@ -843,8 +840,8 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfObject * obj){
 
 	int i = 0;
-	char * high_keywords[] = {"HeapSpray","heap","spray","memory","hack","shellcode", "shell", "Execute", "pointers", "byteToChar", "system32", "payload", "console"};
-	int num_high = 12;
+	char * high_keywords[] = {"HeapSpray","heap","spray","hack","shellcode", "shell", "pointers", "byteToChar", "system32", "payload", "console"};
+	int num_high = 10;
 	int num_medium = 10;
 	char * medium_keywords[] = {"toString", "substring", "split", "eval", "addToolButton", "String.replace", "unescape", "exportDataObject", "StringFromChar", "util.print"};
 	char * start = NULL;
@@ -854,7 +851,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	int ret = 0;
 
 
-	printf(":: Searching Dangerous Keywords in %s\n",obj->reference);
+	//printf(":: Searching Dangerous Keywords in %s\n",obj->reference);
 
 	//printf("\n\n content to analyze = %s\n",stream);
 

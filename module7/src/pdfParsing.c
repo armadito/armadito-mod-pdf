@@ -504,16 +504,12 @@ char * getStreamFilters(struct pdfObject * obj){
 		start = end;
 		
 		len = 0;
-		do{
-			//printf("char = %c\n",end[0]);
-			// get the array of filters
+		while(end[0] != ']'){
 			end ++;
-			len++;
-			//printf("heyhey\n");
-		
-		}while( end[0] != ']');
-		//}while( (end[0] >=97 && end[0] <=122) || (end[0] >=65 && end[0] <=90 ) || (end[0] >=48 && end[0] <= 57) || (end[0] == ' ') || (end[0] == '/') ); // Lower case [97 122] or Upper case [65 90] + digit [48 57]
-		len +=2;
+			len ++;
+		}
+
+		len +=1;
 		//printf("getStreamFilters :: len = %d\n",len);
 		//printf("end debug :: %c",end[0]);
 
@@ -574,7 +570,7 @@ int decodeObjectStream(struct pdfObject * obj){
 	
 	//printf("implemented filters = %s\n",obj->filters);
 	if(obj->stream == NULL){
-		printf("Error :: Stream NULL\n");
+		printf("Error :: decodeObjectStream :: Null Stream in object %s\n", obj->reference);
 		return -1;
 	}
 
@@ -617,7 +613,7 @@ int decodeObjectStream(struct pdfObject * obj){
 		
 		//TODO
 		if((strncmp(filter,"/FlateDecode",12) == 0 && strncmp(filter,"/FlateDecode",strlen(filter)) == 0) || (strncmp(filter,"/Fl",3) == 0 && strncmp(filter,"/Fl",strlen(filter)) == 0)){
-				printf("Decode Fladetecode \n");
+				printf("Decode Fladetecode :: %s\n",obj->reference);
 				stream = FlateDecode(stream, obj);
 				/*if(strncmp(obj->reference,"8 0 obj",8) == 0)
 					printf("stream _flatedecode = %s\n",stream);*/
@@ -824,8 +820,18 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	}
 
 
-	printf("::: extractObjectFromObjStream :::\n");
-	//printf("stream = %s\n\n",stream);
+	printf("::: extractObjectFromObjStream ::: %s\n",obj->reference);
+
+
+	if(strlen(stream) == 0){
+		printf("Error :: extractObjectFromObjStream :: Null stream in object %s\n",obj->reference );
+		return -1;
+
+	}
+
+	//printf("stream = %s :: \n\n",stream);
+
+	// stream verification 
 	//printf("strm len = %d\n",strlen(obj->dico));
 
 	/*
@@ -922,11 +928,19 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 
 	//len = strlen(stream);
+	//printf("%d\n",strlen(stream));
+
+	
+
 	len = stream_len;
+
+
 
 	obj_offsets = (int*)calloc(num,sizeof(int));
 
-	//printf("len_obj_stream = %d\n",len);
+
+
+	
 	
 
 	// Get objects number and offset
@@ -969,6 +983,8 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	}
 
 	printf("\n\n");
+
+
 
 	start = stream;
 	len = strlen(stream);
@@ -1064,7 +1080,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		getObjectInfos(comp_obj,pdf);
 
 
-
 		addObjectInList(comp_obj,pdf);
 
 		
@@ -1073,8 +1088,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 	return 0;
 }
-
-
 
 
 
@@ -1163,7 +1176,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		ref[ref_len] = '\0';
 		
 		strncpy(ref,startobj_ptr,ref_len);
-		printf("object reference = %s :: %d\n",ref,ref_len);
+		//printf("object reference = %s :: %d\n",ref,ref_len);
 		
 		//startobj_ptr++;
 		
@@ -1231,7 +1244,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		
 		// Add in object list.
 		addObjectInList(obj,pdf);
-		printf("------------------------------------\n\n");
+		//printf("------------------------------------\n\n");
 
 
 	
@@ -1244,6 +1257,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 	
 	return 0;
 }
+
 
 
 // Get pdf trailer according to PDF
@@ -1487,11 +1501,11 @@ int removeComments(struct pdfDocument * pdf){
 	start = pdf->content;
 	end = start;
 
-	/*
-	printf("size = %d\n",pdf->size);
-	printf("start = %d\n",start);
-	printf("end[0] = %c\n",end[0]);
-	*/
+	
+	//printf("size = %d\n",pdf->size);
+	//printf("start = %d\n",start);
+	//printf("end[0] = %c\n",end[0]);
+	
 
 
 	//for each line
@@ -1568,8 +1582,9 @@ int removeComments(struct pdfDocument * pdf){
 						continue;
 					}else{
 
-						if(after_header == 2  && (line_size - i) >= 5 && (unsigned char)ptr[i+1]>=128  && (unsigned char)ptr[i+2]>=128 && (unsigned char)ptr[i+3]>=128 && (unsigned char)ptr[i+4]>=128 ){ // header line immediatly followed by 
-							after_header = 0;
+						// header line immediatly followed by
+						if(after_header == 2  &&  ((i==0) || ((line_size - i) >= 5 && (unsigned char)ptr[i+1]>=128  && (unsigned char)ptr[i+2]>=128 && (unsigned char)ptr[i+3]>=128 && (unsigned char)ptr[i+4]>=128)) ){  
+							after_header = 1;
 							i = line_size;
 							continue;
 						}else{
@@ -1611,6 +1626,9 @@ int removeComments(struct pdfDocument * pdf){
 			memcpy(uncomment,line,line_size);
 			uncomment_len = line_size;
 			
+		}else{
+			if(inStream == 0)
+				printf("DEBUG :: Comment found :: %s\n",uncomment);
 		}
 
 		//printf("uncomment = %s :: uncomment_len = %d \n", uncomment,uncomment_len);
@@ -1718,7 +1736,7 @@ int removeComments(struct pdfDocument * pdf){
 			//printf("New content2 = %s\n",new_content);
 
 			ptr = new_content + content_len - 1;
-			ptr[0]='\n';
+			ptr[0]=white_space;
 
 		}
 
@@ -1746,8 +1764,8 @@ int removeComments(struct pdfDocument * pdf){
 	printf("Debug :: removeComments :: Old size :: %d\n",pdf->size);
 	printf("Debug :: removeComments :: New size :: %d\n",content_len);
 
-	printf("new content = \n");
-	printStream(new_content,content_len);
+	//printf("new content = \n");
+	//printStream(new_content,content_len);
 
 	free(pdf->content);
 	pdf->content = NULL;
@@ -1777,6 +1795,13 @@ int parsePDF(struct pdfDocument * pdf){
 	// Get the content of the document
 	getPDFContent(pdf);
 
+
+	// File too large
+	if(pdf->size > LARGE_FILE_SIZE ){
+		printf("Warning :: parsePDF :: Large file :: pdf size =  %d octets\n",pdf->size);
+		pdf->testStruct->large_file ++;
+		return -3;
+	}
 
 
 	// Remove comments

@@ -56,10 +56,13 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("\n\n");
 	printf("::: Suspicious Coefficient :::\n\n");
 
-	if(pdf->testStruct->encrypted > 0)
-		printf("Coef = Encrypted_PDF\n");
+	if(pdf->testStruct->large_file > 0)
+		printf("Coef = LARGE_FILE\n");
 	else
-		printf("Coef = %d\n",pdf->coef);
+		if(pdf->testStruct->encrypted > 0)
+			printf("Coef = Encrypted_PDF\n");
+		else
+			printf("Coef = %d\n",pdf->coef);
 
 
 	printf("-------------------------------------------------------\n");
@@ -222,9 +225,8 @@ int analyze(char * filename){
 		printPDFObjects(pdf);
 	#endif
 
-	
-	
-	if(res == -2){		
+		
+	if(res <= -2 ){		
 		analysisReport(pdf,filename);
 		freePDFDocumentStruct(pdf);
 		return -2;
@@ -236,6 +238,7 @@ int analyze(char * filename){
 		getDangerousContent(pdf);
 	}
 
+
 	// Document structure analysis
 	documentStructureAnalysis(pdf);
 
@@ -245,6 +248,8 @@ int analyze(char * filename){
 
 	// print all objects references
 	//printObjectReferences(pdf);
+
+
 
 
 	// Analysis summary

@@ -51,7 +51,9 @@ void freePDFTrailerStruct(struct pdfTrailer * trailer){
 		tmp = trailer;
 		trailer = trailer->next;
 
+		free(tmp->dico);
 		free(tmp->content);
+
 				
 		free(tmp);
 		tmp = NULL;
@@ -190,6 +192,7 @@ struct testsPDFStruct * initTestsPDFStruct(){
 	testStruct->bad_obj_offset = 0;
 	testStruct->obfuscated_object = 0;
 	testStruct->multiple_headers = 0;
+	testStruct->large_file = 0;
 
 	return testStruct;
 }
@@ -252,8 +255,6 @@ struct pdfDocument* initPDFDocument(){
 	pdf->trailers = NULL;
 	pdf->xref = NULL;
 
-
-	
 	return pdf;
 
 }
@@ -284,8 +285,7 @@ struct pdfObject* initPDFObject(){
 	obj->tmp_stream_size = 0;
 	obj->content_size = 0;
 	obj->decoded_stream_size = 0;
-	
-		
+	obj->errors = 0;
 	
 	return obj;
 
@@ -304,6 +304,7 @@ struct pdfTrailer* initPDFTrailer(){
 	// Initialize entries
 	trailer->offset = 0;
 	trailer->content = NULL;
+	trailer->dico = NULL;
 	trailer->next = NULL;
 	
 	return trailer;
@@ -482,13 +483,6 @@ void printObjectInFile(struct pdfObject * obj){
 		fwrite(obj->decoded_stream, sizeof(char),obj->decoded_stream_size,debug);	
 	}
 	
-	
-
-	
-
-
-
-
 	//printf("Reference = %s\n",);
 
 
@@ -501,6 +495,7 @@ void printObjectInFile(struct pdfObject * obj){
 
 
 // Print object in a debug file (debug.txt)
+// TODO print object by ref
 void printObject(struct pdfObject * obj){
 
 	
@@ -545,6 +540,44 @@ void printObject(struct pdfObject * obj){
 
 	return;
 }
+
+
+void printObjectByRef(struct pdfDocument * pdf, char * ref){
+
+	struct pdfObject * obj = NULL;
+
+
+	if(pdf == NULL ){
+		printf("Error :: printObjectByRef :: NULL parameter \"pdf\" \n");
+		return;
+	}
+
+	if(ref == NULL ){
+		printf("Error :: printObjectByRef :: NULL parameter \"ref\" \n");
+		return;
+	}
+
+
+	obj = pdf->objects;
+	
+	while(obj != NULL){
+	
+		if( strncmp(ref,obj->reference,strlen(ref)) == 0 ){
+			printObject(obj);
+			return;
+		}
+		
+		obj = obj->next;	
+	}
+	
+	//printf("Object \"%s\" not found\n",ref);
+
+	return;
+
+
+}
+
+
 
 
 // Prints all object described in the PDF Document
