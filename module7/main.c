@@ -21,9 +21,11 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("-------------------------------\n\n");
 
 	printf("Filename = %s\n",filename);
-	printf("Execution time = %d sec\n",0);
+	//printf("Execution time = %d sec\n",0);
 	printf("PDF version = %s\n",pdf->version);
 
+	#ifdef DEBUG
+	
 	printf("\n\n");
 	printf("::: PDF Document Structure Tests :::\n\n");
 
@@ -56,13 +58,18 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("\n\n");
 	printf("::: Suspicious Coefficient :::\n\n");
 
-	if(pdf->testStruct->large_file > 0)
-		printf("Coef = LARGE_FILE\n");
+	#endif
+
+	if(pdf->testStruct->bad_header > 0)
+		printf("Coef = BAD_HEADER\n");
 	else
-		if(pdf->testStruct->encrypted > 0)
-			printf("Coef = Encrypted_PDF\n");
+		if(pdf->testStruct->large_file > 0)
+			printf("Coef = LARGE_FILE\n");
 		else
-			printf("Coef = %d\n",pdf->coef);
+			if(pdf->testStruct->encrypted > 0)
+				printf("Coef = Encrypted_PDF\n");
+			else
+				printf("Coef = %d\n",pdf->coef);
 
 
 	printf("-------------------------------------------------------\n");
@@ -181,8 +188,7 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 
 
 
-
-
+// Launch analysis (parsing, analysis, evaluation)
 int analyze(char * filename){
 
 
@@ -198,13 +204,13 @@ int analyze(char * filename){
 	
 	// Open file
 	if(!(f = fopen(filename,"rb"))){
-		printf("Error while opening file %s\n",filename);
+		printf("ERROR :: analyze :: Error while opening file %s\n",filename);
 		return -1;
 	}
 	
 	// Initialize the pdfDocument struct	
 	if(!(pdf = initPDFDocument())){
-		printf("Error while allocating memory for pdfDocument structure\n");
+		printf("ERROR :: analyze :: Error while allocating memory for pdfDocument structure\n");
 		fclose(f);
 		return -1;
 	}
@@ -214,7 +220,11 @@ int analyze(char * filename){
 	checkMagicNumber(pdf);
 
 	if(pdf->testStruct->bad_header > 0){
-		printf("Uhuru PDF analyzer :: Bad PDF header :: This file is not a PDF file :: %s \n",filename);
+		#ifdef DEBUG
+		printf("ERROR :: analyze :: Bad PDF header :: This file is not a PDF file :: %s \n",filename);
+		#endif
+		analysisReport(pdf,filename);
+		freePDFDocumentStruct(pdf);
 		return -2;
 	}
 
@@ -249,9 +259,6 @@ int analyze(char * filename){
 	// print all objects references
 	//printObjectReferences(pdf);
 
-
-
-
 	// Analysis summary
 	calcSuspiciousCoefficient(pdf);
 	analysisReport(pdf,filename);
@@ -272,19 +279,21 @@ int main (int argc, char ** argv){
 
 	int ret;
 	
+	#ifdef DEBUG
+	printf("-------------------------\n");
+	printf("-- UHURU PDF ANALYZER  --\n");
+	printf("-------------------------\n\n");
+	#endif
 
-	printf("\nUHURU PDF ANALYZER\n\n");
-	
 	if(argc < 2){
 		Helper();
 		return (-1);
 	}
 	
-	printf ("Analyzing file : %s\n",argv[1]);
+	//printf ("Analyzing file : %s\n",argv[1]);
 	
 	ret = analyze(argv[1]);
 	
 
 	return ret;
 }
-

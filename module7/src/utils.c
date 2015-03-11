@@ -103,12 +103,18 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 
 
 	if(pdf == NULL ){
-		printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
+		#ifdef DEBUG
+			("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
+		#endif
+
 		return NULL;
 	}
 
 	if(ref == NULL ){
-		printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
+		#ifdef DEBUG
+			printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
+		#endif
+
 		return NULL;
 	}
 
@@ -136,7 +142,10 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 	struct pdfObject* tmp = NULL;
 
 	if(obj == NULL){
-		printf("Error :: addObjectInList :: Object is NULL\n");
+		#ifdef DEBUG
+			printf("Error :: addObjectInList :: Object is NULL\n");
+		#endif
+
 		return -1;	
 	}
 	
@@ -148,7 +157,10 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 
 		// Object collision detection
 		if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
-			printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+			#ifdef DEBUG
+				printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+			#endif
+
 			pdf->testStruct->object_collision ++;
 		}
 
@@ -160,7 +172,10 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 			tmp = tmp->next;
 
 			if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
-				printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+				#ifdef DEBUG
+					printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
+				#endif
+
 				pdf->testStruct->object_collision ++;
 			}	
 		}
@@ -179,7 +194,7 @@ struct testsPDFStruct * initTestsPDFStruct(){
 	struct testsPDFStruct * testStruct = NULL;
 
 	if( !(testStruct = (struct testsPDFStruct *)calloc(1,sizeof(struct testsPDFStruct)) ) ){
-		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
+		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");		
 		return NULL;
 	}
 
@@ -321,6 +336,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	//int diff = 0;
 	char * end = NULL;
 	int len = 0;
+	int len_verif = 0;
 	
 	
 	
@@ -371,6 +387,15 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	
 		//i = 0;
 		res = memchr(end,pat[0],len);
+
+		len_verif = (int)(res-end);
+		len_verif = len - len_verif;
+
+		if(len_verif < pat_size){
+			free(tmp);
+			return NULL;
+		}
+
 		//printf("src  = %d && res = %d\n",src,res);
 		//i++;
 		
@@ -639,13 +664,14 @@ int getNumber(char* ptr, int size){
 	*/
 
 
-	num_a = (char*)calloc(len,sizeof(char));
+	num_a = (char*)calloc(len+1,sizeof(char));
+	num_a[len]='\0';
 	memcpy(num_a,ptr,len);
 	//printf("num_a = %s\n",num_a);
 
 	num = atoi(num_a);
 	//printf("num = %d\n",num);
-
+	free(num_a);
 
 	return num;
 }
@@ -680,7 +706,8 @@ char* getNumber_a(char* ptr, int size){
 
 
 
-	num_a = (char*)calloc(len,sizeof(char));
+	num_a = (char*)calloc(len+1,sizeof(char));
+	num_a[len]='\0';
 	memcpy(num_a,ptr,len);
 
 	//num = atoi(num_a);
@@ -754,6 +781,9 @@ char * getIndirectRef(char * ptr, int size){
 	strncat(ref, gen_num, strlen(gen_num));
 	strncat(ref, " obj", 4);
 	//printf("ref = %s\n",ref);	
+
+	free(gen_num);
+	free(obj_num);
 
 	return ref;
 
@@ -849,7 +879,10 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	
 	
 	if( sub > 0){
+		#ifdef DEBUG
 		printf("Warning :: getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s\n",sub,src);
+		#endif
+
 		free(tmp);
 		free(tmp2);
 		tmp = NULL;
@@ -859,7 +892,10 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	
 
 	if(len > src_len){
+		#ifdef DEBUG
 		printf("Error :: getDelimitedStringContent :: delimiter2 not found :: len > src_len\n");
+		#endif
+
 		free(tmp);
 		free(tmp2);
 		tmp = NULL;
@@ -931,7 +967,8 @@ char * getPattern(char * ptr, int size, int len){
 
 	//tmp = len;
 
-	pattern = (char*)calloc(size,sizeof(char));
+	pattern = (char*)calloc(size+1,sizeof(char));
+	pattern[size]='\0';
 
 	for(i=0; i< size ; i++){
 
@@ -1035,7 +1072,10 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 	start = searchPattern(src,toReplace,strlen(toReplace),strlen(src));
 
 	if(start == NULL){
+		#ifdef DEBUG
 		printf("Error :: String to replace (%s) not found in src \n",toReplace);
+		#endif
+
 		return src;
 	}
 
@@ -1134,8 +1174,9 @@ int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 	struct pdfTrailer * tmp =  NULL;
 
 
-	if(pdf == NULL || trailer == NULL){
+	if(pdf == NULL || trailer == NULL){		
 		printf("Error :: addTrailerInPDF :: Bad arguments pdf and trailer \n");
+
 		return -1;
 	}
 
@@ -1177,6 +1218,7 @@ void debugPrint(char * stream, int len){
 
 	if(stream == NULL || len <= 0){
 		printf("Error :: debugPrint :: NULL parameters \n");
+
 		return;
 	}
 

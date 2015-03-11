@@ -13,7 +13,7 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	unsigned long src_len = 0;
 	//mz_ulong len = 16384;
 	unsigned long len = 150000;
-	int dest_len = 16384;
+	//int dest_len = 16384;
 	int res = 0;
 
 	//printf("stream = --%s--\n",stream );
@@ -24,7 +24,9 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 
 	// verify parameters
 	if (stream == NULL || src_len == 0){
-		printf("Error :: FlateDecode :: Null stream to decode in object %s\n", obj->reference);
+		#ifdef DEBUG
+			printf("Error :: FlateDecode :: Null stream to decode in object %s\n", obj->reference);
+		#endif
 		return NULL;
 	}
 
@@ -45,11 +47,15 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 
 	//debugPrint(stream,obj->tmp_stream_size);
 
-	printf("FlateDecode :: status = %d :: len = %d\n",res,len);
+	#ifdef DEBUG
+		printf("FlateDecode :: status = %d :: len = %ld\n",res,len);
+	#endif
 
 
 	if( res != Z_OK){
-		printf("Warning :: Flatedecode failed for object \"%s\" :: %d \n",obj->reference, res);
+		#ifdef DEBUG
+			printf("Warning :: Flatedecode failed for object \"%s\" :: %d \n",obj->reference, res);
+		#endif
 	}
 
 
@@ -60,7 +66,7 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	//printf("decoded data = %s :: len  = %d\n",out,len);
 
 
-	printf("\n\n");
+	//printf("\n\n");
 	free(dest);
 
 	return out;
@@ -413,8 +419,9 @@ void printDico(struct LZWdico * dico){
 
 unsigned short readData(char ** data, int * partial_code, int * partial_bits, int code_len ){
 
-	unsigned short code;
-	char unpack = 0;
+	unsigned short code = 0;
+	unsigned char unpack = 0;
+	
 
 
 	//printf("partial_bits (before) = %d\n",*partial_bits);
@@ -428,6 +435,9 @@ unsigned short readData(char ** data, int * partial_code, int * partial_bits, in
 		if(*partial_code != -1){
 
 			sscanf(&(*data[0]),"%c",&unpack);
+			
+
+			//printf("Debug :: unpack :: %d :: %d\n",unpack,unpack_test);
 			//unpack = *data[0] - '\0';
 			//printf("unpack1 = %d :: data0 = %c\n",unpack,*data[0]);
 			*partial_code = (*partial_code << 8) + unpack;
@@ -491,6 +501,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	//printf("stream = %s\n",stream);
 
 	stream_len = obj->tmp_stream_size;
+	//printf("Stream_len = %d\n",stream_len);
 
 	/*
 	printf("scan0 = %c\n",stream[0]);
@@ -530,7 +541,10 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	//result = (char*)calloc(2,sizeof(char));
 	//result[1] = '\0';
 
+
 	for(i= 0 ; i < stream_len ; i++){
+
+		//printf("hooo\n");
 
 		// maybe if next_code + 1 == 1 << code_len )
 		if( next_code +1 == (1<< code_len)){
@@ -614,7 +628,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 						//printf("IN DICO => entry = %s :: w_entry0 = %s\n",entry,w_entry0);
 
-
 						w = entry;
 						next_code ++;
 						
@@ -645,7 +658,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 							dico = initDico(next_code,w_entry0);
 						}else{
 							if( addInDico(dico,next_code,w_entry0) != 1){
-								printf("Error :: addInDico failed !! %d :: %s\n",next_code,w_entry0);
+								printf("Error :: LZWDecode :: addInDico failed !! %d :: %s\n",next_code,w_entry0);
 							}else{
 
 
@@ -718,12 +731,14 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 						//printf("Adding entry %d :: %s\n",next_code,w_entry0);
 					}else{
 						if( addInDico(dico,next_code,w_entry0) != 1){
-							printf("Error :: addInDico failed !! %d :: %s \n",next_code,w_entry0);
+							#ifdef DEBUG
+								printf("Error :: addInDico failed !! %d :: %s \n",next_code,w_entry0);
+							#endif
 						}
 					}
 
 					//printf("=> entry = %s :: w_entry0 = %s\n",entry,w_entry0);
-
+					
 					w = entry;
 					next_code ++;
 					
@@ -745,8 +760,12 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 		//printf("\n\n");
 
-	}
 
+
+	} // end_for
+
+
+	//printf("heyhey :: size = %d\n",size);
 	
 
 	out[size+1]='\0';
@@ -763,6 +782,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	//printDico(dico);
 
 	freeDico(dico);
+	//free(w);
 
 	return out;
 
@@ -815,8 +835,7 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	char * tuple = NULL;
 	//char * tuple_s = NULL;
 	int len = 0;
-	int * tuple_a = NULL;
-	int * res = NULL;
+	int * tuple_a = NULL;	
 	unsigned long base = 0;
 
 	//int test = 0;
@@ -838,12 +857,11 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	// remove white spaces if any
 
 	out = (char*)calloc(stream_len,sizeof(char));
-	tuple = (char*)calloc(6,sizeof(char));
+	//tuple = (char*)calloc(6,sizeof(char));
 	//tuple_s = (char*)calloc(6,sizeof(char));
 	tuple_a = (int*)calloc(6,sizeof(int));
-	res = (int*)calloc(6,sizeof(int));
-	tuple[5]='\0';
-	res[5]='\0';
+	//res = (int*)calloc(6,sizeof(int));
+	//tuple[5]='\0';
 
 
 	while(len > 0){
@@ -851,6 +869,11 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 		base = 0;
 
 		tuple = getTuple(data_ptr,len);
+		if(tuple == NULL){
+			len = 0;
+			continue;
+		}
+
 		data_ptr += 5; 
 
 		len = (int)(data_ptr - stream);
@@ -932,7 +955,7 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 		//sscanf(&code,"%c",&entry[0]);
 		//printf("tuple_a = %s\n",tuple_a);
 		
-
+		free(tuple);
 	}
 
 	obj->decoded_stream_size = num;
@@ -941,6 +964,7 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	//printf("out = %s--\n",out);
 
 	free(tuple_a);
+
 	//free(tuple_s);
 
 
@@ -1018,7 +1042,9 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 	//printf("stream + 1 = %s\n", stream+1);
 
 	if(stream == NULL){
-		printf("Error :: CCITTFaxDecode :: NULL parameters while decoding stream in object %s\n",obj->reference);
+		#ifdef DEBUG
+			printf("Error :: CCITTFaxDecode :: NULL parameters while decoding stream in object %s\n",obj->reference);
+		#endif
 		return NULL;
 	}
 
