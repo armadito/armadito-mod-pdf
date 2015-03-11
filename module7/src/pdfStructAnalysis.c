@@ -179,7 +179,7 @@ int checkXRef(struct pdfDocument * pdf){
 		
 		if(pdf->fh == NULL){
 			#ifdef DEBUG
-				printf("Error :: pdf file handle is NULL\n");
+				printf("Error :: checkXRef :: pdf file handle is NULL\n");
 			#endif
 
 			return -1;
@@ -314,7 +314,7 @@ int checkXRef(struct pdfDocument * pdf){
 
 				if( obj_num > 0 && obj == NULL){
 					#ifdef DEBUG
-						printf("Warning :: checkXRef :: object not found %s\n",ref);
+						printf("Warning :: checkXRef :: object not found %s--\n",ref);
 					#endif
 
 				}else{
@@ -432,7 +432,7 @@ int checkXRef(struct pdfDocument * pdf){
 			}else{
 
 				#ifdef DEBUG
-					printf("Warning :: checkXRef :: object not found %s\n",ref);
+					//printf("Warning :: checkXRef :: object not found %s\n",ref);
 				#endif
 
 				//pdf->testStruct->bad_xref_offset ++;
@@ -563,9 +563,6 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 				}
 
 				// check the type of the object
-
-				
-				
 				if(kid_obj->dico != NULL && kid_obj->type != NULL && strncmp(kid_obj->type,"/Page",5) == 0 && strncmp(kid_obj->type,"/Page",strlen(kid_obj->type)) == 0 ){
 
 					
@@ -646,6 +643,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								//return 1;
 								ret = 1;
 							}else{
+
 								#ifdef DEBUG
 									printf("Warning :: checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
 								#endif
@@ -678,7 +676,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								free(pageContent_obj_ref);
 								continue;
 						}
-
+						
 						// get the stream
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							//return 1;
@@ -687,6 +685,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 						}else{
 
+							//printf("DEBUG :: %s --\n",pageContent_obj->content);
 
 							// Case when the content is an array ::
 							content_array = getDelimitedStringContent(pageContent_obj->content,"[","]",pageContent_obj->content_size);
@@ -731,7 +730,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								}
 
 							}else{
-
+								
 								#ifdef DEBUG
 									printf("Warning :: checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
 								#endif

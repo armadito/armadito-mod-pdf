@@ -679,6 +679,8 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		// Analyze uri
 		analyzeURI(uri,pdf,obj);
 
+		free(uri);
+
 	}
 
 	return 1;

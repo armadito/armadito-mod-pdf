@@ -64,7 +64,7 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 		printf("Coef = BAD_HEADER\n");
 	else
 		if(pdf->testStruct->large_file > 0)
-			printf("Coef = LARGE_FILE\n");
+			printf("Coef = %d (LARGE_FILE)\n",pdf->coef);
 		else
 			if(pdf->testStruct->encrypted > 0)
 				printf("Coef = Encrypted_PDF\n");

@@ -103,8 +103,9 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 
 
 	if(pdf == NULL ){
+
 		#ifdef DEBUG
-			("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
+			printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
 		#endif
 
 		return NULL;
@@ -1312,13 +1313,13 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 	int off = 0;
 	char * byte = NULL;
 	char res = 0;
-
-
+	int mod = 0;
 
 
 	len = size/8;
-	if(size%8 != 0){
-		printf("Warning :: binarytoChar :: len not a multiple of 8 :: padding with zero :: size %d :: len = %d\n",size,len);
+	mod = size%8;
+	if(mod != 0){
+		printf("Warning :: binarytoChar :: len not a multiple of 8 :: padding with zero :: size %d :: len = %d :: mod8 = %d\n",size,len,mod);
 		//TODO Padd with 0
 	}
 

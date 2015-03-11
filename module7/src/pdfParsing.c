@@ -313,88 +313,124 @@ char * getObjectDictionary_old(struct pdfObject * obj){
 }
 
 
-
-
 char * getObjectType(struct pdfObject * obj){
 
 	char * type = NULL;
 	char * start = NULL;
 	char * end = NULL;
+	char * pattern = NULL;
+	int pattern_len = 5; // "/Type"
 	int len = 0;
 	int flag  = 0;
-	char * tmp = NULL;
-
-	//char tmp = 0;
-	//char *
-
-	// Fix bug => /Subtype /Type1 /Type/Font
-	tmp = obj->dico;
-
-	while(flag == 0){
-
-		start = searchPattern(tmp,"/Type",5,strlen(obj->dico));
-
-		if(start == NULL ){
-			//printf("I got no type !!\n");
-			return NULL;
-		}
+	int dico_len = 0;
+	int sub = 0;
+	int type_len =0;
 
 
-		if( start[5] == '1' || start[5] == '2'){ // /Type2 /Type1
-			tmp = start+1;
+	pattern = (char*)calloc(pattern_len+1,sizeof(char));
 
-		}else{
-			flag ++;
-		}
-		//start = searchPattern(obj->dico,"/Type",5,strlen(obj->dico));
+
+	dico_len = strlen(obj->dico);
+	len = dico_len;
+	start = obj->dico;
+
+	//printf("Dico = %s \n",obj->dico);
+	//printf("len = %d\n",len);
+	//printf("start0 = %c\n",start[0]);
+
+	// skip first dico delimiter
+	while(start[0] == '<'){
+		start ++;
 	}
-	
-	//start = searchPattern(obj->dico,"/Type",5,strlen(obj->dico));
 
-	
-	
-	if(start == NULL ){
-		//printf("I got no type !!\n");
+
+	// Search /Type keyword (but outbound of a sub dictionary)
+	while(len >= pattern_len && flag == 0){
+
+		if(start[0] == '<' && start[1] == '<'){
+			//printf("sub dico start :: %d\n",sub);
+			//printf("start0 = %c :: %d\n",start[0],len);
+			sub ++;
+			start += 2;
+			len = (int)(start - obj->dico);
+			len = dico_len -len;			
+			continue;
+		}
+
+		if(start[0] == '>' && start[1] == '>'){
+			//printf("sub dico end :: %d\n",sub);
+			//printf("start0 = %c :: %d\n",start[0],len);
+			sub --;
+			start += 2;
+			len = (int)(start - obj->dico);
+			len = dico_len -len;
+			continue;
+		}
+
+		memcpy(pattern,start,5);
+
+		if(sub == 0 && memcmp(pattern,"/Type",5) == 0 && start[5] != '1' && start[5] != '2' ){
+			//printf("Found type delimiter :: start[5] = %c\n",start[5]);
+			flag ++;		
+			continue;
+		}
+		//printf("pattern = %s\n",pattern);
+
+		//printf("start0 = %c :: %d\n",start[0],len);
+
+		start++;
+
+		len = (int)(start - obj->dico);
+		len = dico_len -len;
+
+	}
+
+	free(pattern);
+	pattern = NULL;
+
+
+	//printf("start0 = %c%c\n",start[0],start[1]);
+	//printf("sub = %d\n",sub);
+	//printf("len = %d\n",len);
+
+	// If no type found
+	if(flag == 0){
 		return NULL;
 	}
-	
-	len = (int)(start - obj->dico);
-	//printf("len2 = %d :: %d :: %d\n",len, start, obj->dico);
-	
+
+	// skip /Type string
 	start += 5;
 
 	// White space
 	while(start[0] == ' ' ){
 		start ++;
 	}
+
+	end = start+1;
 	
-	//printf("len = %d \t start = %d \t obj->dico = %d\n",len, start,obj->dico);
-	
-	end = memchr(start,'/',strlen(obj->dico)-len);
-	
-	
-	if(end == NULL){
-		//printf("Err :: end = NULL\n");
+	type_len = 0;
+
+	while( (end[0] >=97 && end[0] <=122) || (end[0] >=65 && end[0] <=90 ) || (end[0] >=48 && end[0] <= 57) ){ // Lower case [97 122] or Upper case [65 90] + digit [48 57]
+		end ++;
+		type_len ++;
+	}
+
+	//printf("start0 = %c :: end0 = %c\n",start[0],end[0]);
+
+
+	if(type_len == 0){
 		return NULL;
 	}
-	start = end;
-	
-	len = 0;
-	do{
-		//printf("char = %c\n",end[0]);
-		end ++;
-		len++;
-		
-	}while( (end[0] >=97 && end[0] <=122) || (end[0] >=65 && end[0] <=90 ) || (end[0] >=48 && end[0] <= 57) ); // Lower case [97 122] or Upper case [65 90] + digit [48 57]
-	
-	type = (char*)calloc(len+1,sizeof(char));
-	type[len]= '\0';
+
+	type_len ++; // add it for '/'
+	type = (char*)calloc(type_len+1,sizeof(char));
+	type[type_len]= '\0';
 	//printf("getObjectType :: len = %d \n",len);
 	//start += 4;
-	len = (int)(end-start);
-	memcpy(type,start,len);
+	//len = (int)(end-start);
+	memcpy(type,start,type_len);
 	
-	
+
 	return type;
 }
 
@@ -408,7 +444,6 @@ char * getObjectStream(struct pdfObject * obj){
 	int len = 0;
 	//char * tmp = NULL;
 
-
 	start = searchPattern(obj->content,"stream",6,obj->content_size);
 
 	
@@ -416,7 +451,7 @@ char * getObjectStream(struct pdfObject * obj){
 		return NULL;
 	}
 
-	
+		
 	len = (int)(start - obj->content);
 	len = obj->content_size -len;
 
@@ -429,6 +464,8 @@ char * getObjectStream(struct pdfObject * obj){
 	if(end == NULL){
 		return NULL;
 	}
+
+
 	
 	//len = (int)(end-start);
 	
@@ -635,7 +672,6 @@ int decodeObjectStream(struct pdfObject * obj){
 					printf("Decode Fladetecode :: %s\n",obj->reference);
 				#endif
 				tmp = FlateDecode(stream, obj);
-
 				free(stream);
 				stream  = tmp;
 
@@ -706,7 +742,7 @@ int decodeObjectStream(struct pdfObject * obj){
 								#ifdef DEBUG
 									printf("Filter %s  in object %s not implemented\n",filter,obj->reference);
 								#endif
-
+								
 							}
 
 						}
@@ -730,6 +766,12 @@ int decodeObjectStream(struct pdfObject * obj){
 	// Store the decoded stream
 	if(stream != NULL && filter_applied > 0){
 		obj->decoded_stream = stream ;
+	}else{
+		if(stream != NULL){
+			free(stream);
+			stream = NULL;	
+		}
+		
 	}
 
 	
@@ -767,7 +809,11 @@ int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf){
 	//printf("dictionary = %s\n\n",dico);
 	obj->dico = dico;
 	
+	/*if(strncmp(obj->reference,"17 0 obj",8)== 0){
+		type = getObjectType_2(obj);
+		printf("DEBUG :: /Type = %s\n\n",type);
 	
+	}*/
 	
 	// Get the type
 	type = getObjectType(obj);
@@ -1005,10 +1051,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	obj_offsets = (int*)calloc(num,sizeof(int));
 
 
-
-	
-	
-
 	// Get objects number and offset
 	for(i = 0 ; i< num; i++){
 
@@ -1044,7 +1086,8 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		start ++ ;
 		//printf("start[0] = %c\n",start[0]);
 
-
+		free(off_a);
+		free(obj_num_a);
 		// calc the length of the object according to the offset of the next object.		
 	}
 
@@ -1152,9 +1195,12 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		addObjectInList(comp_obj,pdf);
 
+		free(off_a);
+		free(obj_num_a);
+
 		
 	}
-
+	free(obj_offsets);
 
 	return 0;
 }
@@ -1250,7 +1296,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		
 		//startobj_ptr++;
 		
-		offset = (int)(startobj_ptr -pdf->content);
+		offset = (int)(startobj_ptr - pdf->content);
 		
 	
 		//printf("object offset = %d\n",offset);
@@ -1553,14 +1599,18 @@ int removeComments(struct pdfDocument * pdf){
 	int len = 0;
 	int line_size = 0;	
 	int uncomment_len =0;
-	char white_space = 0;	
+	//char white_space = 0;
+	char * white_spaces = NULL;
+	int white_spaces_len = 0;
 	char * ptr = NULL;
-	
+	char * tmp_spaces = NULL;
 
 	int inStream = 0;
 	int inString = 0; // todo multi line string
 	int inQuotes = 0;
 	int after_header = 0; // line juste after header tag
+
+	int len_tmp = 0;
 
 	int i = 0;
 
@@ -1592,27 +1642,54 @@ int removeComments(struct pdfDocument * pdf){
 	while(len > 0){
 
 		//printf("len = %d\n",len);
+		len_tmp = len;
 
 		start = end;
 
+		//printf("heyhey\n");
+
 		// scan line
-		while(end[0] != '\r' && end[0] != '\n' && end[0] != '\f'){
+		while( (len_tmp > 0) && (end[0] != '\r') && (end[0] != '\n') && (end[0] != '\f')){
 			end ++;
+			len_tmp --;
 		}
 
-		white_space = end[0];
-		
+		// If the end of file is reached
+		if(len_tmp == 0){
+			len = 0;
+			//printf("End of file  reached\n");
+		}
 
+		//white_space = end[0];
+
+		
 		// line
 		line_size = (int)(end-start);
 		line = (char*)calloc(line_size+1,sizeof(char));
 		line[line_size] = '\0';
 
-		
-
 		memcpy(line,start,line_size);
 		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
 
+		//printf("line = %s\n",line);
+
+		// calc whites spaces
+		white_spaces_len = 0;
+
+		tmp_spaces = end;
+		while((len_tmp > 0) && ((end[0] == '\r') || (end[0] == '\n') || (end[0] == '\f'))){
+			end ++;
+			white_spaces_len ++;
+			len_tmp --;
+		}
+
+		//printf("end[0] = %c\n",end[0]);
+
+		white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
+		white_spaces[white_spaces_len]='\0';
+		if(len_tmp > 0)
+			memcpy(white_spaces,tmp_spaces,white_spaces_len);
+		//printf("white_spaces = %s--\n",white_spaces);
 
 
 		//-----------------------------------------------------
@@ -1622,12 +1699,18 @@ int removeComments(struct pdfDocument * pdf){
 		uncomment_len = 0;
 
 		// line after the heaer flag
-		after_header = (after_header == 1)?2:0;
-
+		//after_header = (after_header == 1)?2:0;
+		//printf("DEBUG1 :: line  =  %s :: %d\n",line,after_header );
+		if(after_header == 1)
+			after_header = 2;
+		else
+			after_header  =0;
+		//printf("DEBUG2 :: line  =  %s :: %d\n",line,after_header );
 			
 		ptr = line;
 		// Scan the line
 		for(i= 0; i< line_size ; i++){
+
 
 			// String delimiter
 			if(inStream == 0 && ptr[i] == '(' && inQuotes == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\')) ){
@@ -1656,8 +1739,9 @@ int removeComments(struct pdfDocument * pdf){
 					continue;
 				}else{
 
-					if(line_size - i >= 8 && memcmp(ptr,"%PDF-1.",7) == 0){
+					if(line_size - i >= 8 && memcmp(ptr,"\%PDF-1.",7) == 0){
 						after_header = 1;
+						i = line_size;
 						//printf("PDF Header !!\n");
 						continue;
 					}else{
@@ -1668,6 +1752,8 @@ int removeComments(struct pdfDocument * pdf){
 							i = line_size;
 							continue;
 						}else{
+							//printf("heyheyhey::\n");
+							
 							uncomment = (char*)calloc(i+1,sizeof(char));
 							uncomment[i]='\0';
 							memcpy(uncomment,line,i);
@@ -1700,7 +1786,7 @@ int removeComments(struct pdfDocument * pdf){
 		//printf("uncomment = %s :: len = %d \n", uncomment,uncomment_len);
 
 		// 
-		if(uncomment  == NULL){
+		if(uncomment == NULL){
 			uncomment = (char*)calloc(line_size+1,sizeof(char));
 			uncomment[line_size]='\0';
 			//uncomment = line;
@@ -1708,7 +1794,9 @@ int removeComments(struct pdfDocument * pdf){
 			uncomment_len = line_size;
 			
 		}else{
+
 			if(inStream == 0){
+				
 				#ifdef DEBUG
 					printf("DEBUG :: Comment found :: %s\n",uncomment);
 				#endif
@@ -1720,12 +1808,12 @@ int removeComments(struct pdfDocument * pdf){
 
 
 		//look if I'm in a stream content before adding the uncommented line
-		if(searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){
+		if(uncomment_len >=9 && searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){
 			//printf("removeComments :: Out Stream = 0\n");
 			inStream = 0;
 
 		}else{
-			if(searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
+			if( uncomment_len >=6 && searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
 				//printf("removeComments :: In Stream = 1\n");
 				inStream = 1;
 			}
@@ -1752,11 +1840,14 @@ int removeComments(struct pdfDocument * pdf){
 			}
 			
 
-
 			free(new_content);
 			new_content = NULL;
 
-			content_len += (uncomment_len +1);
+			if(white_spaces_len > 0)
+				content_len += (uncomment_len + white_spaces_len);
+			else
+				content_len += uncomment_len;
+			//content_len += (uncomment_len + white_spaces_len);
 			//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
 
 			//content_len ++; // due to white space
@@ -1776,8 +1867,12 @@ int removeComments(struct pdfDocument * pdf){
 			memcpy(ptr,uncomment,uncomment_len);
 			//printf("New content2 = %s\n",new_content);
 
-			ptr = new_content + content_len - 1;
-			ptr[0]=white_space;
+			//ptr = new_content + content_len - 1;
+			ptr += uncomment_len;
+
+			if(white_spaces_len > 0)
+				memcpy(ptr,white_spaces,white_spaces_len);
+			//ptr[0]=white_space;
 
 			//memset(new_content+content_len-1,'\n',1);
 			//strncat(new_content,uncomment,uncomment_len);
@@ -1800,12 +1895,16 @@ int removeComments(struct pdfDocument * pdf){
 			free(new_content);
 			new_content = NULL;
 
-			content_len += (line_size +1);
+			if(white_spaces_len > 0)
+				content_len += (line_size + white_spaces_len);
+			else
+				content_len += line_size;
 			//printf("content_len = %d :: line_len = %d\n",content_len,line_size );
 
 			//content_len ++; // due to white space
 			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
 			new_content[content_len]='\0';
+
 
 			ptr=new_content;
 
@@ -1820,13 +1919,17 @@ int removeComments(struct pdfDocument * pdf){
 			memcpy(ptr,line,line_size);
 			//printf("New content2 = %s\n",new_content);
 
-			ptr = new_content + content_len - 1;
-			ptr[0]=white_space;
+			//ptr = new_content + content_len - 1;
+			ptr += line_size;
+
+			
+			memcpy(ptr,white_spaces,white_spaces_len);
+			//ptr[0]=white_space;
 
 		}
 
 
-		end ++;
+		//end ++;
 		//printf("\n");
 		len = (int)(end - pdf->content);
 		len = pdf->size - len;
@@ -1836,13 +1939,18 @@ int removeComments(struct pdfDocument * pdf){
 		free(tmp);
 		free(line);
 		free(uncomment);
+		free(white_spaces);
+		//white_spaces == NULL;
 		tmp = NULL;
 		line = NULL;
-		uncomment = NULL;		
+		uncomment = NULL;
+		
+		//printf("len = %d\n",len );	
 
 		//printf("\n\n");
 
 		
+		//printf("hoyhoy\n");
 
 	}
 
@@ -1887,20 +1995,16 @@ int parsePDF(struct pdfDocument * pdf){
 
 	// File too large
 	if(pdf->size > LARGE_FILE_SIZE ){
-		#ifdef DEBUG
-		printf("Warning :: parsePDF :: Large file :: pdf size =  %d octets\n",pdf->size);
-		#endif
+		printf("Warning :: parsePDF :: Large file :: pdf size =  %d octets ==> Skipping the (RemoveComment) function\n",pdf->size);
 		pdf->testStruct->large_file ++;
-		return -3;
+		//return -3;
+	}else{
+		// Remove comments
+		removeComments(pdf);	
 	}
 
 
-	// Remove comments
-	removeComments(pdf);
-
 	// Get Trailers
-	
-	
 	getPDFTrailers_1(pdf);
 	if(pdf->trailers == NULL){
 		getPDFTrailers_2(pdf);

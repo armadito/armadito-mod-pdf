@@ -9,7 +9,7 @@
 # VARIABLES
 DIR=$1
 RES_FILE=$2
-EXE=/home/ulrich/PDF/GIT/uhurupdf/module7/analyzer_bin
+EXE=/home/ulrich/PDF/GIT/uhurupdf/module7/uhuruPDFAnalyzer
 
 for f in $DIR/* ; do
 	echo "Processing $f ...";
@@ -18,8 +18,7 @@ for f in $DIR/* ; do
 done
 
 
-# Stat
-#more $RES_FILE | grep -e 'Coef =' | sort | uniq -c > $RES_FILE\_stat
+# Stats coef
 more $RES_FILE | grep -e 'Coef =' | sort | uniq -c > stats.txt
 
 
