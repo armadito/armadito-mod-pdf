@@ -209,6 +209,7 @@ struct testsPDFStruct * initTestsPDFStruct(){
 	testStruct->obfuscated_object = 0;
 	testStruct->multiple_headers = 0;
 	testStruct->large_file = 0;
+	testStruct->comments = 0;
 
 	return testStruct;
 }

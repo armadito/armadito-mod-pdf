@@ -24,7 +24,7 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	//printf("Execution time = %d sec\n",0);
 	printf("PDF version = %s\n",pdf->version);
 
-	#ifdef DEBUG
+	//#ifdef DEBUG
 	
 	printf("\n\n");
 	printf("::: PDF Document Structure Tests :::\n\n");
@@ -39,6 +39,7 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("bad_obj_offset  = %d\n", pdf->testStruct->bad_obj_offset);
 	printf("obfuscated_object  = %d\n", pdf->testStruct->obfuscated_object);
 	printf("multiple_headers  = %d\n", pdf->testStruct->multiple_headers);
+	printf("postscript_comments = %d\n", pdf->testStruct->comments);
 
 	printf("\n\n");
 	printf("::: PDF Object Analysis Tests :::\n\n");
@@ -52,13 +53,13 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("dangerous_keyword_high = %d\n", pdf->testObjAnalysis->dangerous_keyword_high); 
 	printf("dangerous_keyword_medium = %d\n", pdf->testObjAnalysis->dangerous_keyword_medium); 
 	printf("dangerous_keyword_low = %d\n", pdf->testObjAnalysis->dangerous_keyword_low); 
-	printf("time_exceeded = %d\n", pdf->testObjAnalysis->time_exceeded); 
+	printf("time_exceeded = %d\n", pdf->testObjAnalysis->time_exceeded);
 
 
 	printf("\n\n");
 	printf("::: Suspicious Coefficient :::\n\n");
 
-	#endif
+	//#endif
 
 	if(pdf->testStruct->bad_header > 0)
 		printf("Coef = BAD_HEADER\n");
@@ -234,7 +235,6 @@ int analyze(char * filename){
 	#ifdef DEBUG
 		printPDFObjects(pdf);
 	#endif
-
 		
 	if(res <= -2 ){		
 		analysisReport(pdf,filename);

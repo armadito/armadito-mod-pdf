@@ -1683,6 +1683,11 @@ int removeComments(struct pdfDocument * pdf){
 			len_tmp --;
 		}
 
+		if(len_tmp == 0){
+			len = 0;
+			//printf("End of file  reached\n");
+		}
+
 		//printf("end[0] = %c\n",end[0]);
 
 		white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
@@ -1730,11 +1735,11 @@ int removeComments(struct pdfDocument * pdf){
 			// If % is not in string
 			if(ptr[i] == '%' && inString == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
 				// remove conmment
-
+				
 				// %%EOF
 				// %PDF-version
-				if(line_size -i >= 5 && memcmp(ptr,"%%EOF",5) == 0){
-					//printf("pdf end of file\n");
+				if(line_size -i >= 5 && memcmp(ptr+i,"%%EOF",5) == 0){
+					//printf("pdf end of file :: EOF marker !!\n");
 					i = line_size;
 					continue;
 				}else{
@@ -1800,6 +1805,7 @@ int removeComments(struct pdfDocument * pdf){
 				#ifdef DEBUG
 					printf("DEBUG :: Comment found :: %s\n",uncomment);
 				#endif
+				pdf->testStruct->comments ++;
 			}
 				
 		}
@@ -1839,6 +1845,7 @@ int removeComments(struct pdfDocument * pdf){
 				memcpy(tmp,new_content,content_len);
 			}
 			
+						
 
 			free(new_content);
 			new_content = NULL;
@@ -1996,7 +2003,7 @@ int parsePDF(struct pdfDocument * pdf){
 	// File too large
 	if(pdf->size > LARGE_FILE_SIZE ){
 		printf("Warning :: parsePDF :: Large file :: pdf size =  %d octets ==> Skipping the (RemoveComment) function\n",pdf->size);
-		pdf->testStruct->large_file ++;
+		//pdf->testStruct->large_file ++;
 		//return -3;
 	}else{
 		// Remove comments

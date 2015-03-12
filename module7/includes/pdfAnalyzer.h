@@ -36,7 +36,7 @@
 #define DANGEROUS_KEYWORD_LOW 20
 #define TIME_EXCEEDED 20
 
-#define LARGE_FILE_SIZE 1000000
+#define LARGE_FILE_SIZE 1500000
 
 //#define DEBUG 1
 
@@ -98,6 +98,7 @@ struct testsPDFStruct{
 	int obfuscated_object;	// when an object dictionary is obfuscated within hexa
 	int multiple_headers; // when several headers are found in the document.
 	int large_file;
+	int comments;	// If PostScript comments are found in pdf.
 
 };
 
