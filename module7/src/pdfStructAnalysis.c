@@ -355,6 +355,7 @@ int checkXRef(struct pdfDocument * pdf){
 				ret = 0;
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
+				free(xref);
 				continue;
 			}
 			
@@ -381,6 +382,7 @@ int checkXRef(struct pdfDocument * pdf){
 			if(obj_num_a == NULL){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
+				free(xref);
 				continue;
 			}
 
@@ -446,6 +448,8 @@ int checkXRef(struct pdfDocument * pdf){
 		free(num_entries_a);
 		free(first_obj_num_a);
 		free(obj_num_a);
+		free(xref);
+
 		
 
 		trailer = trailer->next;

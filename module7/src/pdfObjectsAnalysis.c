@@ -31,7 +31,6 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 	//printf("dictionary = %s\n", obj->dico);
 
 
-	
 	start += 3;
 
 	// If there is a space
@@ -102,7 +101,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 		//printf("Warning :: getJavaScript :: JS object reference is null\n");
 
 		js = getDelimitedStringContent(start,"(",")",len);
-		//printf("JavaScript content = %s\n",js);
+		//printf("JavaScript content = %s :: len = %d\n",js,len);
 
 		if(js != NULL){
 			#ifdef DEBUG
@@ -687,6 +686,52 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
+// Get Suspicious actions 
+int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
+
+
+	char * start = NULL;
+	//char * end = NULL;
+	//char * openAction_dico = NULL;
+	//int len = 0;
+	int dico_len = 0;
+
+
+	// Check parameters
+	if(pdf == NULL || obj == NULL){
+		return -1;
+	}
+
+	if(obj->dico == NULL){
+		return -1;
+	}
+
+	dico_len = strlen(obj->dico);
+
+
+	// get OpenAction dictionary
+	//start = searchPattern(obj->dico,);
+
+
+	// get Launch actions
+	start = searchPattern(obj->dico,"/Launch",7,dico_len);
+	if(start != NULL){
+
+		#ifdef DEBUG
+			printf("Warning :: getActions :: Found /Launch action in object %s\n",obj->reference);
+		#endif
+
+		pdf->testObjAnalysis->dangerous_keyword_high ++;
+	}
+
+
+	// get Actions :: Launch - GoToE - GoToR - 
+
+	return 0;
+}
+
+
+
 // This function remove whites space in a given stream
 char * removeWhiteSpace(char * stream, int size){
 
@@ -1007,6 +1052,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	}
 	
 
+	//printf("stream = %s\n",stream);
 
 	for(i = 0; i< num_medium ; i++){
 
@@ -1054,6 +1100,8 @@ int getDangerousContent(struct pdfDocument* pdf){
 	while(obj != NULL){
 
 		//printf("Analysing object :: %s\n",obj->reference);
+
+		getActions(pdf,obj);		
 
 		getJavaScript(pdf,obj);
 

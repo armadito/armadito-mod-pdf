@@ -40,6 +40,7 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 	printf("obfuscated_object  = %d\n", pdf->testStruct->obfuscated_object);
 	printf("multiple_headers  = %d\n", pdf->testStruct->multiple_headers);
 	printf("postscript_comments = %d\n", pdf->testStruct->comments);
+	printf("malicious_comments = %d\n", pdf->testStruct->malicious_comments);
 
 	printf("\n\n");
 	printf("::: PDF Object Analysis Tests :::\n\n");
@@ -139,6 +140,10 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 
 	if(pdf->testStruct->obfuscated_object > 0){
 		pdf->coef += OBFUSCATED_OBJECT;
+	}
+
+	if(pdf->testStruct->malicious_comments > 0){
+		pdf->coef += MALICIOUS_COMMENTS;
 	}
 
 

@@ -27,6 +27,7 @@
 #define BAD_OBJ_OFFSET 20
 #define OBFUSCATED_OBJECT 50 
 #define MULTIPLE_HEADERS 50
+#define MALICIOUS_COMMENTS 50
 
 #define ACTIVE_CONTENT 40
 #define SHELLCODE 40
@@ -99,6 +100,7 @@ struct testsPDFStruct{
 	int multiple_headers; // when several headers are found in the document.
 	int large_file;
 	int comments;	// If PostScript comments are found in pdf.
+	int malicious_comments; // Malicious comments found (potentially defeat pdf parsers).
 
 };
 
@@ -142,6 +144,7 @@ struct pdfDocument{
 	struct pdfXRef* xref;
 	struct testsPDFStruct * testStruct;
 	struct testsPDFObjAnalysis * testObjAnalysis;
+	int errors; // treatment errors
 
 };
 

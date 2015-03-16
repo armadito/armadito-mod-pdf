@@ -216,7 +216,8 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	//len= obj->stream_size;
 	//printf("len = %d\n",len);
 
-	tmp = (char*)calloc(2,sizeof(char));
+	tmp = (char*)calloc(3,sizeof(char));
+	tmp[2]='\0';
 
 	//printf("stream_len-1 = %c\n",stream[len-1]);
 	if(stream[len-1] == '>' || (( stream[len-1] < 65 || stream[len-1] > 70 ) && (stream[len-1] <  97 || stream[len-1] > 102 ) && (stream[len-1] <  48 || stream[len-1] > 57 )) ){
@@ -272,7 +273,8 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	//if(strncmp(obj->reference,"11 0 obj",8) == 0){
 		//debugPrint(out,obj->tmp_stream_size);
 	//}
-
+	free(tmp);
+	tmp = NULL;
 
 	return out;
 

@@ -203,8 +203,14 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	char * decoded_dico = NULL;
 	char * content =  obj->content;
 	char * dico_start = NULL;
+	char * end = NULL;
+	int inQuotes = 0;
+	int inString = 0;
+	int sub = 0;
+	int flag = 0;
 	//char * dico_end = NULL;
 	int len = 0;
+	//int i = 0;
 		
 	//char* src, char* pat , int pat_size ,  int size
 
@@ -214,7 +220,6 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	dico_start = searchPattern(content,"<<",2,obj->content_size);
 
 
-	
 	if(dico_start == NULL){
 		//printf("No dictionary found in object %s!!\n", obj->reference);
 		return NULL;
@@ -230,17 +235,90 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 
 	//printf("getDico :: len = %d\n",len);
 
-	dico =  getDelimitedStringContent(dico_start,"<<", ">>", len);
+	/////////////////////////////////////////////////
+
+	end = dico_start;
+	// Scan the line
+	//for(i= 0; i< len ; i++){
+
+	while(len >= 2 && flag == 0){
 
 
+		// String delimiter
+		if(inQuotes == 0 && end[0] == '(' && ((end == dico_start) || (end > dico_start && (end-1)[0] != '\\')) ){
+			inString ++;
+			len--;
+			end ++;
+			continue;
+		}
+
+		// String delimiter 2
+		if(inQuotes == 0 && inString > 0 && end[0] == ')' && ((end == dico_start) || (end > dico_start && (end-1)[0] != '\\')) ){
+			inString --;
+			len --;
+			end++;
+			continue;
+		}
+
+		// Quotes delimiter
+		if(end[0] == '"' && ((end == dico_start) || (end > dico_start && (end-1)[0] != '\\')) ){
+			inQuotes = (inQuotes == 0)?1:0;
+			len --;
+			end++;
+			continue;
+		}
+
+		// Dico delimiter
+		if(inString == 0 && end[0] == '<' && end[1] == '<' && ((end == dico_start) || (end > dico_start && (end-1)[0] != '\\')) ){
+			sub ++;
+			end+=2;
+			len -=2;
+			continue;
+		}
+
+		// Dico delimiter
+		if(inString == 0 && end[0] == '>' && end[1] == '>' && ((end == dico_start) || (end > dico_start && (end-1)[0] != '\\')) ){
+			sub --;
+			end+=2;
+			len -=2;
+
+			if(sub == 0){
+				flag ++;
+			}
+
+			continue;
+		}
+
+		len --;
+		end ++;
+
+	}
+
+
+	// No dico found
+	if(flag == 0){
+		return NULL;
+	}
+
+	len = (int)(end - dico_start);
+
+	dico = (char*)calloc(len+1,sizeof(char));
+	dico[len]='\0';
+
+	memcpy(dico,dico_start,len);
+
+	
+	//dico =  getDelimitedStringContent(dico_start,"<<", ">>", len);
+
+	/*
 	if(dico == NULL){
 		#ifdef DEBUG
 			printf("Warning :: getObjectDictionary :: No dictionary found in object %s\n",obj->reference);
 		#endif
 		return NULL;
-	}
+	}*/
 
-	len = strlen(dico);
+	//len = strlen(dico);
 
 	//printf("dico = %s---->\n",dico);
 	
@@ -263,56 +341,8 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 }
 
 
-//This function get the object dictionary
-char * getObjectDictionary_old(struct pdfObject * obj){
-	
-	char  * dico = NULL;
-	char * content =  obj->content;
-	char * dico_start = NULL;
-	char * dico_end = NULL;
-	int len = 0;	
-	
-	//char* src, char* pat , int pat_size ,  int size
-	
-	// Search the beginning of the
-	dico_start = searchPattern(content,"<<",2,obj->content_size);
-	
-	if(dico_start == NULL){
-		//printf("No dictionary found in object %s!!\n", obj->reference);
-		return NULL;
-	}
-	
-	// TODO search other occurencies of "<<" to detect sub dictionaries
-	// TODO Found the same number of occurencies of stream ">>"
-	
-	len = dico_start - obj->content;	
-	
-	dico_end = searchPattern(dico_start,">>",2,obj->content_size-len);
-	
-	if(dico_end == NULL){
-		//printf("No dictionary found in object %s!!\n", obj->reference);
-		return NULL;
-	}
-	
-	len = dico_end - dico_start + 2; // +2 is for >>
-	
-	//dico = (char*)malloc(len*sizeof(char));
-	dico = (char*)calloc(len,sizeof(char));
-	
-	strncpy(dico,dico_start,len);
-	
-	// store the dictionary length
-	//obj->dico_len = len;
-	
-	//printf("dictionary  = %s\n",dico);
-	
-	
-	
-	return dico;
-	
-}
 
-
+// This function get the Object type described in dictionary
 char * getObjectType(struct pdfObject * obj){
 
 	char * type = NULL;
@@ -798,7 +828,6 @@ int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf){
 		#endif
 		return -1;
 	}
-	
 	
 
 	// Get the dictionary
@@ -1595,7 +1624,7 @@ int removeComments(struct pdfDocument * pdf){
 	char * start = NULL;
 	char * end = NULL;
 	char * line = NULL;
-	
+	char * comment = NULL;
 	int len = 0;
 	int line_size = 0;	
 	int uncomment_len =0;
@@ -1613,6 +1642,9 @@ int removeComments(struct pdfDocument * pdf){
 	int len_tmp = 0;
 
 	int i = 0;
+
+	char * mal_comments[] = {"endobj","obj","endstrem","stream","trailer", "startxref", "xref"};
+	int mal_comments_num = 7;
 
 
 
@@ -1763,6 +1795,17 @@ int removeComments(struct pdfDocument * pdf){
 							uncomment[i]='\0';
 							memcpy(uncomment,line,i);
 							uncomment_len = i;
+
+							// comment
+							if(inStream == 0){
+								comment = (char*)calloc((line_size - i)+1,sizeof(char));
+								comment[line_size -i] = '\0';
+								memcpy(comment,ptr+i,line_size -i );
+								//printf("Debug :: removeComments :: comment = %s :: %d :: %d\n",comment,line_size,i);
+							}
+							
+							
+
 							i = line_size;
 							continue;
 
@@ -1806,6 +1849,20 @@ int removeComments(struct pdfDocument * pdf){
 					printf("DEBUG :: Comment found :: %s\n",uncomment);
 				#endif
 				pdf->testStruct->comments ++;
+
+				// Check for a malicious comment :: comments puts to defeat parser (with keywords like "endobj", "obj", "stream", "endstream" )
+				for(i = 0; i< mal_comments_num ; i++){
+
+					if(searchPattern(comment,mal_comments[i],strlen(mal_comments[i]),strlen(comment)) != NULL ){
+						#ifdef DEBUG
+							printf("Warning :: removeComments :: potentially malicious comment :: (%s) found in pdf Document\n", comment);
+						#endif
+						pdf->testStruct->malicious_comments ++;
+						break;
+					}
+
+				}
+
 			}
 				
 		}
@@ -1946,11 +2003,13 @@ int removeComments(struct pdfDocument * pdf){
 		free(tmp);
 		free(line);
 		free(uncomment);
+		free(comment);
 		free(white_spaces);
 		//white_spaces == NULL;
 		tmp = NULL;
 		line = NULL;
 		uncomment = NULL;
+		comment = NULL;
 		
 		//printf("len = %d\n",len );	
 
@@ -1959,7 +2018,7 @@ int removeComments(struct pdfDocument * pdf){
 		
 		//printf("hoyhoy\n");
 
-	}
+	} // end while
 
 	#ifdef DEBUG
 		printf("Debug :: removeComments :: Old size :: %d\n",pdf->size);

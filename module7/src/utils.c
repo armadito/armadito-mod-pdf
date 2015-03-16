@@ -210,6 +210,7 @@ struct testsPDFStruct * initTestsPDFStruct(){
 	testStruct->multiple_headers = 0;
 	testStruct->large_file = 0;
 	testStruct->comments = 0;
+	testStruct->malicious_comments = 0;
 
 	return testStruct;
 }
@@ -272,6 +273,7 @@ struct pdfDocument* initPDFDocument(){
 	pdf->trailers = NULL;
 	pdf->xref = NULL;
 
+	pdf->errors = 0;
 	return pdf;
 
 }

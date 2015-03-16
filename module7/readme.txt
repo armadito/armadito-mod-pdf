@@ -38,6 +38,7 @@ NB: The directory scan produces a file "stats.txt" containing scan evaluation su
 	- Vérifier la collision de déclaration des objets (objet définis plusieurs fois dans le document).
 	- Vérifier de la présence et conformité des trailers.
 	- Vérifier de la conformité de la table de reference des objets "XRef table" (offset + entrées).
+	- Vérifier la présence de commentaires potentiellement malicieux (dont le but est de tromper les parser).
 
 
 * Tests portant sur le contenu des objets
@@ -59,7 +60,7 @@ NB: The directory scan produces a file "stats.txt" containing scan evaluation su
 - LIMITATIONS
 --------------------------------------------------------------------------------------
 
-
+- PDF version supportées : %PDF-1.1 à %PDF-1.7
 - Ne traite pas les documents dont le contenu est chiffrés.
 - L'opération consistant à retirer les commentaires postScript est très couteuse en temps pour les fichiers dont la taille est supérieure à 2M.
 
