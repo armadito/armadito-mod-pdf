@@ -121,6 +121,7 @@ int checkXRef(struct pdfDocument * pdf){
 	char free_obj = 'n';
 	int off = 0;
 	char * encrypt = NULL;
+	
 
 	#ifdef DEBUG
 		printf("\n\nDebug :: checkXRef \n");
@@ -309,7 +310,6 @@ int checkXRef(struct pdfDocument * pdf){
 				// get object by ref
 				if(obj_num > 0){
 					obj = getPDFObjectByRef(pdf,ref);
-
 				}
 
 				if( obj_num > 0 && obj == NULL){
@@ -322,12 +322,36 @@ int checkXRef(struct pdfDocument * pdf){
 					
 					if(obj_num > 0 && free_obj == 'n' && off != obj->offset ){
 						
-						#ifdef DEBUG
-							printf("Warning :: checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
-						#endif
+						
+						//printf("Warning :: checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
 
-						pdf->testStruct->bad_obj_offset ++;
-						ret = 0;
+						// the object could be defnied more than once
+						if(pdf->testStruct->object_collision > 0){
+
+							while( (obj = getPDFNextObjectByRef(pdf,obj,ref)) != NULL ){
+
+								if(obj_num > 0 && free_obj == 'n' && off != obj->offset ){
+						
+									#ifdef DEBUG
+										printf("Warning :: checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
+									#endif									
+									pdf->testStruct->bad_obj_offset ++;
+									ret = 0;
+								}else{
+									ret = 1;
+								}
+							}
+
+						}else{
+
+							#ifdef DEBUG
+							printf("Warning :: checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
+							#endif
+
+							pdf->testStruct->bad_obj_offset ++;
+							ret = 0;
+						}
+						
 
 					}
 
@@ -337,12 +361,13 @@ int checkXRef(struct pdfDocument * pdf){
 				// go to the next entry
 				xref += 3;
 
-				//printf("\n");
-				free(ref);
+				//printf("\n");				
+				free(ref);				
 
 			}
 
 			free(xref_orig);
+			
 
 		}else{
 
@@ -442,15 +467,14 @@ int checkXRef(struct pdfDocument * pdf){
 			}
 
 			free(ref);
+			free(xref);
 
 		}
 
 		free(num_entries_a);
 		free(first_obj_num_a);
 		free(obj_num_a);
-		free(xref);
 
-		
 
 		trailer = trailer->next;
 

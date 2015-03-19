@@ -138,8 +138,8 @@ char * hexaObfuscationDecode(char * dico){
 		
 		memcpy(hexa, start, 3);
 
-		
-		if(strncmp(hexa,"#20",3) != 0){
+		// #20 = space - #2F = '/' (slash) - #E9 = é - #2C = ','
+		if(memcmp(hexa,"#20",3) != 0 && memcmp(hexa,"#2F",3) != 0 && memcmp(hexa,"#E9",3) != 0 && memcmp(hexa,"#2C",3) != 0){
 			is_space_hexa = 0;
 		}
 
@@ -186,6 +186,7 @@ char * hexaObfuscationDecode(char * dico){
 	free(hexa_decoded);
 
 	if(decoded_dico != NULL && is_space_hexa == 0){
+		//printf("dico = %s\n",dico);
 		//printf("decoded_dico  = %s\n\n",decoded_dico);
 		return decoded_dico;
 	}
@@ -803,9 +804,6 @@ int decodeObjectStream(struct pdfObject * obj){
 		}
 		
 	}
-
-	
-	
 	
 	return 0;
 }
@@ -868,7 +866,7 @@ int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	if(filters != NULL){
 		obj->filters = filters;
-		decodeObjectStream(obj); // to uncomment
+		//decodeObjectStream(obj); // to uncomment
 		//printf("res = %d\n",res);
 	}
 
@@ -1380,8 +1378,16 @@ int getPDFObjects(struct pdfDocument * pdf){
 		}
 
 
+		
+
 		// Extract object emebedded in object stream
 		if(obj->type != NULL && strncmp(obj->type,"/ObjStm",7) == 0 ){
+
+			// Decode object stream			
+			if(obj->filters != NULL){		
+				decodeObjectStream(obj);
+			}
+
 			extractObjectFromObjStream(pdf,obj);
 		}
 		
@@ -2027,6 +2033,7 @@ int removeComments(struct pdfDocument * pdf){
 
 	//printf("new content = \n");
 	//printStream(new_content,content_len);
+
 
 	free(pdf->content);
 	pdf->content = NULL;

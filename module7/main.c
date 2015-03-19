@@ -75,7 +75,7 @@ int analysisReport(struct pdfDocument * pdf, char * filename){
 
 
 	printf("-------------------------------------------------------\n");
-	printf("-------------------------------------------------------\n\n");
+	//printf("-------------------------------------------------------\n");
 
 	return 0;
 
@@ -102,6 +102,7 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 	MULTIPLE_HEADERS 50
 	*/
 
+	pdf->coef = 0;
 
 	if(pdf->testStruct->encrypted > 0 ){
 		pdf->coef = -2;
@@ -187,7 +188,7 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 		pdf->coef += TIME_EXCEEDED;
 	}
 
-
+	
 	return 0;
 
 }
@@ -267,7 +268,9 @@ int analyze(char * filename){
 	// Analysis summary
 	calcSuspiciousCoefficient(pdf);
 	analysisReport(pdf,filename);
-	printf("\nExecution time : %.2lf sec \n",time_elapsed);
+	printf("Execution time : %.2lf sec \n",time_elapsed);
+	printf("-------------------------------------------------------\n");
+	printf("-------------------------------------------------------\n\n");
 
 	//ret = pdf->coef;
 	

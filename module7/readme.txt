@@ -79,7 +79,6 @@ NB: The directory scan produces a file "stats.txt" containing scan evaluation su
 ==> Analyse anti-malware <==
 
 - Analyse du contenu du trailer
-- Détection de commentaires malicieux (dont le but est de tromper les parsers de PDF).
 
 - Détection de shellcode
 - Détection de malicious URI.

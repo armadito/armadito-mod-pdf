@@ -21,7 +21,7 @@
 //#define encrypted
 #define EMPTY_PAGE_CONTENT 99
 #define OBJECT_COLLISION 10
-#define OBJECT_COLLISION_AND_BAD_XREF 70
+#define OBJECT_COLLISION_AND_BAD_XREF 60
 #define BAD_TRAILER 40
 #define BAD_XREF_OFFSET 30
 #define BAD_OBJ_OFFSET 20
@@ -165,6 +165,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size);
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
 int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer);
 struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref);
+struct pdfObject * getPDFNextObjectByRef(struct pdfDocument * pdf, struct pdfObject * obj, char * ref);
 struct pdfDocument* initPDFDocument();
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
@@ -186,6 +187,7 @@ char * replaceInString(char * src, char * toReplace , char * pat);
 char * toBinary(char * stream, int size);
 char * binarytoChar(char * binary, int size, int * returned_size);
 void printStream(char * stream, int size);
+
 
 
 
@@ -233,5 +235,6 @@ int getInfoObject(struct pdfDocument * pdf);
 int unknownPatternRepetition(char * stream, int size,struct pdfDocument * pdf, struct pdfObject * obj);
 int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfObject * obj);
 int getURI(struct pdfDocument * pdf, struct pdfObject * obj);
+int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf);
 
 #endif

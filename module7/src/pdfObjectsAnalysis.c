@@ -64,6 +64,13 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			return -1;
 		}
 
+
+		// Decode object stream
+		if(js_obj->filters != NULL){		
+			decodeObjectStream(js_obj);			
+		}
+
+
 		if( js_obj->decoded_stream != NULL){
 			js = js_obj->decoded_stream;
 		}else{
@@ -83,7 +90,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			
 			pdf->testObjAnalysis->active_content ++;
 			pdf->testObjAnalysis->js ++;
-			unknownPatternRepetition(js, strlen(js),pdf, js_obj);
+			unknownPatternRepetition(js, strlen(js),pdf,js_obj);
 			findDangerousKeywords(js,pdf,js_obj);
 			
 
@@ -108,6 +115,8 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 				printf("Debug :: getJavaScript :: Found JS content in object %s\n",obj->reference);
 			#endif
 
+			//printf("js = %s\n",js);
+
 			pdf->testObjAnalysis->active_content ++;
 			pdf->testObjAnalysis->js ++;
 			unknownPatternRepetition(js, strlen(js),pdf,obj);
@@ -127,8 +136,131 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 }
 
+// This function get the JavaScript content in XFA form description (xml). // and analyze it
+// return NULL if there is no JS content 
+int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
+	//TODO
+
+	char * start = NULL;
+	char * end = NULL;
+	char * js_content = NULL;
+	int len = 0;
+	int rest = 0;
+	//int rest_size = 0;
+	char * script_balise = NULL;
+	//char * script_balise_end = NULL;
+	char * tmp = NULL;
+	int found  = 0;
 
 
+
+	// get the 
+
+	end = stream;
+	rest = size;
+
+	while((start = searchPattern(end,"<script",7,rest)) != NULL && rest > 0){
+
+		#ifdef DEBUG
+			printf("Debug :: getJSContentInXFA :: javascript content found in %s\n",obj->reference);
+		#endif
+
+		rest = (int)(start-stream);
+		rest = size - rest;
+		end = start;
+		len = 0;
+		while(end[0] != '>' && len<=rest ){
+			end ++;		
+			len ++;
+		}
+
+		script_balise = (char*)calloc(len+1,sizeof(char));
+		script_balise[len]= '\0';
+		memcpy(script_balise,start,len);
+		//printf("script_balise = %s\n",script_balise);
+
+		//TODO :: Check the keyword javascript 
+
+		// save the script start ptr
+		tmp = start;
+
+		// search the </script> balise
+		rest = (int)(end-stream);
+		rest = size - rest;
+
+		start = searchPattern(end,"</script",8,rest);
+
+		if(start == NULL){
+			return -1;
+		}
+
+		rest = (int)(start-stream);
+		rest = size - rest;
+
+		end = start;
+		len = 0;
+		while(end[0] != '>' && len<=rest ){
+			end ++;		
+			len ++;
+		}
+
+		//printf("end0 = %c\n",end[0] );
+
+
+		len = (int)(end - tmp);
+		len ++;
+
+
+		js_content = (char*)calloc(len+1, sizeof(char));
+		js_content[len]='\0';
+
+		memcpy(js_content,tmp,len);
+
+		//printf("Debug :: getJSContentInXFA :: js_content = %s\n",js_content);
+		found = 1;
+
+		// Analyze the js content
+		unknownPatternRepetition(js_content,len,pdf,obj);
+		findDangerousKeywords(js_content,pdf,obj);
+
+
+	
+		rest = (int)(start-stream);
+		rest = size - rest;
+
+
+		free(script_balise);
+		free(js_content);
+		script_balise = NULL;
+		js_content  = NULL;
+
+		//printf("\n\n");
+
+
+	}
+
+	
+	/*
+	if(start == NULL){
+		//printf("Debug :: getJSContentInXFA No js content script found in xfa xml :: %s\n",obj->reference );
+		//printf("Debug :: getJSContentInXFA :: stream = %s\n",stream);
+
+		return NULL;
+	}*/
+
+	if(found == 1){
+		pdf->testObjAnalysis->js ++;
+	}
+
+	
+
+	//printf("start = %s\n",start);
+
+	
+
+
+	return found;
+}
 
 
 // get Object
@@ -214,6 +346,12 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 				continue;
 			}
 
+			// Decode object stream			
+			if(xfa_obj->filters != NULL){		
+				decodeObjectStream(xfa_obj);			
+			}
+		
+
 			// get xfa content
 			if(xfa_obj->decoded_stream != NULL ){
 				xfa = xfa_obj->decoded_stream;
@@ -223,12 +361,15 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 			if(xfa != NULL){
 				//printf("XFA content = %s\n",xfa);
+
+				getJSContentInXFA(xfa,strlen(xfa),xfa_obj,pdf);
+
 				#ifdef DEBUG
 					printf("Found XFA content in object %s\n",xfa_obj_ref);
 				#endif
-				// TODO Analyze xfa content
-				unknownPatternRepetition(xfa, strlen(xfa),pdf, xfa_obj);
-				findDangerousKeywords(xfa,pdf,obj);
+				// Analyze xfa content
+				//unknownPatternRepetition(xfa, strlen(xfa),pdf, xfa_obj);
+				//findDangerousKeywords(xfa,pdf,xfa_obj);
 				pdf->testObjAnalysis->active_content ++;
 				pdf->testObjAnalysis->xfa ++;
 			}else{
@@ -266,6 +407,11 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			return -1;
 		}
 
+		// Decode object stream			
+		if(xfa_obj->filters != NULL){		
+			decodeObjectStream(xfa_obj);			
+		}
+
 		// get xfa content
 		if(xfa_obj->decoded_stream != NULL ){
 			xfa = xfa_obj->decoded_stream;
@@ -278,9 +424,11 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 				printf("Found XFA content in object %s\n",xfa_obj_ref);
 			#endif
 			//printf("XFA content = %s\n",xfa);	
+
+			getJSContentInXFA(xfa,strlen(xfa),xfa_obj,pdf);
 			// TODO Analyze xfa content
-			unknownPatternRepetition(xfa, strlen(xfa), pdf, xfa_obj);
-			findDangerousKeywords(xfa,pdf,obj);
+			//unknownPatternRepetition(xfa, strlen(xfa), pdf, xfa_obj);
+			//findDangerousKeywords(xfa,pdf,xfa_obj);
 			pdf->testObjAnalysis->active_content ++;
 			pdf->testObjAnalysis->xfa ++;
 		}else{
@@ -314,6 +462,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	//char * isDico = NULL;
 	//char * end = NULL;
 	int len = 0;
+	//int ef_len 
 
 	//printf("Analysing object :: %s\n",obj->reference);
 
@@ -327,7 +476,10 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	if( strncmp(obj->type,"/EmbeddedFile",13) == 0){
 
 
-		
+		// Decode object stream			
+		if(obj->filters != NULL){		
+			decodeObjectStream(obj);			
+		}
 
 		if(obj->decoded_stream != NULL ){
 			ef = obj->decoded_stream;
@@ -341,6 +493,9 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			#endif
 			//printf("ef content = %s\n",ef);
 			// TODO Process to ef stream content analysis.
+			//unknownPatternRepetition(ef, strlen(xfa), pdf, xfa_obj);
+			//findDangerousKeywords(xfa,pdf,obj);
+			
 		}else{
 			#ifdef DEBUG
 				printf("Warning :: Empty EF stream content in object %s\n",obj->reference);
@@ -441,6 +596,11 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
 
 			if(ef_obj != NULL){
+
+				// Decode object stream			
+				if(ef_obj->filters != NULL){		
+					decodeObjectStream(ef_obj);			
+				}
 
 				if(ef_obj->decoded_stream != NULL ){
 					ef = ef_obj->decoded_stream;
@@ -608,8 +768,9 @@ int getInfoObject(struct pdfDocument * pdf){
 // This function detects potentially malicious URI.
 int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
-
-	printf("\tTODO... URI analysis :: %s\n", uri);
+	#ifdef DEBUG
+		printf("\tTODO... URI analysis :: %s\n", uri);
+	#endif
 	
 	// Path traveral detection.
 	// Malicious uri detection
@@ -802,6 +963,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 
 
+
 // This function detects when a string (unknown) is repeted in the stream with a high frequency.
 // TODO remove white spaces to improve results.
 int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, struct pdfObject * obj){
@@ -813,7 +975,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	//char * end = NULL;
 	//char * len = 0;
 	int rep = 0;
-	int lim_rep = 100;
+	int lim_rep = 150;
 	//int off = 0;
 	char * ptr = NULL;
 	char * ptr_bis = NULL;
@@ -823,12 +985,14 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	char * whithout_space = NULL;
 	time_t start_time, end_time;
 	double time_elapsed = 0;
+	int time_exceeded = 6;
 
 	/*
 	if(pdf != NULL){
 		return 0;
 	}*/
 
+	//printf("Debug :: Stream = %s\n",stream);
 
 	time(&start_time);
 	//char * test = "Bonjour je suis une stream de test";
@@ -896,6 +1060,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 				rep ++;
 			}
 
+			
 			if(rep > lim_rep){
 				#ifdef DEBUG
 					printf("Warning :: unknownPatternRepetition :: Found pattern repetition in object %s\n",obj->reference);
@@ -918,7 +1083,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 			
 			//printf("\ntmp = %s, %.2lf sec \n",tmp,time_elapsed);
 
-			if(time_elapsed > 5){
+			if(time_elapsed > time_exceeded){
 				#ifdef DEBUG
 					printf("Warning :: unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference );
 				#endif
@@ -983,8 +1148,10 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	int i = 0;
 	char * high_keywords[] = {"HeapSpray","heap","spray","hack","shellcode", "shell", "pointers", "byteToChar", "system32", "payload", "console"};
 	int num_high = 10;
-	int num_medium = 10;
-	char * medium_keywords[] = {"toString", "substring", "split", "eval", "addToolButton", "String.replace", "unescape", "exportDataObject", "StringFromChar", "util.print"};
+	int num_medium = 9;
+	int num_low = 1;
+	char * medium_keywords[] = {"substring", "split", "eval", "addToolButton", "String.replace", "unescape", "exportDataObject", "StringFromChar", "util.print"};
+	char * low_keywords[] = {"toString"};
 	char * start = NULL;
 	int len = 0;
 	int unicode_count = 0;
@@ -1062,8 +1229,23 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 			#ifdef DEBUG
 				printf("Warning :: findDangerousKeywords :: Medium dangerous keyword (%s) found in object %s\n",medium_keywords[i], obj->reference);
 			#endif
-			pdf->testObjAnalysis->dangerous_keyword_medium ++;
+			pdf->testObjAnalysis->dangerous_keyword_medium ++;			
 			ret=  2;
+		}
+
+	}
+
+
+	for(i = 0; i< num_low ; i++){
+
+		//printf("Test :: %s\n",medium_keywords[i]);
+		//if(strnstr(stream,medium_keywords[i],strlen(medium_keywords[i])) != NULL ){
+		if(  searchPattern(stream,low_keywords[i],strlen(low_keywords[i]),strlen(stream)) != NULL ){
+			#ifdef DEBUG
+				printf("Warning :: findDangerousKeywords :: Low dangerous keyword (%s) found in object %s\n",low_keywords[i], obj->reference);
+			#endif
+			pdf->testObjAnalysis->dangerous_keyword_low ++;			
+			ret = 1;
 		}
 
 	}

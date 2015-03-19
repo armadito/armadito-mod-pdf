@@ -136,6 +136,50 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 	return NULL;
 }
 
+// return the object within the reference given in parameters (get the next object in the list, starting from obj, with the reference given in parameter)
+struct pdfObject * getPDFNextObjectByRef(struct pdfDocument * pdf, struct pdfObject * obj, char * ref){
+
+	struct pdfObject * tmp = NULL;
+
+
+	if(pdf == NULL ){
+
+		#ifdef DEBUG
+			printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
+		#endif
+
+		return NULL;
+	}
+
+	if(ref == NULL ){
+		#ifdef DEBUG
+			printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
+		#endif
+
+		return NULL;
+	}
+
+	if(obj == NULL){
+		return NULL;
+	}
+
+
+	tmp = obj->next;
+
+	while(tmp != NULL){
+	
+		if( strncmp(ref,tmp->reference,strlen(ref)) == 0 ){
+			return tmp;
+		}
+		
+		tmp = tmp->next;	
+	}
+	
+	//printf("Object \"%s\" not found\n",ref);
+
+	return NULL;
+}
+
 
 // This function add an object in the list
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
