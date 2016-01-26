@@ -1,4 +1,5 @@
 #include "osdeps.h"
+#include <string.h>
 
 
 #ifdef WIN32
@@ -19,15 +20,26 @@ FILE * os_fopen(const char * filename, const char * mode) {
 #else
 
 // Linux part for compatibility.
-errno_t os_strncat(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
+int os_strncat(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
+	
 
-	return (strncat(strDest, strSource, count));
+	if( strncat(strDest, strSource, count) == NULL){
+		return -1;
+	}
+	
+
+	return 0;
 
 }
 
-errno_t os_strncpy_s(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
+int os_strncpy(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
 
-	return strncpy(strDest , strSource, count);
+	
+	if( strncpy(strDest , strSource, count)  == NULL){
+		return -1;
+	}
+
+	return 0;
 }
 
 	

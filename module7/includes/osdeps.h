@@ -15,10 +15,10 @@ FILE * os_fopen(const char * filename, const char * mode);
 
 #define os_fopen fopen
 #define os_sprintf snprintf
-#TOTRY...
+#define os_sscanf sscanf
 //#define os_sprintf(buffer,sizeOfBuffer, format,...) sprintf(buffer, format,...)
-errno_t os_strncat(char *strDest, size_t numberOfElements, const char *strSource, size_t count);
-errno_t os_strncpy_s(char *strDest, size_t numberOfElements, const char *strSource, size_t count);
+int os_strncat(char *strDest, size_t numberOfElements, const char *strSource, size_t count);
+int os_strncpy(char *strDest, size_t numberOfElements, const char *strSource, size_t count);
 
 #endif
 
