@@ -23,7 +23,8 @@
 #include "miniz.c"
 #include <errno.h>
 
-extern int errno;
+
+//extern int _errno;
 
 char * FlateDecode(char * stream, struct pdfObject* obj){
 
@@ -456,7 +457,7 @@ unsigned short readData(char ** data, int * partial_code, int * partial_bits, in
 
 		if(*partial_code != -1){
 
-			sscanf(&(*data[0]),"%c",&unpack);
+			os_sscanf(&(*data[0]),"%c",&unpack);
 			
 
 			//printf("Debug :: unpack :: %d :: %d\n",unpack,unpack_test);
@@ -467,7 +468,7 @@ unsigned short readData(char ** data, int * partial_code, int * partial_bits, in
 
 		}else{
 
-			sscanf(&(*data[0]),"%c",&unpack);
+			os_sscanf(&(*data[0]),"%c",&unpack);
 			//printf("unpack2 = %d\n",unpack);
 			*partial_code = unpack;
 
@@ -629,14 +630,15 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 
 						// write entry in result
-						strncat(out,entry,strlen(entry));
+						os_strncat(out,stream_len+1,entry,strlen(entry));
 						size += strlen(entry);
 
 						// add entry in dico
 						w_entry0 = (char*)calloc(strlen(w)+2,sizeof(char));
 						w_entry0[strlen(w)+1]= '\0';
-						strncat(w_entry0,w,strlen(w));
-						strncat(w_entry0,entry,1);
+						
+						os_strncat(w_entry0,strlen(w)+2,w,strlen(w));
+						os_strncat(w_entry0,strlen(w)+2,entry,1);
 
 						if(dico == NULL){
 							dico = initDico(next_code,w_entry0);
@@ -659,20 +661,20 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 						//entry = w + w[0]
 						entry = (char*)calloc(strlen(w)+2,sizeof(char));
 						entry[strlen(w)+1]= '\0';
-						strncat(entry,w,strlen(w));
-						strncat(entry,w,1);
+						os_strncat(entry,strlen(w)+2,w,strlen(w));
+						os_strncat(entry,strlen(w)+2,w,1);
 
 
 						// write entry in result
-						strncat(out,entry,strlen(entry));
+						os_strncat(out,stream_len+1,entry,strlen(entry));
 						size += strlen(entry);
 
 						
 						// add w + entry[0] in dico
 						w_entry0 = (char*)calloc(strlen(w)+2,sizeof(char));
 						w_entry0[strlen(w)+1]= '\0';
-						strncat(w_entry0,w,strlen(w));
-						strncat(w_entry0,entry,1);
+						os_strncat(w_entry0,strlen(w)+2,w,strlen(w));
+						os_strncat(w_entry0,strlen(w)+2,entry,1);
 						
 
 
@@ -714,7 +716,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 						w[0] = (char)((int)'\0' + code);
 						//sscanf(&code,"%c",&w[0]);
 						//printf("RESULT1 = %d , %s\n",code, w);
-						strncat(out,w,1);
+						os_strncat(out,stream_len+1,w,1);
 						size++;
 						first = 0;
 						continue;
@@ -731,7 +733,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 					entry[0] = (char)((int)'\0' + code);
 					//sscanf(&code,"%c",&entry[0]);
 					//printf("RESULT = %s\n",entry);
-					strncat(out,entry,1);
+					os_strncat(out,stream_len+1,entry,1);
 					size ++;
 
 
@@ -742,8 +744,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 					
 
 					//w_entry0 = w + entry[0];
-					strncat(w_entry0,w,strlen(w));
-					strncat(w_entry0,entry,1);
+					os_strncat(w_entry0,strlen(w)+2,w,strlen(w));
+					os_strncat(w_entry0,strlen(w)+2,entry,1);
 
 
 
@@ -816,9 +818,10 @@ char * getTuple(char * data, int len){
 	char * tuple = NULL;
 	//int num = 0;
 	int i = 0;
+	int size = 5; // tuple size
 
-	tuple = (char*)calloc(6,sizeof(char));
-	tuple[5]='\0';
+	tuple = (char*)calloc(size+1,sizeof(char));
+	tuple[size]='\0';
 
 	if(data == NULL){
 		return NULL;
@@ -838,7 +841,7 @@ char * getTuple(char * data, int len){
 
 		// padd with "u"
 		for(i = 0; i < (5-len); i++){
-			strncat(tuple,"u",1);
+			os_strncat(tuple,size+1,"u",1);
 		}
 
 	}
@@ -851,8 +854,8 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 
 
 	unsigned long stream_len = 0;
-	int i = 0;
-	char * out = NULL;
+	int i = 0,j=0;
+	char * out = NULL, *out_tmp = NULL;
 	char * data_ptr = NULL;
 	char * tuple = NULL;
 	//char * tuple_s = NULL;
@@ -874,11 +877,14 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	len = stream_len;
 
 	//printf("stream = %s\n", stream);
+	//printf("stream_len = %d\n", stream_len);
 	data_ptr = stream;
 
 	// remove white spaces if any
-
-	out = (char*)calloc(stream_len,sizeof(char));
+	//stream_len *= 2;
+	out = (char*)calloc(stream_len+1,sizeof(char));
+	out[stream_len] = '\0';
+	//out_tmp = out;
 	//tuple = (char*)calloc(6,sizeof(char));
 	//tuple_s = (char*)calloc(6,sizeof(char));
 	tuple_a = (int*)calloc(6,sizeof(int));
@@ -886,17 +892,18 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	//tuple[5]='\0';
 
 
-	while(len > 0){
+	while(len > 0 && j < stream_len-1){
 
 		base = 0;
 
 		tuple = getTuple(data_ptr,len);
 		if(tuple == NULL){
+			printf("ERROR :: Cannot get Tuple!!\n" );
 			len = 0;
 			continue;
 		}
 
-		data_ptr += 5; 
+		data_ptr += 5;
 
 		len = (int)(data_ptr - stream);
 		len = stream_len - len;
@@ -905,13 +912,13 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 
 
 		// tuple (char) into ascii (dec)
-		/*
-		sscanf(&tuple[0],"%c",&tuple_a[0]);
+		
+		/*sscanf(&tuple[0],"%c",&tuple_a[0]);
 		sscanf(&tuple[1],"%c",&tuple_a[1]);
 		sscanf(&tuple[2],"%c",&tuple_a[2]);
 		sscanf(&tuple[3],"%c",&tuple_a[3]);
-		sscanf(&tuple[4],"%c",&tuple_a[4]);
-		*/
+		sscanf(&tuple[4],"%c",&tuple_a[4]);*/
+		
 
 		for(i = 0; i < 5; i++){
 			tuple_a[i] = tuple[i] - '\0'; // char to int			
@@ -944,35 +951,47 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 		//sprintf(tuple_s,"%d",base);
 
 		tmp = (char*)&base; // change unsigned long into char *
+		//tmp[4] = '\0';
 
-
-		//printf("\tres = --%s--\n",tmp);
+		//printf("\tres = --%s--\t j = %d \n",tmp,j);
 
 
 
 
 		//printf("num = %d\n",strlen(tuple_s));
 		//strncat(out,tmp,strlen(tmp));
-		num = strlen(tmp);
+		//num = strlen(tmp);
+		num = 5;
 		//printf("strlen_tmp =  %d\n",strlen(tmp));
+		//printf("stream_len =  %d\n",stream_len);
 
 
-		invert = tmp + num -1;
+
+		//invert = tmp + num -1;
+		invert = tmp + num -2;
+		//printf("\tinvert = --%s--\n",invert);
+		//printf("out = %s\n",out);
+		//printf("invert= %s :: len = %d\n",invert,len);
 
 		// invert 
-		for(i = num-1; i >= 0 ; i--){
+		for(i = num-2; i >= 0 ; i--){
 
-			strncat(out,invert,1);
-			
+			//printf(":: len = %d num = %d\n",len, num);
+			//memcpy(out_tmp, invert, 1);
+			j++;
+			if (j<stream_len)
+				os_strncat(out,stream_len,invert,1);
+			//out_tmp++;
+			//printf("out = %s\n",out);
 			//printf("hey :: %c :: %s\n",invert[0],out);
 
 			invert --;
 
-		}		
+		}
 		//strncat(out,invert,num);	
-		
+		//j += num;
 
-		//printf("\n");
+		//printf("j = %d\n",j);
 
 		//sscanf(&code,"%c",&entry[0]);
 		//printf("tuple_a = %s\n",tuple_a);
@@ -980,8 +999,8 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 		free(tuple);
 	}
 
-	obj->decoded_stream_size = num;
-	obj->tmp_stream_size = num;
+	obj->decoded_stream_size = j;
+	obj->tmp_stream_size = j;
 
 	//printf("out = %s--\n",out);
 
@@ -1122,7 +1141,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 					result = (char*)calloc(result_size+1,sizeof(char));
 					result[result_size] = '\0';
 
-					strncat(result,tmp,result_size-run);
+					os_strncat(result,result_size+1,tmp,result_size-run);
 
 					for(j = 0; j < run; j++){
 						result[result_size-run+j] = white;
@@ -1154,7 +1173,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 						result = (char*)calloc(result_size+1,sizeof(char));
 						result[result_size] = '\0';
 
-						strncat(result,tmp,result_size-run);
+						os_strncat(result,result_size+1,tmp,result_size-run);
 
 						for(j = 0; j < run; j++){
 							result[result_size-run+j] = white;
@@ -1199,7 +1218,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 					result = (char*)calloc(result_size+1,sizeof(char));
 					result[result_size] = '\0';
 
-					strncat(result,tmp,result_size-run);
+					os_strncat(result,result_size+1,tmp,result_size-run);
 
 					for(j = 0; j < run; j++){
 						result[result_size-run+j] = black;
@@ -1228,7 +1247,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 						result = (char*)calloc(result_size+1,sizeof(char));
 						result[result_size] = '\0';
 
-						strncat(result,tmp,result_size-run);
+						os_strncat(result,result_size+1,tmp,result_size-run);
 
 						for(j = 0; j < run; j++){
 							result[result_size-run+j] = black;

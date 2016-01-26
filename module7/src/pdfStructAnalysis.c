@@ -136,6 +136,7 @@ int checkXRef(struct pdfDocument * pdf){
 	int first_obj_num = 0;
 	char * first_obj_num_a = NULL;
 	int i = 0;
+	int ref_size = 12; // xxxx 0 obj
 	char * ref = NULL;
 	struct pdfObject * obj = NULL;
 	char free_obj = 'n';
@@ -166,7 +167,7 @@ int checkXRef(struct pdfDocument * pdf){
 		//printf("Hey !!\n");
 		if(trailer->content == NULL){
 			#ifdef DEBUG
-				printf("Error :: getInfoObject :: Empty trailer content\n");
+				printf("Error :: checkXRef :: Empty trailer content\n");
 			#endif
 
 			trailer = trailer->next;
@@ -321,9 +322,9 @@ int checkXRef(struct pdfDocument * pdf){
 				//printf("object number = %d\n",obj_num );
 
 				
-				ref = (char*)calloc(12,sizeof(char)); // whhhhyyyyyyyyyyyyyyyyyyyyyy !!!!!!!!!
+				ref = (char*)calloc(ref_size+1,sizeof(char)); // whhhhyyyyyyyyyyyyyyyyyyyyyy !!!!!!!!!
 				
-				sprintf(ref,"%d 0 obj",obj_num);
+				os_sprintf(ref,ref_size+1,"%d 0 obj",obj_num);
 				
 				//printf("ref = %s at %d\n",ref, off);
 
@@ -440,7 +441,7 @@ int checkXRef(struct pdfDocument * pdf){
 			ref = (char*)calloc(len+1,sizeof(char));
 			ref[len] = '\0';
 
-			sprintf(ref,"%d 0 obj",obj_num);
+			os_sprintf(ref,len,"%d 0 obj",obj_num);
 			//printf("xref object = %s\n",ref);
 
 
@@ -688,8 +689,26 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							// get the stream
 							if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 								//printf("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
-								//return 1;
+								//return 1; // TODO ::  when you find a non-empty page then return. + time
+								/* Do no forget to free the allocated variables
+								free(pageContent_obj_ref);
+								free(kid_obj_ref);
+								free(kids);
+								*/
+								if (pageContent_obj_ref != NULL) {
+									free(pageContent_obj_ref);
+									pageContent_obj_ref = NULL;
+								}
+								if (kid_obj_ref != NULL) {
+									free(kid_obj_ref);
+									kid_obj_ref = NULL;
+								}
+								if (kids != NULL) {
+									free(kids);
+									kids = NULL;
+								}
 								ret = 1;
+								return 1;
 							}else{
 
 								#ifdef DEBUG

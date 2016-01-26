@@ -106,23 +106,30 @@ int getPDFContent(struct pdfDocument * pdf){
 char * hexaObfuscationDecode(char * dico){
 
 	char * start = NULL;
-	int len = 0;
+	int len = 0, start_len = 0;
 	char * decoded_dico = NULL;
 	char * hexa = NULL;
 	char * hexa_decoded = NULL;
 	int is_space_hexa = 1;
 	char * tmp = NULL;
 
-	len = strlen(dico);
-	start = searchPattern(dico,"#",1,len);
+	if (dico == NULL) {
+		return NULL;
+	}
 
+	len = strlen(dico);
+	
+	start = searchPattern(dico,"#",1,len);
 
 	if(start == NULL){
 		return NULL;
 	}
 
+	start_len = (int)(start - dico);
+	start_len = len - start_len;
+	//printf("dico_len =  %d:: start_len = %d\n",len,start_len );
 	//printf("dico = %s\n\n",dico);
-
+	
 	//decoded_dico = (char*)calloc(len,sizeof(char));
 	hexa = (char*)calloc(4,sizeof(char));
 	hexa[3] = '\0';
@@ -137,16 +144,16 @@ char * hexaObfuscationDecode(char * dico){
 	tmp = (char*)calloc(len+1,sizeof(char));
 	tmp[len]= '\0';
 	memcpy(tmp,dico,len);
+	
 
 
-
-	while( start != NULL && len >= 3){
+	while( start != NULL && start_len >= 3){
 
 		
-
+		//printf("FLAG1\n");
 		// get the pointer of the hexa code
-		start = getHexa(start,len);
-
+		start = getHexa(start,start_len);
+		//printf("FLAG2\n");
 		
 		if(start == NULL){
 			//start += 3;
@@ -166,10 +173,10 @@ char * hexaObfuscationDecode(char * dico){
 		//memcpy(hexa, start, 2);
 		//hexa[2]='\0';
 		//printf("hexa = %s\n",hexa);
-
+		
 		//sscanf(hexa,"%x",&hexa_decoded[0]);
-		sscanf(hexa+1,"%x",&hexa_decoded[0]);
-
+		os_sscanf(hexa,"%x",&hexa_decoded[0]);
+		
 		//printf("hexa_decoded_s = %s\n",hexa_decoded);
 
 		decoded_dico = replaceInString(tmp,hexa,hexa_decoded);
@@ -195,13 +202,13 @@ char * hexaObfuscationDecode(char * dico){
 		start += 3;
 		//start += 3;
 
-		len = (int)(start - dico);
-		len = strlen(dico) -len;
+		start_len = (int)(start - dico);
+		start_len = strlen(dico) -start_len;
 		//printf("len = %d\n",len);
 
 
 	}
-
+	
 	free(hexa);
 	free(hexa_decoded);
 
@@ -356,7 +363,8 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 		return decoded_dico;
 	}
 
-	free(decoded_dico);
+	if (decoded_dico != NULL)
+		free(decoded_dico);
 	return dico;
 	
 }
@@ -634,7 +642,7 @@ char * getStreamFilters(struct pdfObject * obj){
 	//len = (int)(end - start);
 	//printf("getStreamFilters :: len = %d \n",len);
 
-	strncpy(filters,start,len);
+	os_strncpy(filters,len+1,start,len);
 	
 	//printf("filters = %s \n",filters);
 	
@@ -709,7 +717,7 @@ int decodeObjectStream(struct pdfObject * obj){
 
 		//printf("filter_len = %d\n",len);
 
-		strncpy(filter,start,len);
+		os_strncpy(filter,len+1,start,len);
 		//printf("implemented filter_end = %s\n",filter);
 		
 		//len -= filter - strlen(obj->filter);
@@ -1173,9 +1181,9 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		obj_ref_len = strlen(obj_num_a) + 6;
 		obj_ref = (char*)calloc(obj_ref_len+1,sizeof(char));
 		obj_ref[obj_ref_len] = '\0';
-
-		obj_ref = strncat(obj_ref, obj_num_a, strlen(obj_num_a));
-		obj_ref = strncat(obj_ref, " 0 obj", 6);
+		
+		os_strncat(obj_ref, obj_ref_len+1, obj_num_a, strlen(obj_num_a));
+		os_strncat(obj_ref,obj_ref_len+1, " 0 obj", 6);
 		//printf("obj_ref = %s\n",obj_ref);
 		comp_obj->reference =  obj_ref;
 
@@ -1259,6 +1267,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 
 	char * startobj_ptr;
 	char * endobj_ptr;
+
 	char * content;
 	int len = 0;
 	char * ref = NULL;
@@ -1338,7 +1347,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		ref = (char*)calloc(ref_len+1,sizeof(char));
 		ref[ref_len] = '\0';
 		
-		strncpy(ref,startobj_ptr,ref_len);
+		os_strncpy(ref,ref_len+1,startobj_ptr,ref_len);
 		//printf("object reference = %s :: %d\n",ref,ref_len);
 		
 		//startobj_ptr++;
@@ -2093,7 +2102,7 @@ int parsePDF(struct pdfDocument * pdf){
 		//return -3;
 	}else{
 		// Remove comments
-		removeComments(pdf);	
+		removeComments(pdf);
 	}
 
 
@@ -2105,7 +2114,7 @@ int parsePDF(struct pdfDocument * pdf){
 		if(pdf->trailers == NULL)
 			pdf->testStruct->bad_trailer ++;
 	}
-
+	
 	
 	// if the document is encrypted
 	if( pdf->testStruct->encrypted > 0 ){		

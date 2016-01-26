@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "osdeps.h"
 //#include <regex.h>
 
 // FILTERS

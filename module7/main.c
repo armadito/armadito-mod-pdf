@@ -230,7 +230,7 @@ int analyze(char * filename){
 	time(&start_time);
 	
 	// Open file
-	if(!(f = fopen(filename,"rb"))){
+	if(!(f = os_fopen(filename,"rb"))){
 		printf("ERROR :: analyze :: Error while opening file %s\n",filename);
 		return -1;
 	}
@@ -255,11 +255,11 @@ int analyze(char * filename){
 		return -2;
 	}
 
-
+	
 	res = parsePDF(pdf);
-
+	
 	#ifdef DEBUG
-		printPDFObjects(pdf);
+		//printPDFObjects(pdf);
 	#endif
 		
 	if(res <= -2 ){		
@@ -268,7 +268,7 @@ int analyze(char * filename){
 		return -2;
 	}
 	
-
+	
 	// Object analysis
 	if(pdf->objects != NULL){
 		getDangerousContent(pdf);
@@ -321,7 +321,7 @@ int main (int argc, char ** argv){
 	//printf ("Analyzing file : %s\n",argv[1]);
 	
 	ret = analyze(argv[1]);
-	
+	//system("pause");
 
 	return ret;
 }
