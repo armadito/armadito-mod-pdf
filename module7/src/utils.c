@@ -101,14 +101,23 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 	if(pdf->trailers != NULL)
 		freePDFTrailerStruct(pdf->trailers);
 	
+	if (pdf->fh != NULL)
+		fclose(pdf->fh); //Close file handle
 
-	fclose(pdf->fh); //Close file handle
-	free(pdf->version);
-	free(pdf->content);
+	if (pdf->version != NULL)
+		free(pdf->version);
 
-	free(pdf->testStruct);
-	free(pdf->testObjAnalysis);
-	free(pdf);
+	if (pdf->content != NULL)
+		free(pdf->content);
+
+	if (pdf->testStruct != NULL)
+		free(pdf->testStruct);
+
+	if (pdf->testObjAnalysis != NULL)
+		free(pdf->testObjAnalysis);
+
+	if (pdf != NULL)
+		free(pdf);
 	
 
 	return ;
@@ -328,7 +337,8 @@ struct pdfDocument* initPDFDocument(){
 
 	
 	// Initialize entries
-	pdf->fh = NULL;	
+	pdf->fh = NULL;
+	pdf->fd = -1;
 	pdf->content = NULL;
 	pdf->objects =NULL;
 	pdf->coef = 0;

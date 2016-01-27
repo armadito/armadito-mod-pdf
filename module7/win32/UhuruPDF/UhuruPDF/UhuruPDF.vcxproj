@@ -84,6 +84,7 @@
     <ClCompile Include="..\..\..\main.c" />
     <ClCompile Include="..\..\..\src\filters.c" />
     <ClCompile Include="..\..\..\src\osdeps.c" />
+    <ClCompile Include="..\..\..\src\pdfAnalysis.c" />
     <ClCompile Include="..\..\..\src\pdfObjectsAnalysis.c" />
     <ClCompile Include="..\..\..\src\pdfParsing.c" />
     <ClCompile Include="..\..\..\src\pdfStructAnalysis.c" />

@@ -32,19 +32,32 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	version = (char*)calloc(9,sizeof(char));
 	version[8]='\0';
 	
-	
-	// Go to the beginning of the file
-	fseek(pdf->fh,0,SEEK_SET);
-	
-	
-	// Read the 8 first bytes Ex: %PDF-1.
-	fread(version,1,version_size,pdf->fh);
-	
+	if (pdf->fh == NULL && pdf->fd < 0) {
+		printf("[-] Error :: checkMagicNumber :: invalid parameters\n");
+		return -1;
+	}
+
+	// In this case use file handle.
+	if (pdf->fh != NULL) {
+
+		// Go to the beginning of the file
+		fseek(pdf->fh,0,SEEK_SET);
+
+		// Read the 8 first bytes Ex: %PDF-1.
+		fread(version,1,version_size,pdf->fh);
+
+	}
+	else {
+
+		os_lseek(pdf->fd,0,SEEK_SET);
+		os_read(pdf->fd, version, version_size);
+	}
+
 	//printf("pdf header = %s\n",version);
 	
 	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
 	
-		//printf ("PDF Header OK = %s\n",version);
+		printf ("PDF Header OK = %s\n",version);
 		pdf->version = version;
 	
 	}else{
@@ -68,10 +81,30 @@ int getPDFContent(struct pdfDocument * pdf){
 	int doc_size = 0;
 	int read_bytes;
 
+
+	if (pdf->fh == NULL && pdf->fd < 0) {
+		printf("[-] Error :: getPDFContent :: invalid parameters\n");
+		return -1;
+	}
+
+	if (pdf->fh != NULL) {
+
+		// Get the size in byte
+		fseek(pdf->fh,0,SEEK_END);
+		doc_size = ftell(pdf->fh);
+		fseek(pdf->fh,0,SEEK_SET); // rewind
+
+	}
+	else {
+
+		doc_size =  os_lseek(pdf->fd,0,SEEK_END);
+		//printf("Document Size  = %d\n",doc_size);
+		//doc_size = _tell(pdf->fd);
+		os_lseek(pdf->fd,0,SEEK_SET); // rewind		
+
+	}
 	
-	// Get the size in byte
-	fseek(pdf->fh,0,SEEK_END);
-	doc_size = ftell(pdf->fh);
+	
 	
 	#ifdef DEBUG
 		printf("Document Size  = %d\n",doc_size);
@@ -79,11 +112,16 @@ int getPDFContent(struct pdfDocument * pdf){
 	
 	content = (char*)calloc(doc_size+1,sizeof(char));
 	content[doc_size]= '\0';
-
+	if (content == NULL) {
+		return -1;
+	}
 	
-	fseek(pdf->fh,0,SEEK_SET);
-	
-	read_bytes = fread(content,1,doc_size,pdf->fh);
+	if (pdf->fh != NULL) {
+		read_bytes = fread(content, 1, doc_size, pdf->fh);
+	}
+	else {		
+		read_bytes = os_read(pdf->fd, content, doc_size);
+	}
 	
 	//printf("read bytes = %d\n",read_bytes);
 	
@@ -2049,9 +2087,7 @@ int removeComments(struct pdfDocument * pdf){
 		//printf("len = %d\n",len );	
 
 		//printf("\n\n");
-
 		
-		//printf("hoyhoy\n");
 
 	} // end while
 
@@ -2092,7 +2128,10 @@ int parsePDF(struct pdfDocument * pdf){
 
 
 	// Get the content of the document
-	getPDFContent(pdf);
+	if (getPDFContent(pdf) <= 0) {
+		printf("[-] Error :: parsePDF :: getPDF content failed\n");
+		return -1;
+	};
 
 
 	// File too large
