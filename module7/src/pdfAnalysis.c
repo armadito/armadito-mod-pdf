@@ -23,6 +23,10 @@
 // This function print a report of the analysis
 int printAnalysisReport(struct pdfDocument * pdf, char * filename){
 
+	if (!PRINT_REPORT) {
+		return 0;
+	}
+
 	printf("\n\n");
 	printf("-------------------------------\n");
 	printf("-- UHURU PDF ANALYZER REPORT --\n");
@@ -219,6 +223,10 @@ int analyzePDF(char * filename){
 	double time_elapsed = 0;
 	int res = 0;
 
+	if (filename == NULL) {
+		printf("[-] Error :: analyzePDF :: invalid parameter\n");
+		return -1;
+	}
 
 	time(&start_time);
 	
@@ -234,7 +242,7 @@ int analyzePDF(char * filename){
 		fclose(f);
 		return -1;
 	}
-	pdf->fh = f;	
+	pdf->fh = f;
 	
 	// Check the magic number of the file
 	res = checkMagicNumber(pdf);

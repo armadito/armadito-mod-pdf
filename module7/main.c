@@ -47,20 +47,26 @@ int main (int argc, char ** argv){
 		return (-1);
 	}
 	
+#if 0
+
+	// Code for testing analysis with file descriptor.
 	//printf ("Analyzing file : %s\n",argv[1]);
 	if(!(f = os_fopen(argv[1],"rb"))){
 		printf("[-] Error :: main :: Error while opening file %s\n",argv[1]);
 		return -1;
 	}
-	//printf("f = %d\n",f);
+	
 	fd = os_fileno(f);
 	//printf("[+] Debug :: fd = %d\n",fd);
-	
-	//ret = analyzePDF(argv[1]);
-
 	ret = analyzePDF_fd(fd, argv[1]);
 
 	fclose(f);
+
+#else
+
+	ret = analyzePDF(argv[1]);
+	
+#endif	
 
 	//system("pause");
 	

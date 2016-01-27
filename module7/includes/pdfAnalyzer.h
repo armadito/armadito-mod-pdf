@@ -61,6 +61,7 @@
 #define LARGE_FILE_SIZE 1500000
 
 //#define DEBUG 1
+#define PRINT_REPORT 1
 
 // PDF object structure
 struct pdfObject{

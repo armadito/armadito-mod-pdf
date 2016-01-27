@@ -26,7 +26,8 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	
 	
 	int version_size = 8;
-	//int ret;
+	int ret = 0;
+
 	
 	char * version;
 	version = (char*)calloc(9,sizeof(char));
@@ -44,7 +45,7 @@ int checkMagicNumber(struct pdfDocument * pdf){
 		fseek(pdf->fh,0,SEEK_SET);
 
 		// Read the 8 first bytes Ex: %PDF-1.
-		fread(version,1,version_size,pdf->fh);
+		ret = fread(version,1,version_size,pdf->fh);
 
 	}
 	else {
@@ -127,11 +128,7 @@ int getPDFContent(struct pdfDocument * pdf){
 	
 	//printf("Document content = %s",content);
 	
-	//read_bytes = strlen(content);
-	//printf("read bytes = %d\n",read_bytes);
-	
-	pdf->content = content;
-	
+	pdf->content = content;	
 	pdf->size = read_bytes;
 	
 	return read_bytes;
@@ -1407,6 +1404,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		//printf("end obj ptr = %d\n",endobj_ptr);
 		
 		if(endobj_ptr == NULL){
+			// invalid object no "endobj" pattern found... Malformed PDF.
 			//printf(":: Error :: startobj_ptr = %d\n", startobj_ptr);
 			return -1;
 		}
@@ -2116,6 +2114,7 @@ int removeComments(struct pdfDocument * pdf){
 int parsePDF(struct pdfDocument * pdf){
 
 	if(pdf == NULL){
+		printf("[-] Error :: parsePDF :: Invalid parameter!\n");
 		return -1;
 	}
 
@@ -2161,7 +2160,10 @@ int parsePDF(struct pdfDocument * pdf){
 	}
 
 	// Get objects described in pdf document
-	getPDFObjects(pdf);
+	if (getPDFObjects(pdf) < 0) {
+		// malformed PDF.
+		//return -1;
+	}
 	
 
 	return 0;
