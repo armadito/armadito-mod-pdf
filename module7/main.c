@@ -53,8 +53,8 @@ int main (int argc, char ** argv){
 		return -1;
 	}
 	//printf("f = %d\n",f);
-	fd = _fileno(f);
-	printf("[+] Debug :: fd = %d\n",fd);
+	fd = os_fileno(f);
+	//printf("[+] Debug :: fd = %d\n",fd);
 	
 	//ret = analyzePDF(argv[1]);
 
@@ -62,7 +62,7 @@ int main (int argc, char ** argv){
 
 	fclose(f);
 
-	system("pause");
+	//system("pause");
 	
 	return ret;
 }
