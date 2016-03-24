@@ -82,6 +82,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\main.c" />
+    <ClCompile Include="..\..\..\parser.c" />
     <ClCompile Include="..\..\..\src\filters.c" />
     <ClCompile Include="..\..\..\src\osdeps.c" />
     <ClCompile Include="..\..\..\src\pdfAnalysis.c" />

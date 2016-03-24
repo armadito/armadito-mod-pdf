@@ -29,7 +29,7 @@
 #define CLEAR_TABLE 256
 
 #define MAX_CODES 512
-struct LZWdico{
+typedef struct LZWdico{
 
 	unsigned short code;
 	char * entry;

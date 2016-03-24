@@ -331,24 +331,24 @@ struct LZWdico * initDico(int code, char * entry){
 
 struct LZWdico * initDico_(int code, char * entry, int len){
 
-	struct LZWdico * dico = NULL;
+	struct LZWdico * new_dico = NULL;
 
-	if((dico = (struct LZWdico *)calloc(1,sizeof(struct LZWdico))) == NULL){
-		printf("Error :: initDico :: Initialization failed\n");
+	if((new_dico = (struct LZWdico *)calloc(1,sizeof(struct LZWdico))) == NULL){
+		printf("[-] Error :: initDico :: Initialization failed\n");
 		return NULL;
 	}
 
-	dico->code = code;
+	new_dico->code = code;
 
 	//dico->entry = entry;
-	dico->entry = (char*)calloc(len+1,sizeof(char));
-	dico->entry[len]='\0';
-	memcpy(dico->entry,entry,len);
+	new_dico->entry = (char*)calloc(len+1,sizeof(char));
+	new_dico->entry[len]='\0';
+	memcpy(new_dico->entry,entry,len);
 
-	dico->entry_len = len;
-	dico->next = NULL;
+	new_dico->entry_len = len;
+	new_dico->next = NULL;
 
-	return dico;
+	return new_dico;
 }
 
 
@@ -491,10 +491,12 @@ char * getEntryInDico(struct LZWdico * dico , int code){
 	while(tmp != NULL){
 
 		if(tmp->code == code){
-			entry = (char*)calloc(tmp->entry_len+1,sizeof(char));
+			/*entry = (char*)calloc(tmp->entry_len+1,sizeof(char));
 			entry[tmp->entry_len]='\0';
 			memcpy(entry,tmp->entry,tmp->entry_len);
 			return entry;
+			*/
+			return tmp->entry;
 		}
 
 		tmp = tmp->next;
@@ -610,27 +612,6 @@ unsigned short readData(char ** data, int * partial_code, int * partial_bits, in
 
 }
 
-unsigned short decodeRecursive(struct LZWdico * dico, unsigned short code, char * out, int * size){
-
-	unsigned short first_char = 0;
-	unsigned short c;
-
-	if(code >= FIRST_CODE){
-
-		c = getEntryInDico(dico,code-FIRST_CODE);
-
-
-
-	}else{
-
-		//decodeRecursive();
-
-	}
-
-
-	return first_char;
-}
-
 
 char * LZWDecode(char* stream, struct pdfObject * obj){
 
@@ -640,11 +621,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	struct LZWdico* dico = NULL;
 	int code_len  = 9;
 	char * ptr_data = NULL;
-	//int test = 0; 
 	unsigned short code = 0;
 	unsigned short last_code = 0;
-	//unsigned short tmp = 0;
-	//char * result = NULL;
 	int size = 0;
 	char * entry = NULL;
 	char * w = NULL;
@@ -655,10 +633,9 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	int first = 1;
 	char * w_entry0  = NULL ; //to add in dico
 
-
-	//char * tmp_ptr = NULL;
+	char * tmp = NULL;	
 	char * out_init_ptr = NULL;
-	//int out_size = 0;
+	int out_len = 0;
 	int entry_len= 0;
 	int w_entry0_len = 0;
 	int w_len = 0;
@@ -670,50 +647,17 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 	stream_len = obj->tmp_stream_size;
 	printf("Stream_len = %d\n",stream_len);
-
+	out_len = 2 * stream_len;
 
 	ptr_data = stream;	
 
 
-	out_init_ptr = (char*)calloc(stream_len+1,sizeof(char));
-	out_init_ptr[stream_len] = '\0';
+	out_init_ptr = (char*)calloc(out_len+1,sizeof(char));
+	out_init_ptr[out_len] = '\0';
 
-	memset(out_init_ptr, '\0',stream_len);
-
-	/*for(i=0; i <stream_len; i++){
-
-		out[i]='\0';
-	}*/
-
-	//out_init_ptr = out;
 	out = out_init_ptr;
 
-	// First time.
-	/*code = readData(&ptr_data, &partial_code, &partial_bits, code_len );
-	printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d :: w = (%s) :: w_len = %d\n", code,last_code,next_code,code_len,w,w_len);
-
-	if(first == 1){
-
-		w = (char*)calloc(2,sizeof(char));
-		w[1] = '\0';
-		w[0] = (char)((int)'\0' + code);
-
-		// write result in output.
-		memcpy(out,w,1);
-		w_len = 1;
-		out++;
-		size++;
-		first = 0;
-		last_code = code;
-	}	
-	*/
-
-	for(i= 0 ; i < stream_len ; i++){
-
-		/*if(getEntryInDico(dico, 14150) != NULL){
-			printf("-----------------------------------------------\n");			
-		}*/
-		
+	for(i= 0 ; i < stream_len ; i++){		
 
 		// maybe if next_code + 1 == 1 << code_len )
 		if( next_code +1== (1<< code_len)){
@@ -723,7 +667,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 
 		code = readData(&ptr_data, &partial_code, &partial_bits, code_len);
-
 		
 		//printf("ptr_data = %c :: code = %d :: next_code = %d\n",ptr_data[0], code,next_code);
 		//printf("code = %d :: next_code = %d\n", code,next_code);
@@ -731,20 +674,19 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		//printf("last_code = %d \n",last_code);
 		//printf("i = %d\n",i);
 		printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d :: w = (%s) :: w_len = %d  :: w_entry0 = (%s) \n", code,last_code,next_code,code_len,w,w_len,w_entry0);
-		//printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d ::  :: w_len = %d\n", code,last_code,next_code,code_len,w_len);
-		//printDico(dico);
 
 		// free allocated memory.
-		if(entry!=NULL){
-			free(entry);
-			entry = NULL;
-		}
-
 		if(w_entry0!=NULL){
 			free(w_entry0);
 			w_entry0 = NULL;
+			w_entry0_len = 0;
 		}
 
+		if(entry!=NULL){
+			free(entry);
+			entry = NULL;
+			entry_len = 0;
+		}
 
 
 		if(code == CLEAR_TABLE){	// Clear table code
@@ -759,7 +701,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			freeDico(dico);
 			dico = NULL;
 			continue;
-
 
 		}else if(code == EOD_MARKER){
 
@@ -778,28 +719,27 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		        * Build the decoded string using the last character + the
 		        * string from the last code.
 		    ***************************************************************/
-			printf("BAD/END SEQUENCE code (%d) > next_code (%d) :: last_code = %d :: size = %d\n",code, next_code, last_code, size);
-			//printf("BAD/END SEQUENCE w = (%s) :: w_len (%d) :: last_code = %d :: last_code_entry = (%c)\n",w,w_len, last_code, ((char)((int)'\0' + last_code)));
-		    printf("BAD/END SEQUENCE w = (%s) :: w_len (%d) :: last_code = %d ::\n",w, w_len, last_code);
-
-			//printf("BAD/END SEQUENCE code (%d) > next_code (%d)\n",code, next_code);
+			printf("BAD/END SEQUENCE code (%d) > next_code (%d) :: last_code = %d :: size = %d\n",code, next_code, last_code, size);			
+		    printf("BAD/END SEQUENCE w = (%s) :: w_len (%d) :: last_code = %d ::\n",w, w_len, last_code);			
 
 			// Translate the value of last_code => LAST_value => w. or get_entry(last_code)
 			//w_entry0 = (char*)calloc(w_len+2,sizeof(char));
 			//free(entry); entry= NULL;
 
 			// entry = w + w[0]
-			entry = (char*)calloc(w_len+2,sizeof(char));
-			entry[w_len+1]= '\0';
 			entry_len = w_len+1;
+			entry = (char*)calloc(entry_len+1,sizeof(char));
+			entry[entry_len]= '\0';		
 			//w_entry0[w_len+1]= '\0';
 			//memcpy(w_entry0,w,w_len);
-			memcpy(entry,w,w_len);
-			//os_strncat(w_entry0,strlen(w)+2,w,strlen(w));
+			memcpy(entry,w,w_len);			
 
 			// not sure about this line.
 			//w_entry0[w_len]= w[0];
-			entry[w_len]= w[0];			
+			//entry[w_len]= w[0];
+			tmp = entry;
+			tmp += w_len;
+			memcpy(tmp,w,1);
 
 
 		}else if(code < EOD_MARKER){ /// <257
@@ -827,39 +767,47 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			}			
 			// Write entry in result output
 
-			//free(entry); entry= NULL;			
-			entry = (char*)calloc(2,sizeof(char));
-			entry[1] = '\0';
-			entry[0] = (char)((int)'\0' + code); // unsigned int to char.
-
+			//free(entry); entry= NULL;
 			entry_len = 1;
+			entry = (char*)calloc(entry_len+1,sizeof(char));
+			entry[entry_len] = '\0';
+			entry[0] = (char)((int)'\0' + code); // unsigned int to char.
+			
 
 
 		}else if(code > EOD_MARKER){
 
-
-			//free(entry); entry= NULL;
-			if(code == 1059 || code == 1791){
-				//printDico(dico);
-			}
 			
 			if((entry_len = getEntryLengthInDico(dico,code)) > 0){	// if code is in the dictionary.				
 				// get entry length
 
-				entry = getEntryInDico(dico,code);
+				entry = (char*)calloc(entry_len+1,sizeof(char));
+				entry[entry_len] = '\0';
+
+				tmp = getEntryInDico(dico,code);
+				if (tmp == NULL) {
+					printf("[-] Error :: code [%d] not found in the dico!\n",code);
+					printDico(dico);
+					break;
+				}
 				
-				
+				memcpy(entry,tmp,entry_len);
+
 				//printf("entry = %s :: entry_len = %d\n",entry,entry_len);
 
 			}else{
+
 				//entry = w + w[0]
-				printf("[!] NOT FOUND IN THE DICO :: code :: %d\n",code );
-				entry = (char*)calloc(w_len+2,sizeof(char));
-				entry[w_len+1]= '\0';
-				entry_len = w_len+1;
+				printf("[!] NOT FOUND IN THE DICO :: code = %d :: entry_len =%d\n",code,entry_len);											
+				entry_len = w_len + 1;
+				entry = (char*)calloc(entry_len+1,sizeof(char));
+				entry[entry_len]= '\0';				
 
 				memcpy(entry,w,w_len);
-				entry[w_len] = w[0];
+				tmp = entry;
+				tmp += w_len;
+				memcpy(tmp,w,1);
+				//entry[w_len] = w[0];
 
 			}
 
@@ -868,9 +816,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 		}else{
 
-
-			printf("[WARNING] :: This case is not treated !! =======\n");
-
+			printf("[WARNING] :: This case is not treated !! =======\n");			
 
 		}
 
@@ -879,99 +825,66 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		
 		//printf("out_init_ptr = %d :: out = %d :: diff = %d :: size = %d\n",out_init_ptr, out, (out-out_init_ptr), size);
 		// Write entry in result output
-
-
-		//////////////////////////////////////////////// here is the problem...........
-		memcpy(out,entry,entry_len);
-
-
+		
+		// TODO :: size > stream_len
+		memcpy(out,entry,entry_len);		
 
 		//printf("out = %s\n",out);
 		out  += entry_len;
 		size += entry_len;
 		//out_init_ptr[size]='\0';
-
-
-		// add w + entry[0] in dico
-		//free(w_entry0); w_entry0= NULL;		
-		w_entry0 = (char*)calloc(w_len+2,sizeof(char));
-		w_entry0[w_len+1]= '\0';
-		memcpy(w_entry0,w,w_len);
-		w_entry0[w_len] = entry[0];
+		
+		// w_entry0=  w + entry[0] in dico
+		// add w_entry0 in dico
+		//free(w_entry0); w_entry0= NULL;	
 		w_entry0_len = w_len+1;
-
-
-
+		w_entry0 = (char*)calloc(w_entry0_len+1,sizeof(char));
+		w_entry0[w_entry0_len]= '\0';		
+		memcpy(w_entry0,w,w_len);
+		tmp = w_entry0;
+		tmp += w_len;
+		memcpy(tmp,entry,1);
+		//w_entry0[w_len] = entry[0];
+	
 
 
 		// save new entry in the dico : w + entry[0]
 		if(dico == NULL){
 			dico = initDico_(next_code,w_entry0,w_entry0_len);			
 		}			
-		else{
-			
-		
+		else{		
 			addEntryInDico(dico,next_code,w_entry0,w_entry0_len);			
 		}
 
 		
-		
-		
-		// save entry (last_code entry)
-		
+		// save entry (last_code entry)		
 		if(w != NULL){
 			free(w);			
-			w = NULL;	
-		}
-		
+			w = NULL;
+			w_len = 0;
 
+		}
 
 		//w = entry;
-		w = (char*)calloc(entry_len+1,sizeof(char));
-			
-		w[entry_len]='\0';
-		memcpy(w,entry,entry_len);
-		
 		w_len = entry_len;
+		w = (char*)calloc(w_len+1,sizeof(char));			
+		w[w_len]='\0';
+		memcpy(w,entry,entry_len);		
+		
 		next_code ++;
-		last_code = code;
-
-		/*
-		*/
-
-		//printf("scan = %c\n",stream[i]);
-
-		//printf("\n\n");
-
-
-
 		/* save last character and code for use in unknown code word case */
-		//last_code = code;
-
-
-		//printDico(dico);
+		last_code = code;
 
 	} // end_for
 
-
-	//printf("heyhey :: size = %d\n",size);
-
-	
-
-	//out[size+1]='\0';
-	//out[size]='\0';
-
-	//if(strncmp(obj->reference,"44 0 obj",8) == 0)
-	//printf("out = %s\n",out_init_ptr);
-
 	printf("size = %d\n",size);
-	//printf("str_size = %d\n",strlen(out_init_ptr));
 
-
-	debugPrint(out_init_ptr,size);
+	//debugPrint(out_init_ptr,size);
 
 	obj->tmp_stream_size = size;
 	obj->decoded_stream_size = size;
+
+	out_init_ptr[size]='\0';
 
 	//if(strncmp(obj->reference,"44 0 obj",8) == 0)
 	//printDico(dico);
