@@ -781,8 +781,8 @@ sub main(){
 	print "\n Execution time = $exTime sec\n" unless $DEBUG eq "no";
 
 
-	PrintSingleObject("9 0 obj");
-	#PrintSingleObject("85 0 obj");
+	#PrintSingleObject("82 0 obj");
+	#PrintSingleObject("83 0 obj");
 	#PrintSingleObject("1 0 obj");
 	#PrintSingleObject("2 0 obj");
 	#PrintSingleObject("534 0 obj");

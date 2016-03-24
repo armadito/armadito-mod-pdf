@@ -24,18 +24,23 @@
 
 
 // ::: LZWDecode :::
+#define FIRST_CODE 258
 #define EOD_MARKER 257
 #define CLEAR_TABLE 256
+
+#define MAX_CODES 512
 struct LZWdico{
 
 	unsigned short code;
 	char * entry;
+	int entry_len;
 
 	struct LZWdico * next;
 
 };
 
 struct LZWdico * initDico(int code, char * entry);
+struct LZWdico * initDico_(int code, char * entry, int len);
 int addInDico(struct LZWdico * dico , int code, char * entry);
 void freeDico(struct LZWdico * dico);
 char * getEntryInDico(struct LZWdico * dico , int code);

@@ -1224,10 +1224,10 @@ if ((flush) && (flush != MZ_SYNC_FLUSH) && (flush != MZ_FINISH)) return MZ_STREA
 pState = (inflate_state*)pStream->state;
 if (pState->m_window_bits > 0) decomp_flags |= TINFL_FLAG_PARSE_ZLIB_HEADER;
 orig_avail_in = pStream->avail_in;
-
+printf("[miniz] --\n");
 first_call = pState->m_first_call; pState->m_first_call = 0;
 if (pState->m_last_status < 0) return MZ_DATA_ERROR;
-
+printf("[miniz] --\n");
 if (pState->m_has_flushed && (flush != MZ_FINISH)) return MZ_STREAM_ERROR;
 pState->m_has_flushed |= (flush == MZ_FINISH);
 
@@ -1236,7 +1236,7 @@ if ((flush == MZ_FINISH) && (first_call))
 // MZ_FINISH on the first call implies that the input and output buffers are large enough to hold the entire compressed/decompressed file.
 decomp_flags |= TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF;
 in_bytes = pStream->avail_in; out_bytes = pStream->avail_out;
-status = tinfl_decompress(&pState->m_decomp, pStream->next_in, &in_bytes, pStream->next_out, pStream->next_out, &out_bytes, decomp_flags);
+status = tinfl_decompress(&pState->m_decomp, pStream->next_in, &in_bytes, pStream->next_out, pStream->next_out, &out_bytes, decomp_flags);printf("[miniz] -- status = %d\n",status);
 pState->m_last_status = status;
 pStream->next_in += (mz_uint)in_bytes; pStream->avail_in -= (mz_uint)in_bytes; pStream->total_in += (mz_uint)in_bytes;
 pStream->adler = tinfl_get_adler32(&pState->m_decomp);
@@ -1449,13 +1449,13 @@ tinfl_status status = TINFL_STATUS_FAILED; mz_uint32 num_bits, dist, counter, nu
 const mz_uint8 *pIn_buf_cur = pIn_buf_next, *const pIn_buf_end = pIn_buf_next + *pIn_buf_size;
 mz_uint8 *pOut_buf_cur = pOut_buf_next, *const pOut_buf_end = pOut_buf_next + *pOut_buf_size;
 size_t out_buf_size_mask = (decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF) ? (size_t)-1 : ((pOut_buf_next - pOut_buf_start) + *pOut_buf_size) - 1, dist_from_out_buf_start;
-
+printf("[miniz]-- dbg\n");
 // Ensure the output buffer's size is a power of 2, unless the output buffer is large enough to hold the entire output file (in which case it doesn't matter).
 if (((out_buf_size_mask + 1) & out_buf_size_mask) || (pOut_buf_next < pOut_buf_start)) { *pIn_buf_size = *pOut_buf_size = 0; return TINFL_STATUS_BAD_PARAM; }
-
+printf("[miniz]-- dbg\n");
 num_bits = r->m_num_bits; bit_buf = r->m_bit_buf; dist = r->m_dist; counter = r->m_counter; num_extra = r->m_num_extra; dist_from_out_buf_start = r->m_dist_from_out_buf_start;
 TINFL_CR_BEGIN
-
+printf("[miniz]-- dbg\n");
 bit_buf = num_bits = dist = counter = num_extra = r->m_zhdr0 = r->m_zhdr1 = 0; r->m_z_adler32 = r->m_check_adler32 = 1;
 if (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER)
 {
@@ -1464,9 +1464,10 @@ counter = (((r->m_zhdr0 * 256 + r->m_zhdr1) % 31 != 0) || (r->m_zhdr1 & 32) || (
 if (!(decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)) counter |= (((1U << (8U + (r->m_zhdr0 >> 4))) > 32768U) || ((out_buf_size_mask + 1) < (size_t)(1U << (8U + (r->m_zhdr0 >> 4)))));
 if (counter) { TINFL_CR_RETURN_FOREVER(36, TINFL_STATUS_FAILED); }
 }
+printf("[miniz]-- dbg\n");
 
 do
-{
+{printf("[miniz]-- dbg1\n");
 TINFL_GET_BITS(3, r->m_final, 3); r->m_type = r->m_final >> 1;
 if (r->m_type == 0)
 {
@@ -1552,9 +1553,9 @@ TINFL_CR_RETURN_FOREVER(17, TINFL_STATUS_FAILED);
 }
 num_extra = "\02\03\07"[dist - 16]; TINFL_GET_BITS(18, s, num_extra); s += "\03\03\013"[dist - 16];
 TINFL_MEMSET(r->m_len_codes + counter, (dist == 16) ? r->m_len_codes[counter - 1] : 0, s); counter += s;
-}
+}printf("[miniz]-- dbg2 :: counter = %d :: r->m_table_sizes[0]= %d :: r->m_table_sizes[1]= %d \n",counter,r->m_table_sizes[0], r->m_table_sizes[1]);
 if ((r->m_table_sizes[0] + r->m_table_sizes[1]) != counter)
-{
+{// exit here.....[debug :: 23/03/2016]
 TINFL_CR_RETURN_FOREVER(21, TINFL_STATUS_FAILED);
 }
 TINFL_MEMCPY(r->m_tables[0].m_code_size, r->m_len_codes, r->m_table_sizes[0]); TINFL_MEMCPY(r->m_tables[1].m_code_size, r->m_len_codes + r->m_table_sizes[0], r->m_table_sizes[1]);

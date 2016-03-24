@@ -584,6 +584,7 @@ void printObjectInFile(struct pdfObject * obj){
 
 	// Decoded Stream 
 	if(obj->decoded_stream != NULL){
+		printf("------------------\n");
 		fwrite(obj->decoded_stream, sizeof(char),obj->decoded_stream_size,debug);	
 	}
 	
@@ -599,7 +600,6 @@ void printObjectInFile(struct pdfObject * obj){
 
 
 // Print object in a debug file (debug.txt)
-// TODO print object by ref
 void printObject(struct pdfObject * obj){
 
 	
@@ -632,12 +632,12 @@ void printObject(struct pdfObject * obj){
 
 	// Stream 
 	if(obj->stream != NULL){
-		//printf("\tStream = %s\n", obj->stream); // Print in debug file
+		printf("\tStream = %s\n", obj->stream); // Print in debug file
 		printf("\tStream size = %d\n",obj->stream_size);
 	}
 	
 	if(obj->decoded_stream != NULL){
-		//printf("\tDecoded Stream = %s\n", obj->stream);	// Print in debug file
+		printf("\tDecoded Stream = %s\n", obj->decoded_stream);	// Print in debug file
 		printf("\tDecoded Stream size = %d\n",obj->decoded_stream_size);
 	}
 		
@@ -1318,7 +1318,7 @@ void debugPrint(char * stream, int len){
 
 	//printf("DEBUG ::: \n");
 
-	printf("stream in debug = %s\n",stream);
+	//printf("stream in debug = %s\n",stream);
 	//fputc('\n',debug);
 	//fputc('\n',debug);
 	//fputc('\n',debug);

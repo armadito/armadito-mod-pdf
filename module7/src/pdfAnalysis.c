@@ -236,26 +236,15 @@ int analyzePDF(char * filename){
 	}
 	pdf->fh = f;	
 	
-	// Check the magic number of the file
-	res = checkMagicNumber(pdf);
-
 	
-	if(pdf->testStruct->bad_header > 0){
-		#ifdef DEBUG
-		printf("[-] Error :: analyzePDF :: Bad PDF header :: This file is not a PDF file :: %s \n",filename);
-		#endif
-		printAnalysisReport(pdf,filename);
-		freePDFDocumentStruct(pdf);
-		return -2;
-	}
 
 	// PDF Parsing
 	res = parsePDF(pdf);
 
 	if(res < 0 ){
 
-		// If the file is encrypted.
-		if (res == -2) {
+		// If bad file header or the file is encrypted.
+		if (res == -2 || pdf->testStruct->bad_header > 0) {
 			printAnalysisReport(pdf,filename);
 			freePDFDocumentStruct(pdf);
 			return -2;
@@ -364,7 +353,7 @@ int analyzePDF_fd(int fd, char * filename){
 		return -1;
 	}
 	
-	
+	printPDFObjects(pdf);
 	#ifdef DEBUG
 		//printPDFObjects(pdf);
 	#endif
@@ -385,6 +374,9 @@ int analyzePDF_fd(int fd, char * filename){
 
 	// print all objects references
 	//printObjectReferences(pdf);
+	//printPDFObjects(pdf);
+
+	
 
 	// Analysis summary
 	calcSuspiciousCoefficient(pdf);
@@ -392,6 +384,8 @@ int analyzePDF_fd(int fd, char * filename){
 	printf("Execution time : %.2lf sec \n",time_elapsed);
 	printf("-------------------------------------------------------\n");
 	printf("-------------------------------------------------------\n\n");
+
+	printObjectByRef(pdf, "82 0 obj");
 
 	ret = pdf->coef;
 		

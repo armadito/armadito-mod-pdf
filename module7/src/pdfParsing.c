@@ -2126,6 +2126,16 @@ int parsePDF(struct pdfDocument * pdf){
 	printf("------------------------------\n\n");
 	#endif
 
+	// Check the magic number of the file
+	checkMagicNumber(pdf);
+	
+	if(pdf->testStruct->bad_header > 0){
+		#ifdef DEBUG
+		printf("[-] Error :: parsePDF :: Bad PDF header :: This file is not a PDF file ::\n");
+		#endif
+		return -2;
+	}
+
 
 	// Get the content of the document
 	if (getPDFContent(pdf) <= 0) {
