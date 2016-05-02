@@ -61,7 +61,7 @@
 #define LARGE_FILE_SIZE 1500000
 
 
-#define DEBUG 1
+#undef DEBUG
 #define PRINT_REPORT 1
 
 

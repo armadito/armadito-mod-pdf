@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #include <io.h>
 #define os_strncat strncat_s

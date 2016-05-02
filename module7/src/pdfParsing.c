@@ -58,7 +58,9 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	
 	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
 	
+#ifdef DEBUG
 		printf ("PDF Header OK = %s\n",version);
+#endif
 		pdf->version = version;
 	
 	}else{
@@ -295,10 +297,6 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	len = (int)(dico_start - obj->content);
 	len = obj->content_size - len;
-
-	//printf("getDico :: len = %d\n",len);
-
-	/////////////////////////////////////////////////
 
 	end = dico_start;
 	// Scan the line

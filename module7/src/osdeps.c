@@ -2,7 +2,7 @@
 #include <string.h>
 
 
-#ifdef WIN32
+#ifdef _WIN32
 
 FILE * os_fopen(const char * filename, const char * mode) {
 

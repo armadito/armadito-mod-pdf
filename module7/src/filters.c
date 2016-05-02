@@ -32,20 +32,14 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	char * dest = NULL;
 	char * out = NULL;
 	unsigned long src_len = 0;
-	//mz_ulong len = 16384;
 	unsigned long len = 150000;
-	//int dest_len = 16384;
 	int res = 0;
 
 	//printf("stream = --%s--\n",stream );
-	//printStream(stream,obj->tmp_stream_size);
-	//unsigned long streamd_len = 163840; // TODO TOFIX search a way to find the right length
+	//unsigned long streamd_len = 163840; // TODO TOFIX find and set the right length
 	
 	src_len = obj->tmp_stream_size;
-	if(strncmp(obj->reference,"82 0 obj",8) == 0){
-		//src_len = 1835;
-	}
-	printf("[+] Debug :: Flatedecode :: stream_len = %d\n",src_len);
+	//printf("[+] Debug :: Flatedecode :: stream_len = %d\n",src_len);
 
 	// verify parameters
 	if (stream == NULL || src_len == 0){
@@ -53,13 +47,9 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 			printf("Error :: FlateDecode :: Null stream to decode in object %s\n", obj->reference);
 		#endif
 		return NULL;
-	}
+	}	
 
-	//sleep(10);
-
-	dest = calloc(len,sizeof(char));
-	
-	//dest[17505] = '\0';
+	dest = calloc(len, sizeof(char));
 
 
 	res = uncompress((unsigned char*)dest,&len,stream,src_len);
@@ -75,8 +65,6 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	out = (char*)calloc(len+1,sizeof(char));
 	out[len]='\0';
 	memcpy(out,dest,len);
-
-	//debugPrint(stream,obj->tmp_stream_size);
 
 	#ifdef DEBUG
 		printf("FlateDecode :: status = %d :: len = %ld\n",res,len);
@@ -227,7 +215,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	int has_eod_marker = 0;
 	int len = 0;
 	int i = 0 ,j =0;
-	//char res;
 	int flag = 0;
 	char c = 0;
 	char * end = NULL;
@@ -250,7 +237,7 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	//printf("stream_len-1 = %c\n",stream[len-1]);
 	if(stream[len-1] == '>' || (( stream[len-1] < 65 || stream[len-1] > 70 ) && (stream[len-1] <  97 || stream[len-1] > 102 ) && (stream[len-1] <  48 || stream[len-1] > 57 )) ){
 		has_eod_marker = 1;
-		printf("has_eod_marker = %d\n",has_eod_marker);
+		//printf("has_eod_marker = %d\n",has_eod_marker);
 		stream[len-1]='\0';
 		len --;
 	}
@@ -258,9 +245,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 
 
 	obj->tmp_stream_size = len/2;
-
-	//if(strncmp(obj->reference,"30 0 obj",8)==0)
-	//printf("stream = %s\n",stream);
 
 	// If the length is odd and there is an eod marker (>) padd with a zero.
 	out =  (char*)calloc(len+1,sizeof(char));
@@ -287,8 +271,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 
 		c = strtol(tmp,NULL,16);
 		memset(end,c,1);
-		//out[j] = strtol(tmp,NULL,16);
-		//printf("tmp = %s\tres = %c\n",tmp,out[j]);
 		j++;
 		end ++;
 
@@ -298,9 +280,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	obj->tmp_stream_size = j;
 	obj->decoded_stream_size = j;
 
-	//if(strncmp(obj->reference,"11 0 obj",8) == 0){
-		//debugPrint(out,obj->tmp_stream_size);
-	//}
 	free(tmp);
 	tmp = NULL;
 
@@ -308,10 +287,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 
 
 }
-
-
-
-
 
 struct LZWdico * initDico(int code, char * entry){
 
@@ -533,18 +508,18 @@ void printDico(struct LZWdico * dico){
 	struct LZWdico * tmp = NULL;
 
 	if(dico == NULL){
-		printf("Empty Dico !!\n");
+		//printf("Empty Dico !!\n");
 		return;
 	}
 
 	tmp = dico;
 
-	printf("LZW DICO\n");
-	printf("...tmp->code = %d :: tmp->entry_len = %d :: entry = (%s)\n",tmp->code,tmp->entry_len,tmp->entry);
+	//printf("LZW DICO\n");
+	//printf("...tmp->code = %d :: tmp->entry_len = %d :: entry = (%s)\n",tmp->code,tmp->entry_len,tmp->entry);
 
 	while( tmp != NULL ){
 
-		//printf("Code = %d :: entry =  [%s]\n",tmp->code, tmp->entry);
+		printf("Code = %d :: entry =  [%s]\n",tmp->code, tmp->entry);
 		tmp = tmp->next;
 
 	}
@@ -560,13 +535,9 @@ unsigned short readData(char ** data, int * partial_code, int * partial_bits, in
 	unsigned short code = 0;
 	unsigned char unpack = 0;
 	
-
-
 	//printf("partial_bits (before) = %d\n",*partial_bits);
 	//printf("partial_code (before) = %d\n",*partial_code);
 	//printf("data :: %c\n",*data[0]);
-
-	
 
 	while(*partial_bits < code_len){
 
@@ -646,7 +617,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	//printf("stream = %s\n",stream);
 
 	stream_len = obj->tmp_stream_size;
-	printf("Stream_len = %d\n",stream_len);
 	out_len = 2 * stream_len;
 
 	ptr_data = stream;	
@@ -661,7 +631,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 		// maybe if next_code + 1 == 1 << code_len )
 		if( next_code +1== (1<< code_len)){
-			printf("\t<::> INCREASING CODE len = %d ++\n",code_len);
+			//printf("\t<::> INCREASING CODE len = %d ++\n",code_len);
 			code_len ++;			
 		}
 
@@ -673,7 +643,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		//printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d\n", code,last_code,next_code,code_len);
 		//printf("last_code = %d \n",last_code);
 		//printf("i = %d\n",i);
-		printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d :: w = (%s) :: w_len = %d  :: w_entry0 = (%s) \n", code,last_code,next_code,code_len,w,w_len,w_entry0);
+		//printf("code = %d :: last_code = %d :: next_code = %d :: code_len = %d :: w = (%s) :: w_len = %d  :: w_entry0 = (%s) \n", code,last_code,next_code,code_len,w,w_len,w_entry0);
 
 		// free allocated memory.
 		if(w_entry0!=NULL){
@@ -691,7 +661,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 		if(code == CLEAR_TABLE){	// Clear table code
 
-			printf("============= CLEAR_TABLE marker reached !!=================\n");
+			//printf("============= CLEAR_TABLE marker reached !!=================\n");
 			code_len = 9;
 			//next_code = EOD_MARKER + 1;
 			next_code = FIRST_CODE;
@@ -705,7 +675,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		}else if(code == EOD_MARKER){
 
 
-			printf("EOD_MARKER reached !!\n");
+			//printf("EOD_MARKER reached !!\n");
 			i = stream_len;
 			continue;
 
@@ -719,8 +689,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		        * Build the decoded string using the last character + the
 		        * string from the last code.
 		    ***************************************************************/
-			printf("BAD/END SEQUENCE code (%d) > next_code (%d) :: last_code = %d :: size = %d\n",code, next_code, last_code, size);			
-		    printf("BAD/END SEQUENCE w = (%s) :: w_len (%d) :: last_code = %d ::\n",w, w_len, last_code);			
+			//printf("BAD/END SEQUENCE code (%d) > next_code (%d) :: last_code = %d :: size = %d\n",code, next_code, last_code, size);			
+		    //printf("BAD/END SEQUENCE w = (%s) :: w_len (%d) :: last_code = %d ::\n",w, w_len, last_code);			
 
 			// Translate the value of last_code => LAST_value => w. or get_entry(last_code)
 			//w_entry0 = (char*)calloc(w_len+2,sizeof(char));
@@ -763,7 +733,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			}	
 
 			if(code == 0){
-				printf("[CAUTION] :: NULL character !!!!! ==============>\n");
+				//printf("[CAUTION] :: NULL character !!!!! ==============>\n");
 			}			
 			// Write entry in result output
 
@@ -786,8 +756,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 				tmp = getEntryInDico(dico,code);
 				if (tmp == NULL) {
-					printf("[-] Error :: code [%d] not found in the dico!\n",code);
-					printDico(dico);
+					//printf("[-] Error :: code [%d] not found in the dico!\n",code);
+					//printDico(dico);
 					break;
 				}
 				
@@ -798,7 +768,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			}else{
 
 				//entry = w + w[0]
-				printf("[!] NOT FOUND IN THE DICO :: code = %d :: entry_len =%d\n",code,entry_len);											
+				//printf("[!] NOT FOUND IN THE DICO :: code = %d :: entry_len =%d\n",code,entry_len);											
 				entry_len = w_len + 1;
 				entry = (char*)calloc(entry_len+1,sizeof(char));
 				entry[entry_len]= '\0';				
@@ -816,7 +786,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 		}else{
 
-			printf("[WARNING] :: This case is not treated !! =======\n");			
+			//printf("[WARNING] :: This case is not treated !! =======\n");			
 
 		}
 
@@ -877,17 +847,10 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 	} // end_for
 
-	printf("size = %d\n",size);
-
-	//debugPrint(out_init_ptr,size);
-
 	obj->tmp_stream_size = size;
 	obj->decoded_stream_size = size;
 
 	out_init_ptr[size]='\0';
-
-	//if(strncmp(obj->reference,"44 0 obj",8) == 0)
-	//printDico(dico);
 
 	freeDico(dico);
 	free(w);
@@ -1319,8 +1282,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	char * invert = NULL;
 
 
-
-	//if(strncmp(obj->reference,"44 0 obj",8) == 0)
 	//	printf("\n\n::: ASCII85Decode :::\n");
 
 	stream_len = obj->tmp_stream_size;
@@ -1340,7 +1301,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 	tuple_a = (int*)calloc(6,sizeof(int));
 	//res = (int*)calloc(6,sizeof(int));
 	//tuple[5]='\0';
-
 
 	while(len > 0 && j < stream_len-1){
 
@@ -1405,10 +1365,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 
 		//printf("\tres = --%s--\t j = %d \n",tmp,j);
 
-
-
-
-		//printf("num = %d\n",strlen(tuple_s));
 		//strncat(out,tmp,strlen(tmp));
 		//num = strlen(tmp);
 		num = 5;
@@ -1433,7 +1389,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 				os_strncat(out,stream_len,invert,1);
 			//out_tmp++;
 			//printf("out = %s\n",out);
-			//printf("hey :: %c :: %s\n",invert[0],out);
 
 			invert --;
 
