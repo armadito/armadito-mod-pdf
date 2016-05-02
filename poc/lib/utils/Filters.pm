@@ -1300,14 +1300,12 @@ sub read_dat{
 	}
 
 	my $code = $partial_code >> ($partial_bits - $code_length);
-	$partial_code &= (1 << ($partial_bits - $code_length)) - 1;
+	$partial_code &= (1 << 
+		($partial_bits - $code_length)) - 1;
 	$partial_bits -= $code_length;
 
 	return ($code, $partial_code, $partial_bits);
 }
-
-
-
 
 #LZWDecode
 sub LZWDecode{
@@ -1388,6 +1386,8 @@ sub LZWDecode{
 		}
 	}
 
+
+	print "\n\nLZW :: Result = $result\n\n";
 	return $result;
 
 

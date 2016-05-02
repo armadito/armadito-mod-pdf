@@ -1465,6 +1465,7 @@ if (!(decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)) counter |= (((1U
 if (counter) { TINFL_CR_RETURN_FOREVER(36, TINFL_STATUS_FAILED); }
 }
 
+
 do
 {
 TINFL_GET_BITS(3, r->m_final, 3); r->m_type = r->m_final >> 1;
@@ -1554,7 +1555,7 @@ num_extra = "\02\03\07"[dist - 16]; TINFL_GET_BITS(18, s, num_extra); s += "\03\
 TINFL_MEMSET(r->m_len_codes + counter, (dist == 16) ? r->m_len_codes[counter - 1] : 0, s); counter += s;
 }
 if ((r->m_table_sizes[0] + r->m_table_sizes[1]) != counter)
-{
+{// exit here.....[debug :: 23/03/2016]
 TINFL_CR_RETURN_FOREVER(21, TINFL_STATUS_FAILED);
 }
 TINFL_MEMCPY(r->m_tables[0].m_code_size, r->m_len_codes, r->m_table_sizes[0]); TINFL_MEMCPY(r->m_tables[1].m_code_size, r->m_len_codes + r->m_table_sizes[0], r->m_table_sizes[1]);

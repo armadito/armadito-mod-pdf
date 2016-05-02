@@ -722,7 +722,7 @@ int getInfoObject(struct pdfDocument * pdf){
 		}
 
 
-		start += 5;
+		start += 5; // skip "/Info"
 
 		len = (int)(start - trailer->content);
 		len = strlen(trailer->content) - len;
@@ -858,9 +858,12 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		//printf("uri = %s\n",uri);
 
 		// Analyze uri
-		analyzeURI(uri,pdf,obj);
-
-		free(uri);
+		if (uri != NULL) {
+			analyzeURI(uri, pdf, obj);
+			free(uri);
+			uri = NULL;
+		}
+		
 
 	}
 
@@ -921,6 +924,7 @@ char * removeWhiteSpace(char * stream, int size){
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
+	int len_saved = 0;
 	int len2 = 0;
 	int count = 0;
 	int i = 0;
@@ -939,7 +943,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 	// calc the new len
 	len = size - count;
-
+	len_saved = len;
 	out = (char*)calloc(len+1,sizeof(char));
 	out[len] = '\0';
 
@@ -963,8 +967,8 @@ char * removeWhiteSpace(char * stream, int size){
 		}
 
 		len2 = (int)(end-start);
-		//memcpy(out,start,len2);
-		strncat(out, start, len2);
+		//memcpy(out,start,len2);		
+		os_strncat(out,len_saved+1,start, len2);
 		len += len2;
 
 		// skip white spaces
@@ -978,7 +982,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 	
 
-
+	//printf("out = %s\n",out);
 	return out;
 }
 
@@ -1307,18 +1311,18 @@ int getDangerousContent(struct pdfDocument* pdf){
 		getActions(pdf,obj);		
 
 		getJavaScript(pdf,obj);
-
+		
 		getXFA(pdf,obj);
-
+		
 		getEmbeddedFile(pdf,obj);
-
+		
 		getURI(pdf,obj);
 
 		// next object
 		obj = obj->next;
-
+		
 	}
-
+	
 	getInfoObject(pdf);
 
 	return res;

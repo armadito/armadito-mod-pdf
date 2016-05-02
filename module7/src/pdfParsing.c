@@ -26,25 +26,41 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	
 	
 	int version_size = 8;
-	//int ret;
+	int ret = 0;
+
 	
 	char * version;
 	version = (char*)calloc(9,sizeof(char));
 	version[8]='\0';
 	
-	
-	// Go to the beginning of the file
-	fseek(pdf->fh,0,SEEK_SET);
-	
-	
-	// Read the 8 first bytes Ex: %PDF-1.
-	fread(version,1,version_size,pdf->fh);
-	
+	if (pdf->fh == NULL && pdf->fd < 0) {
+		printf("[-] Error :: checkMagicNumber :: invalid parameters\n");
+		return -1;
+	}
+
+	// In this case use file handle.
+	if (pdf->fh != NULL) {
+
+		// Go to the beginning of the file
+		fseek(pdf->fh,0,SEEK_SET);
+
+		// Read the 8 first bytes Ex: %PDF-1.
+		ret = fread(version,1,version_size,pdf->fh);
+
+	}
+	else {
+
+		os_lseek(pdf->fd,0,SEEK_SET);
+		os_read(pdf->fd, version, version_size);
+	}
+
 	//printf("pdf header = %s\n",version);
 	
 	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
 	
-		//printf ("PDF Header OK = %s\n",version);
+#ifdef DEBUG
+		printf ("PDF Header OK = %s\n",version);
+#endif
 		pdf->version = version;
 	
 	}else{
@@ -68,10 +84,30 @@ int getPDFContent(struct pdfDocument * pdf){
 	int doc_size = 0;
 	int read_bytes;
 
+
+	if (pdf->fh == NULL && pdf->fd < 0) {
+		printf("[-] Error :: getPDFContent :: invalid parameters\n");
+		return -1;
+	}
+
+	if (pdf->fh != NULL) {
+
+		// Get the size in byte
+		fseek(pdf->fh,0,SEEK_END);
+		doc_size = ftell(pdf->fh);
+		fseek(pdf->fh,0,SEEK_SET); // rewind
+
+	}
+	else {
+
+		doc_size =  os_lseek(pdf->fd,0,SEEK_END);
+		//printf("Document Size  = %d\n",doc_size);
+		//doc_size = _tell(pdf->fd);
+		os_lseek(pdf->fd,0,SEEK_SET); // rewind		
+
+	}
 	
-	// Get the size in byte
-	fseek(pdf->fh,0,SEEK_END);
-	doc_size = ftell(pdf->fh);
+	
 	
 	#ifdef DEBUG
 		printf("Document Size  = %d\n",doc_size);
@@ -79,21 +115,22 @@ int getPDFContent(struct pdfDocument * pdf){
 	
 	content = (char*)calloc(doc_size+1,sizeof(char));
 	content[doc_size]= '\0';
-
+	if (content == NULL) {
+		return -1;
+	}
 	
-	fseek(pdf->fh,0,SEEK_SET);
-	
-	read_bytes = fread(content,1,doc_size,pdf->fh);
+	if (pdf->fh != NULL) {
+		read_bytes = fread(content, 1, doc_size, pdf->fh);
+	}
+	else {		
+		read_bytes = os_read(pdf->fd, content, doc_size);
+	}
 	
 	//printf("read bytes = %d\n",read_bytes);
 	
 	//printf("Document content = %s",content);
 	
-	//read_bytes = strlen(content);
-	//printf("read bytes = %d\n",read_bytes);
-	
-	pdf->content = content;
-	
+	pdf->content = content;	
 	pdf->size = read_bytes;
 	
 	return read_bytes;
@@ -106,23 +143,30 @@ int getPDFContent(struct pdfDocument * pdf){
 char * hexaObfuscationDecode(char * dico){
 
 	char * start = NULL;
-	int len = 0;
+	int len = 0, start_len = 0;
 	char * decoded_dico = NULL;
 	char * hexa = NULL;
 	char * hexa_decoded = NULL;
 	int is_space_hexa = 1;
 	char * tmp = NULL;
 
-	len = strlen(dico);
-	start = searchPattern(dico,"#",1,len);
+	if (dico == NULL) {
+		return NULL;
+	}
 
+	len = strlen(dico);
+	
+	start = searchPattern(dico,"#",1,len);
 
 	if(start == NULL){
 		return NULL;
 	}
 
+	start_len = (int)(start - dico);
+	start_len = len - start_len;
+	//printf("dico_len =  %d:: start_len = %d\n",len,start_len );
 	//printf("dico = %s\n\n",dico);
-
+	
 	//decoded_dico = (char*)calloc(len,sizeof(char));
 	hexa = (char*)calloc(4,sizeof(char));
 	hexa[3] = '\0';
@@ -137,16 +181,16 @@ char * hexaObfuscationDecode(char * dico){
 	tmp = (char*)calloc(len+1,sizeof(char));
 	tmp[len]= '\0';
 	memcpy(tmp,dico,len);
+	
 
 
-
-	while( start != NULL && len >= 3){
+	while( start != NULL && start_len >= 3){
 
 		
-
+		//printf("FLAG1\n");
 		// get the pointer of the hexa code
-		start = getHexa(start,len);
-
+		start = getHexa(start,start_len);
+		//printf("FLAG2\n");
 		
 		if(start == NULL){
 			//start += 3;
@@ -166,10 +210,10 @@ char * hexaObfuscationDecode(char * dico){
 		//memcpy(hexa, start, 2);
 		//hexa[2]='\0';
 		//printf("hexa = %s\n",hexa);
-
+		
 		//sscanf(hexa,"%x",&hexa_decoded[0]);
-		sscanf(hexa+1,"%x",&hexa_decoded[0]);
-
+		os_sscanf(hexa,"%x",&hexa_decoded[0]);
+		
 		//printf("hexa_decoded_s = %s\n",hexa_decoded);
 
 		decoded_dico = replaceInString(tmp,hexa,hexa_decoded);
@@ -195,13 +239,13 @@ char * hexaObfuscationDecode(char * dico){
 		start += 3;
 		//start += 3;
 
-		len = (int)(start - dico);
-		len = strlen(dico) -len;
+		start_len = (int)(start - dico);
+		start_len = strlen(dico) -start_len;
 		//printf("len = %d\n",len);
 
 
 	}
-
+	
 	free(hexa);
 	free(hexa_decoded);
 
@@ -253,10 +297,6 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	len = (int)(dico_start - obj->content);
 	len = obj->content_size - len;
-
-	//printf("getDico :: len = %d\n",len);
-
-	/////////////////////////////////////////////////
 
 	end = dico_start;
 	// Scan the line
@@ -356,7 +396,8 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 		return decoded_dico;
 	}
 
-	free(decoded_dico);
+	if (decoded_dico != NULL)
+		free(decoded_dico);
 	return dico;
 	
 }
@@ -634,7 +675,7 @@ char * getStreamFilters(struct pdfObject * obj){
 	//len = (int)(end - start);
 	//printf("getStreamFilters :: len = %d \n",len);
 
-	strncpy(filters,start,len);
+	os_strncpy(filters,len+1,start,len);
 	
 	//printf("filters = %s \n",filters);
 	
@@ -709,7 +750,7 @@ int decodeObjectStream(struct pdfObject * obj){
 
 		//printf("filter_len = %d\n",len);
 
-		strncpy(filter,start,len);
+		os_strncpy(filter,len+1,start,len);
 		//printf("implemented filter_end = %s\n",filter);
 		
 		//len -= filter - strlen(obj->filter);
@@ -1173,9 +1214,9 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		obj_ref_len = strlen(obj_num_a) + 6;
 		obj_ref = (char*)calloc(obj_ref_len+1,sizeof(char));
 		obj_ref[obj_ref_len] = '\0';
-
-		obj_ref = strncat(obj_ref, obj_num_a, strlen(obj_num_a));
-		obj_ref = strncat(obj_ref, " 0 obj", 6);
+		
+		os_strncat(obj_ref, obj_ref_len+1, obj_num_a, strlen(obj_num_a));
+		os_strncat(obj_ref,obj_ref_len+1, " 0 obj", 6);
 		//printf("obj_ref = %s\n",obj_ref);
 		comp_obj->reference =  obj_ref;
 
@@ -1259,6 +1300,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 
 	char * startobj_ptr;
 	char * endobj_ptr;
+
 	char * content;
 	int len = 0;
 	char * ref = NULL;
@@ -1338,7 +1380,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		ref = (char*)calloc(ref_len+1,sizeof(char));
 		ref[ref_len] = '\0';
 		
-		strncpy(ref,startobj_ptr,ref_len);
+		os_strncpy(ref,ref_len+1,startobj_ptr,ref_len);
 		//printf("object reference = %s :: %d\n",ref,ref_len);
 		
 		//startobj_ptr++;
@@ -1360,6 +1402,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		//printf("end obj ptr = %d\n",endobj_ptr);
 		
 		if(endobj_ptr == NULL){
+			// invalid object no "endobj" pattern found... Malformed PDF.
 			//printf(":: Error :: startobj_ptr = %d\n", startobj_ptr);
 			return -1;
 		}
@@ -2040,9 +2083,7 @@ int removeComments(struct pdfDocument * pdf){
 		//printf("len = %d\n",len );	
 
 		//printf("\n\n");
-
 		
-		//printf("hoyhoy\n");
 
 	} // end while
 
@@ -2071,6 +2112,7 @@ int removeComments(struct pdfDocument * pdf){
 int parsePDF(struct pdfDocument * pdf){
 
 	if(pdf == NULL){
+		printf("[-] Error :: parsePDF :: Invalid parameter!\n");
 		return -1;
 	}
 
@@ -2081,9 +2123,22 @@ int parsePDF(struct pdfDocument * pdf){
 	printf("------------------------------\n\n");
 	#endif
 
+	// Check the magic number of the file
+	checkMagicNumber(pdf);
+	
+	if(pdf->testStruct->bad_header > 0){
+		#ifdef DEBUG
+		printf("[-] Error :: parsePDF :: Bad PDF header :: This file is not a PDF file ::\n");
+		#endif
+		return -2;
+	}
+
 
 	// Get the content of the document
-	getPDFContent(pdf);
+	if (getPDFContent(pdf) <= 0) {
+		printf("[-] Error :: parsePDF :: getPDF content failed\n");
+		return -1;
+	};
 
 
 	// File too large
@@ -2093,7 +2148,7 @@ int parsePDF(struct pdfDocument * pdf){
 		//return -3;
 	}else{
 		// Remove comments
-		removeComments(pdf);	
+		removeComments(pdf);
 	}
 
 
@@ -2105,7 +2160,7 @@ int parsePDF(struct pdfDocument * pdf){
 		if(pdf->trailers == NULL)
 			pdf->testStruct->bad_trailer ++;
 	}
-
+	
 	
 	// if the document is encrypted
 	if( pdf->testStruct->encrypted > 0 ){		
@@ -2113,7 +2168,10 @@ int parsePDF(struct pdfDocument * pdf){
 	}
 
 	// Get objects described in pdf document
-	getPDFObjects(pdf);
+	if (getPDFObjects(pdf) < 0) {
+		// malformed PDF.
+		//return -1;
+	}
 	
 
 	return 0;

@@ -9,7 +9,21 @@
 # VARIABLES
 DIR=$1
 RES_FILE=$2
-EXE=/home/ulrich/PDF/GIT/uhurupdf/module7/uhuruPDFAnalyzer
+EXE=./uhPDFAnalyzer
+
+if [ -z "$1" ]
+  then
+    echo "Missing parameters";
+    echo "SYNTAX :: scandir.sh [directory] [result_file]";
+    exit -1;
+fi
+
+if [ -z "$2" ]
+  then
+    echo "Missing parameters"
+    echo "SYNTAX :: scandir.sh [directory] [result_file]"
+    ecit -2;
+fi
 
 for f in $DIR/* ; do
 	echo "Processing $f ...";

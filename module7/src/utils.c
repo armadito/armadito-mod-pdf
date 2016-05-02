@@ -101,14 +101,23 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 	if(pdf->trailers != NULL)
 		freePDFTrailerStruct(pdf->trailers);
 	
+	if (pdf->fh != NULL)
+		fclose(pdf->fh); //Close file handle
 
-	fclose(pdf->fh); //Close file handle
-	free(pdf->version);
-	free(pdf->content);
+	if (pdf->version != NULL)
+		free(pdf->version);
 
-	free(pdf->testStruct);
-	free(pdf->testObjAnalysis);
-	free(pdf);
+	if (pdf->content != NULL)
+		free(pdf->content);
+
+	if (pdf->testStruct != NULL)
+		free(pdf->testStruct);
+
+	if (pdf->testObjAnalysis != NULL)
+		free(pdf->testObjAnalysis);
+
+	if (pdf != NULL)
+		free(pdf);
 	
 
 	return ;
@@ -328,7 +337,8 @@ struct pdfDocument* initPDFDocument(){
 
 	
 	// Initialize entries
-	pdf->fh = NULL;	
+	pdf->fh = NULL;
+	pdf->fd = -1;
 	pdf->content = NULL;
 	pdf->objects =NULL;
 	pdf->coef = 0;
@@ -455,6 +465,13 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	
 		//i = 0;
 		res = memchr(end,pat[0],len);
+		//printf("res = %s\n",res);
+		if(res == NULL){
+			free(tmp);
+			//printf("Not found\n");
+			return NULL;
+		}
+
 
 		len_verif = (int)(res-end);
 		len_verif = len - len_verif;
@@ -467,13 +484,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 		//printf("src  = %d && res = %d\n",src,res);
 		//i++;
 		
-		if(res == NULL){
-			free(tmp);
-			//printf("Not found\n");
-			return NULL;
-		}
-		
-		
+
 		memcpy(tmp,res,pat_size);
 		
 		if( memcmp(tmp,pat,pat_size) == 0){
@@ -505,7 +516,7 @@ void printObjectInFile(struct pdfObject * obj){
 	FILE * debug = NULL;
 
 	// Open en file
-	if(!(debug = fopen("debug.txt","wb+"))){
+	if(!(debug = os_fopen("debug.txt","wb+"))){
 		printf("open failed\n");
 		return ;
 	}
@@ -573,6 +584,7 @@ void printObjectInFile(struct pdfObject * obj){
 
 	// Decoded Stream 
 	if(obj->decoded_stream != NULL){
+		printf("------------------\n");
 		fwrite(obj->decoded_stream, sizeof(char),obj->decoded_stream_size,debug);	
 	}
 	
@@ -588,7 +600,6 @@ void printObjectInFile(struct pdfObject * obj){
 
 
 // Print object in a debug file (debug.txt)
-// TODO print object by ref
 void printObject(struct pdfObject * obj){
 
 	
@@ -621,12 +632,12 @@ void printObject(struct pdfObject * obj){
 
 	// Stream 
 	if(obj->stream != NULL){
-		//printf("\tStream = %s\n", obj->stream); // Print in debug file
+		printf("\tStream = %s\n", obj->stream); // Print in debug file
 		printf("\tStream size = %d\n",obj->stream_size);
 	}
 	
 	if(obj->decoded_stream != NULL){
-		//printf("\tDecoded Stream = %s\n", obj->stream);	// Print in debug file
+		printf("\tDecoded Stream = %s\n", obj->decoded_stream);	// Print in debug file
 		printf("\tDecoded Stream size = %d\n",obj->decoded_stream_size);
 	}
 		
@@ -752,6 +763,11 @@ char* getNumber_a(char* ptr, int size){
 	char * end = NULL;
 	int len = 0;
 
+	if (ptr == NULL || size <= 0) {
+		printf("[-] Error :: getNumber_a :: invalid parameters!\n");
+		return NULL;
+	}
+
 	end = ptr;
 
 	/*
@@ -762,7 +778,7 @@ char* getNumber_a(char* ptr, int size){
 	}while( (end[0] >= 48 && end[0] <= 57) &&  len < size );
 	*/
 
-	while( (end[0] >= 48 && end[0] <= 57) &&  len < size ){
+	while( len < size && (end[0] >= 48 && end[0] <= 57)  ){
 		len ++;
 		end ++;
 	}
@@ -844,10 +860,10 @@ char * getIndirectRef(char * ptr, int size){
 	ref = (char*)calloc(len+1,sizeof(char));
 	ref[len] = '\0';
 
-	strncat(ref, obj_num, strlen(obj_num));
-	strncat(ref, " ", strlen(obj_num));
-	strncat(ref, gen_num, strlen(gen_num));
-	strncat(ref, " obj", 4);
+	os_strncat(ref,len+1, obj_num, strlen(obj_num));
+	os_strncat(ref,len+1, " ", strlen(obj_num));
+	os_strncat(ref,len+1, gen_num, strlen(gen_num));
+	os_strncat(ref,len+1, " obj", 4);
 	//printf("ref = %s\n",ref);	
 
 	free(gen_num);
@@ -905,7 +921,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 
 	//while( strncmp(tmp,delimiter2,strlen(delimiter2)) != 0  && sub = 0){
-	while( sub > 0  && len <= src_len-2){
+	while( sub > 0  && len <= src_len-2){ // TODO :: why? src_len-2 or src_len -1;
 
 		//printf("hey\n");
 		memcpy(tmp,end,strlen(delimiter1));
@@ -948,7 +964,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	
 	if( sub > 0){
 		#ifdef DEBUG
-		printf("Warning :: getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s\n",sub,src);
+		printf("Warning :: getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s :: delimiter1 = %s :: delimiter2 = %s\n",sub,src,delimiter1,delimiter2);
 		#endif
 
 		free(tmp);
@@ -999,7 +1015,8 @@ char * getIndirectRefInString(char * ptr, int size){
 	//char * end = NULL;
 	int len = 0;
 
-	if(size < 5){
+	if( ptr == NULL){
+		printf("[-] Error :: getIndirectRefInString :: invalid parameter!\n");
 		return NULL;
 	}
 
@@ -1125,6 +1142,7 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
+	int len_alloc = 0;
 	int off = 0;
 
 	if(src == NULL || toReplace == NULL || pat == NULL)
@@ -1150,6 +1168,7 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 
 	// calc the new length = len - diff(pat et pat2)
 	len = strlen(src) - (strlen(toReplace) - strlen(pat));
+	len_alloc = len;
 
 	//printf("src_len = %d :: len = %d\n",strlen(src),len);
 
@@ -1167,7 +1186,7 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 	//printf("dest = %s\n",dest);
 
 	// replace
-	strncat(dest,pat,strlen(pat));
+	os_strncat(dest,len_alloc+1,pat,strlen(pat));
 	//printf("dest = %s\n",dest);
 
 	end = start + strlen(toReplace);
@@ -1181,8 +1200,8 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 
 	len = strlen(src) - off - strlen(toReplace);
 	//printf("off = %d\n",off);
-
-	strncat(dest,end,len);
+	//printf("Debug :: len = %d :: len")
+	os_strncat(dest,len_alloc+1,end,len);
 	//printf("dest = %s\n",dest);	
 
 
@@ -1204,8 +1223,8 @@ char * getHexa(char * dico, int size){
 
 	while( hexa == NULL && len >= 3  ){
 
-		//printf("heyhey %d :: %d \n",len,size);
-	
+		//printf("heyhey :: end = %s :: len = %d :: size =  %d \n",end,len,size);
+		
 		start = searchPattern(end,"#",1,len);
 
 		//printf("oooh\n");
@@ -1221,6 +1240,7 @@ char * getHexa(char * dico, int size){
 
 		// test the two next characters
 		if( ((end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57)) && ((end[1] >= 65 && end[1] <=70) || (end[1] >= 97 && end[1] <= 102) || (end[1] >= 48 && end[1] <= 57)) ){
+			//printf("hex found\n");
 			return start;
 		}
 
@@ -1291,14 +1311,14 @@ void debugPrint(char * stream, int len){
 	}
 
 	// Open en file
-	if(!(debug = fopen("debug","wb+"))){
+	if(!(debug = os_fopen("debug","wb+"))){
 		printf("open failed\n");
 		return ;
 	}
 
 	//printf("DEBUG ::: \n");
 
-	printf("stream in debug = %s\n",stream);
+	//printf("stream in debug = %s\n",stream);
 	//fputc('\n',debug);
 	//fputc('\n',debug);
 	//fputc('\n',debug);

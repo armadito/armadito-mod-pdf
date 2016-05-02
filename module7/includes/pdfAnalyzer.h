@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "osdeps.h"
 //#include <regex.h>
 
 // FILTERS
@@ -59,7 +60,10 @@
 
 #define LARGE_FILE_SIZE 1500000
 
-//#define DEBUG 1
+
+#undef DEBUG
+#define PRINT_REPORT 1
+
 
 // PDF object structure
 struct pdfObject{
@@ -155,6 +159,7 @@ struct testCVEs{
 struct pdfDocument{
 	
 	FILE * fh;	// File handle of the document
+	int fd;
 	char * content;
 	struct pdfObject * objects;	// List of objects
 	int coef;	// Suspicious coefficient
@@ -171,9 +176,10 @@ struct pdfDocument{
 
 /* Functions */
 void Helper();
-int analyze(char * filename);
+int analyzePDF(char * filename);
+int analyzePDF_fd(int fd, char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
-int analysisReport(struct pdfDocument * pdf, char * filename);
+int printAnalysisReport(struct pdfDocument * pdf, char * filename);
 void debugPrint(char * stream, int len); // print in a debug file
 
 
