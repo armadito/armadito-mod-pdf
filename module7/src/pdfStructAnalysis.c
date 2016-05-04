@@ -1,6 +1,6 @@
 /*  
-	< UHURU PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <u.fausther@uhuru-solutions.com>
+	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
     
 
     This program is free software: you can redistribute it and/or modify

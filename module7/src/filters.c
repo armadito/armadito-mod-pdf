@@ -1,6 +1,6 @@
 /*  
-	< UHURU PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <u.fausther@uhuru-solutions.com>
+	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
     
 
     This program is free software: you can redistribute it and/or modify
@@ -121,12 +121,6 @@ char * FlateDecode_old(char * stream, struct pdfObject* obj){
 	//streamd_len = 10000;
 
 	// printf("Stream size = %d...\n",obj->stream_size);
-
-	if(strncmp(obj->reference,"8 0 obj",7) == 0){
-		printf("len_stream = %d\n",obj->tmp_stream_size);
-		debugPrint(stream,obj->tmp_stream_size-1);
-		printf("stream _flatedecode = %s\n",stream);
-	}
 	
 
 	//debugPrint(stream,obj->tmp_stream_size);

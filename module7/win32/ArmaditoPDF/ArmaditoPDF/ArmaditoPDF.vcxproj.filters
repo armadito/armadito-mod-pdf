@@ -13,18 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Fichiers d%27en-tête\osdeps">
-      <UniqueIdentifier>{f0336d63-8eb0-495c-8ece-c0c96a118faa}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Fichiers sources\osdeps">
-      <UniqueIdentifier>{edd50a21-9058-4205-87d7-627e4747ac84}</UniqueIdentifier>
+      <UniqueIdentifier>{de5d87ae-3c70-4a71-877f-f5cef05b237e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\osdeps">
+      <UniqueIdentifier>{2cf89655-f2a4-4131-a986-3db75eda9ff0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\main.c">
-      <Filter>Fichiers sources</Filter>
+    <ClCompile Include="..\..\..\src\osdeps.c">
+      <Filter>Fichiers sources\osdeps</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\filters.c">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\pdfAnalysis.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\pdfObjectsAnalysis.c">
@@ -39,13 +42,7 @@
     <ClCompile Include="..\..\..\src\utils.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\osdeps.c">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\pdfAnalysis.c">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\parser.c">
+    <ClCompile Include="..\..\..\main.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,10 +50,10 @@
     <ClInclude Include="..\..\..\includes\filters.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\includes\pdfAnalyzer.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\includes\osdeps.h">
+      <Filter>Fichiers d%27en-tête\osdeps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\includes\pdfAnalyzer.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>

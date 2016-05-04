@@ -1,6 +1,6 @@
 /*  
-	< UHURU PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <u.fausther@uhuru-solutions.com>
+	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
     
 
     This program is free software: you can redistribute it and/or modify
@@ -36,9 +36,7 @@ void freePDFObjectStruct(struct pdfObject * obj){
 		tmp = obj;
 		obj = obj->next;
 
-		// free all elements
-
-		//printf("free object  %s\n",tmp->reference);
+		// free all elements		
 		free(tmp->reference);
 		free(tmp->content);
 		free(tmp->dico);
@@ -102,7 +100,7 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 		freePDFTrailerStruct(pdf->trailers);
 	
 	if (pdf->fh != NULL)
-		fclose(pdf->fh); //Close file handle
+		fclose(pdf->fh);
 
 	if (pdf->version != NULL)
 		free(pdf->version);

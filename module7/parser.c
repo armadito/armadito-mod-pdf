@@ -1,6 +1,6 @@
 /*  
-	< UHURU PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <u.fausther@uhuru-solutions.com>
+	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
     
 
     This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 void Banner(){
 	
 	printf("-------------------------\n");
-	printf("-- UHURU PDF ANALYZER  --\n");
+	printf("-- ARMADITO PDF ANALYZER  --\n");
 	printf("-------------------------\n\n");
 
 	return;
@@ -34,7 +34,7 @@ void Banner(){
 
 void Helper(){
 	
-	printf("UHURU PDF ANALYZER :: No file in parameter\n");
+	printf("ARMADITO PDF ANALYZER :: No file in parameter\n");
 	printf("Command : ./pdfAnalyzer [filename]\n\n");
 
 	return;
@@ -71,9 +71,6 @@ int main (int argc, char ** argv){
 	struct pdfDocument * pdf = NULL;
 	struct pdfObject * obj = NULL;
 	char cmd[512] = {0};
-	//char ref[15] = {0};
-	//char * ref = "82 0 obj";
-	char * ref = "30 0 obj";
 	char params[512] = {0};	
 
 	
@@ -91,8 +88,7 @@ int main (int argc, char ** argv){
 		printf("[-] Error :: main :: Error while opening file %s\n",argv[1]);
 		return -1;
 	}
-	//printf("f = %d\n",f);	
-	//printf("[+] Debug :: fd = %d\n",fd);
+	
 
 	// Initialize the pdfDocument struct
 	if(!(pdf = initPDFDocument())){
@@ -106,20 +102,8 @@ int main (int argc, char ** argv){
 		printf("[-] Error :: parsing error\n");
 		return -2;
 	}
-
-	//ref = "82 0 obj";
-
-	obj = getPDFObjectByRef(pdf,ref);
-
-	if(obj == NULL){
-		printf("[-] Error :: Object [%s] not found!\n",ref);				
-		return -3;
-	}
-	decodeObjectStream(obj);
-
-	printObjectInFile(obj);
 	
-	/*
+	
 
 	while(1){
 
@@ -193,8 +177,6 @@ int main (int argc, char ** argv){
 
 
 	}
-
-	*/
 
 	//fclose(f);
 	freePDFDocumentStruct(pdf);

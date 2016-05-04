@@ -1,6 +1,6 @@
 /*  
-	< UHURU PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <u.fausther@uhuru-solutions.com>
+	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
     
 
     This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 void Helper(){
 	
-	printf("UHURU PDF ANALYZER :: No file in parameter\n");
+	printf("ARMADITO PDF ANALYZER :: No file in parameter\n");
 	printf("Command : ./pdfAnalyzer [filename]\n\n");
 
 	return;
@@ -38,7 +38,7 @@ int main (int argc, char ** argv){
 	
 	#ifdef DEBUG
 	printf("-------------------------\n");
-	printf("-- UHURU PDF ANALYZER  --\n");
+	printf("-- ARMADITO PDF ANALYZER  --\n");
 	printf("-------------------------\n\n");
 	#endif
 
