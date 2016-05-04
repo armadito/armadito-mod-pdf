@@ -1,5 +1,5 @@
 ------------------------
--- UHURU PDF ANALYZER --
+-- ARMADITO PDF ANALYZER --
 ------------------------
 =====
 
@@ -11,9 +11,13 @@ What is it?
 -----------
 
 Analyseur de PDF:
+
 	* Parsing du PDF
+
 	* Analyse anti-malware
+
 	* Evaluation (coefficient de suspicion)
+	
 
 Dépendances
 -----------
