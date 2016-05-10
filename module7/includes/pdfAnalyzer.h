@@ -1,8 +1,8 @@
 /*  
-	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
+	<ARMADITO PDF ANALYZER is a tool to parse and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Teclib' 
+	<ufausther@teclib.com>
     
-
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -26,15 +26,6 @@
 #include <string.h>
 #include <time.h>
 #include "osdeps.h"
-//#include <regex.h>
-
-// FILTERS
-/*#define FlateDecode 10
-#define AsciiHexDecode 11
-#define Ascii86Decode 12
-#define
-*/
-
 
 // Define Tests Coefficients
 
@@ -82,8 +73,6 @@ struct pdfObject{
 	int content_size;	// size in byte of the object's content
 
 	int errors;		// errors in parsing
-	//enum efilter * filter;
-	//filter* stream_filter[];
 	
 	struct pdfObject* next;	// next object in the list.
 	
@@ -145,14 +134,6 @@ struct testsPDFObjAnalysis{
 
 
 };
-
-/*
-struct testCVEs{
-
-};
-*/
-
-
 
 
 // PDF Document structure

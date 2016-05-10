@@ -1,8 +1,8 @@
 /*  
-	< ARMADITO PDF ANALYZER is a tool to parses and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Ulrich FAUSTHER <ufausther@teclib.com>
+	<ARMADITO PDF ANALYZER is a tool to parse and analyze PDF files in order to detect potentially dangerous contents.>
+    Copyright (C) 2015 by Teclib' 
+	<ufausther@teclib.com>
     
-
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
