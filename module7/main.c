@@ -29,17 +29,24 @@ void Helper(){
 	return;
 }
 
+void Banner(){
+	
+	printf("-------------------------\n");
+	printf("-- ARMADITO PDF ANALYZER  --\n");
+	printf("-------------------------\n\n");
+
+	return;
+}
+
 
 int main (int argc, char ** argv){
 
 	int ret;
-	FILE * f = NULL;
-	int fd = -1;
+	//FILE * f = NULL;
+	//int fd = -1;
 	
 	#ifdef DEBUG
-	printf("-------------------------\n");
-	printf("-- ARMADITO PDF ANALYZER  --\n");
-	printf("-------------------------\n\n");
+	Banner();
 	#endif
 
 	if(argc < 2){

@@ -71,10 +71,10 @@ struct pdfObject{
 	int tmp_stream_size; // temp size of the stream (between two decoding process)
 	int decoded_stream_size;	// Size in byte of the object's decoded stream
 	int content_size;	// size in byte of the object's content
-
 	int errors;		// errors in parsing
 	
 	struct pdfObject* next;	// next object in the list.
+
 	
 };
 
@@ -150,6 +150,7 @@ struct pdfDocument{
 	struct pdfXRef* xref;
 	struct testsPDFStruct * testStruct;
 	struct testsPDFObjAnalysis * testObjAnalysis;
+	double scan_time; // time elapsed in second for parse or scan.
 	int errors; // treatment errors
 
 };
