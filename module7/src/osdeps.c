@@ -42,7 +42,7 @@ FILE * os_fopen(const char * filename, const char * mode) {
 // Linux part for compatibility.
 int os_strncat(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
 	
-
+	
 	if( strncat(strDest, strSource, count) == NULL){
 		return -1;
 	}

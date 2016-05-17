@@ -346,6 +346,7 @@ struct pdfDocument* initPDFDocument(){
 	pdf->xref = NULL;
 
 	pdf->errors = 0;
+	pdf->scan_time=0;
 	return pdf;
 
 }

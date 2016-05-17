@@ -18,8 +18,8 @@
 
 */
     
-#ifndef filters
-#define filters
+#ifndef _filters_h_
+#define _filters_h_
 
 
 
@@ -29,14 +29,13 @@
 #define CLEAR_TABLE 256
 
 #define MAX_CODES 512
-typedef struct LZWdico{
+struct LZWdico{
 
 	unsigned short code;
 	char * entry;
 	int entry_len;
 
 	struct LZWdico * next;
-
 };
 
 struct LZWdico * initDico(int code, char * entry);

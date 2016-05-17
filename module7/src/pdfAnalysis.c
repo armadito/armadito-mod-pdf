@@ -88,6 +88,9 @@ int printAnalysisReport(struct pdfDocument * pdf, char * filename){
 
 	printf("-------------------------------------------------------\n");
 	//printf("-------------------------------------------------------\n");
+	printf("Execution time : %.2lf sec \n",pdf->scan_time); // put in analysis report function 
+	printf("-------------------------------------------------------\n");
+	printf("-------------------------------------------------------\n\n");
 
 	return 0;
 
@@ -380,6 +383,7 @@ int analyzePDF_fd(int fd, char * filename){
 	time(&end_time);
 	time_elapsed = difftime(end_time,start_time);
 
+	pdf->scan_time = time_elapsed;
 
 	// print all objects references
 	//printObjectReferences(pdf);
@@ -391,9 +395,7 @@ int analyzePDF_fd(int fd, char * filename){
 	// Analysis summary
 	#ifdef DEBUG	
 	printAnalysisReport(pdf,filename);
-	printf("Execution time : %.2lf sec \n",time_elapsed);
-	printf("-------------------------------------------------------\n");
-	printf("-------------------------------------------------------\n\n");
+	
 	#endif
 	ret = pdf->coef;
 	printf("[MODULEPDF] Coef = %d\n", ret);
@@ -403,4 +405,11 @@ int analyzePDF_fd(int fd, char * filename){
 	//fclose(f);
 	return ret;
 
+}
+
+/* Analyze pdf extention function*/
+int analyzePDF_ex(int fd, char * filename){
+
+	int ret = 0;
+	return ret;
 }
