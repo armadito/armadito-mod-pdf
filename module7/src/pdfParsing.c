@@ -82,7 +82,7 @@ int getPDFContent(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	int doc_size = 0;
-	int read_bytes;
+	int read_bytes = 0;
 
 
 	if (pdf->fh == NULL && pdf->fd < 0) {
@@ -123,10 +123,10 @@ int getPDFContent(struct pdfDocument * pdf){
 		read_bytes = fread(content, 1, doc_size, pdf->fh);
 	}
 	else {		
-		read_bytes = os_read(pdf->fd, content, doc_size);
+		read_bytes = _read(pdf->fd, content, doc_size);
 	}
 	
-	//printf("read bytes = %d\n",read_bytes);
+	printf("read bytes = %d\n",read_bytes);
 	
 	//printf("Document content = %s",content);
 	
@@ -951,18 +951,13 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 	int first = 0;
 	int num = 0;
-	//char * num_a = NULL;
-	//char * first_a = NULL;
 	char * stream  = NULL;
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
 	int i = 0;
-	//int obj_num = 0;
 	char * obj_num_a = NULL;
 	int off = 0;
-	//char * off_next = 0;
-	//char * obj_num_next_a = 0;
 	char * off_a = NULL;
 	char * obj_ref = NULL;
 	int obj_ref_len = 0;
@@ -1146,6 +1141,10 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		//printf("start[0] = %c\n",start[0]);
 		// Get the object number
 		obj_num_a = getNumber_a(start,len);
+		if (obj_num_a == NULL){
+			printf("[-] Error :: Can't extract object from object stream :: obj_ref = %s\n",obj->reference);
+			return -1;
+		}
 
 		//printf("Hey :: %d :: %d\n",start,len);
 
@@ -1845,7 +1844,7 @@ int removeComments(struct pdfDocument * pdf){
 					continue;
 				}else{
 
-					if(line_size - i >= 8 && memcmp(ptr,"\%PDF-1.",7) == 0){
+					if(line_size - i >= 8 && memcmp(ptr,"%%PDF-1.",7) == 0){
 						after_header = 1;
 						i = line_size;
 						//printf("PDF Header !!\n");
