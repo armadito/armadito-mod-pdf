@@ -126,7 +126,7 @@ int getPDFContent(struct pdfDocument * pdf){
 		read_bytes = _read(pdf->fd, content, doc_size);
 	}
 	
-	printf("read bytes = %d\n",read_bytes);
+	//printf("read bytes = %d\n",read_bytes);
 	
 	//printf("Document content = %s",content);
 	
@@ -978,6 +978,12 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		return -1;
 	}
 
+	// avoid parsing object stream not well decoded.
+	if (obj->filters != NULL && obj->decoded_stream == NULL){
+		printf("[-] Error :: object not decoded successfully!\n");
+		return -1;
+	}
+
 	if( obj->decoded_stream != NULL ){
 
 		stream = obj->decoded_stream;
@@ -988,7 +994,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		stream_len = obj->stream_size;
 	}
 
-	if(stream == NULL){
+	if(stream == NULL || stream_len <= 0){
 		#ifdef DEBUG
 			printf("Error :: extractObjectFromObjStream :: No stream in the Object stream %s\n",obj->reference);
 		#endif
@@ -1159,6 +1165,11 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		// Get the offset
 		off_a = getNumber_a(start,len);
+		if (off_a == NULL){
+			printf("[-] Error :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			return -1;
+		}
+
 		off = atoi(off_a);
 
 		obj_offsets[i] = off;
