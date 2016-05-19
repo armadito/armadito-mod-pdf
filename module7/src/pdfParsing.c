@@ -123,7 +123,7 @@ int getPDFContent(struct pdfDocument * pdf){
 		read_bytes = fread(content, 1, doc_size, pdf->fh);
 	}
 	else {		
-		read_bytes = _read(pdf->fd, content, doc_size);
+		read_bytes = os_read(pdf->fd, content, doc_size);
 	}
 	
 	//printf("read bytes = %d\n",read_bytes);
