@@ -578,6 +578,10 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 			kids = getDelimitedStringContent(start,"[","]",len);
 			//printf("kids = %s\n",kids);
 
+			if (kids == NULL){
+				// on error, got to next obj.
+				goto next;
+			}
 
 			len = strlen(kids);
 			end = kids;
@@ -819,7 +823,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 			free(kids);
 		}
 
-
+		next:
 		obj = obj->next;
 
 	}

@@ -880,10 +880,16 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
+	int lim = src_len;
 	char * tmp = NULL;
 	char * tmp2 = NULL;
-	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"
+	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"	
 	//int found = NULL;
+
+	if (src == NULL || src_len <= 0){
+		printf("[-] Error :: getDelimitedStringContent :: bad parameters\n");
+		return NULL;
+	}
 
 	tmp = (char*)calloc(strlen(delimiter1) +1,sizeof(char));
 	tmp2 = (char*)calloc(strlen(delimiter2) +1,sizeof(char));
@@ -892,18 +898,26 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	tmp2[strlen(delimiter2)] = '\0';
 
 
-
 	start = src;
 	//printf("start = %d\n",start);
 	memcpy(tmp,start,strlen(delimiter1));
 
 	// find start point
-	while(memcmp(tmp,delimiter1,strlen(delimiter1)) != 0){
+	while (memcmp(tmp, delimiter1, strlen(delimiter1)) != 0 && lim > 0){
 
 		start ++;
-		memcpy(tmp,start,strlen(delimiter1));
+		lim--;
+		if (lim < 0)
+			memcpy(tmp,start,strlen(delimiter1));
 
 	}
+
+	if (lim <= 0){
+		free(tmp);
+		free(tmp2);
+		return NULL;
+	}
+		
 
 	len = (int)(start - src);
 	//printf("start = %d\n",start);
