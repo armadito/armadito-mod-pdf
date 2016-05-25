@@ -1214,9 +1214,10 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		// Get the object number
 		obj_num_a = getNumber_a(start,len);
-
-
-
+		if (obj_num_a == NULL){
+			printf("[-] Error :: Can't get object number :: obj_ref = %s\n", obj->reference);
+			return -1;
+		}
 
 
 		// "X O obj"
@@ -1244,6 +1245,10 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		// Get the offset
 		off_a = getNumber_a(start,len);
+		if (off_a == NULL){
+			printf("[-] Error :: getNumber_a failed!\n");
+			return -1;
+		}
 		off = atoi(off_a);
 
 		len -=  strlen(off_a);
@@ -1268,6 +1273,10 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			//printf("obj_len = %d\n",obj_len);
 		}
 		
+		if (obj_len >= 0){
+			printf("[-] Error :: bad object length!\n");
+			return -1;
+		}
 		obj_content = (char*)calloc(obj_len+1,sizeof(char));
 
 		
