@@ -1,22 +1,25 @@
-/*  
-	<ARMADITO PDF ANALYZER is a tool to parse and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Teclib' 
-	<ufausther@teclib.com>
-    
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+/***
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+Copyright (C) 2015, 2016 Teclib'
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+This file is part of Armadito module PDF.
 
-*/
+Armadito module PDF is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Armadito module PDF is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
+
+***/
+
+
 
 #ifndef pdfAnalyzer
 #define pdfAnalyzer
@@ -26,6 +29,7 @@
 #include <string.h>
 #include <time.h>
 #include "osdeps.h"
+#include "log.h"
 
 // Define Tests Coefficients
 
@@ -54,6 +58,14 @@
 
 #undef DEBUG
 #define PRINT_REPORT 1
+
+enum error_code {
+		UNEXPTECTED_ERROR = -1 << 0,
+		BAD_HEADER = -1 << 1,		
+		UNSUPPORTED_FILE = -1 << 2,
+		MALFORMED_PDF = -1 << 3,
+		BAD_STREAM_DECODE = -1 << 4,
+};
 
 
 // PDF object structure
@@ -141,6 +153,7 @@ struct pdfDocument{
 	
 	FILE * fh;	// File handle of the document
 	int fd;
+	char * fname;
 	char * content;
 	struct pdfObject * objects;	// List of objects
 	int coef;	// Suspicious coefficient
@@ -160,8 +173,9 @@ struct pdfDocument{
 void Helper();
 int analyzePDF(char * filename);
 int analyzePDF_fd(int fd, char * filename);
+int analyzePDF_ex(int fd, char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
-int printAnalysisReport(struct pdfDocument * pdf, char * filename);
+void printAnalysisReport(struct pdfDocument * pdf);
 void debugPrint(char * stream, int len); // print in a debug file
 
 
@@ -184,7 +198,7 @@ void printObjectByRef(struct pdfDocument * pdf, char * ref);
 void printObjectInFile(struct pdfObject * obj);
 void printPDFObjects(struct pdfDocument * pdf);
 int getNumber(char* ptr, int size);
-char* getNumber_a(char* ptr, int size);
+char* getNumber_s(char* ptr, int size);
 char * getIndirectRef(char * ptr, int size);
 char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter2, int src_len);
 char * getIndirectRefInString(char * ptr, int size);
@@ -210,7 +224,7 @@ char * getStreamFilters(struct pdfObject * obj);
 int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
 int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf);
 int getPDFObjects(struct pdfDocument * pdf);
-int getPDFTrailers_1(struct pdfDocument * pdf);
+int getPDFTrailers(struct pdfDocument * pdf);
 int getPDFTrailers_2(struct pdfDocument * pdf);
 int decodeObjectStream(struct pdfObject * obj);
 char * hexaObfuscationDecode(char * dico);
