@@ -1,35 +1,43 @@
-/*  
-	<ARMADITO PDF ANALYZER is a tool to parse and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Teclib' 
-	<ufausther@teclib.com>
-    
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+/***
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+Copyright (C) 2015, 2016 Teclib'
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+This file is part of Armadito module PDF.
 
-*/
+Armadito module PDF is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Armadito module PDF is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
+
+***/
+
+
 
 #include "pdfAnalyzer.h"
 
-// This function free the memory allocated for an object structure
+
+/*
+freePDFObjectStruct() :: free the allocated memory PDF object structure.
+parameters:
+- struct pdfObject * pdf (the pdf object list pointer).
+returns:
+- none
+*/
 void freePDFObjectStruct(struct pdfObject * obj){
 
 	struct pdfObject * tmp = NULL;
 
-
 	if(obj == NULL){
 		return ;
 	}
-
 
 	while(obj != NULL){
 
@@ -54,7 +62,14 @@ void freePDFObjectStruct(struct pdfObject * obj){
 
 }
 
-// This function free the memory allocated for a trailer structure
+
+/*
+freePDFTrailerStruct() :: free the allocated memory PDF trailer structure.
+parameters:
+- struct pdfTrailer * pdf (the pdf trailer list pointer).
+returns:
+- none
+*/
 void freePDFTrailerStruct(struct pdfTrailer * trailer){
 
 	struct pdfTrailer * tmp = NULL;
@@ -64,14 +79,12 @@ void freePDFTrailerStruct(struct pdfTrailer * trailer){
 	}
 
 	while(trailer!= NULL){
-
 		
 		tmp = trailer;
 		trailer = trailer->next;
 
 		free(tmp->dico);
 		free(tmp->content);
-
 				
 		free(tmp);
 		tmp = NULL;
@@ -82,7 +95,14 @@ void freePDFTrailerStruct(struct pdfTrailer * trailer){
 
 }
 
-// This function free the memory allocated for the pdf structure
+
+/*
+freePDFDocumentStruct() :: free the allocated memory PDF document structure.
+parameters:
+- struct pdfDocument * pdf (the pdf document pointer).
+returns:
+- none
+*/
 void freePDFDocumentStruct(struct pdfDocument * pdf){
 
 	
@@ -90,32 +110,49 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 		return ;
 	}
 	
-	// Free objects
-	if(pdf->objects != NULL)
-		freePDFObjectStruct(pdf->objects);
+	if (pdf->fname != NULL){
+		free(pdf->fname);
+		pdf->fname = NULL;
+	}
 	
+	// Free objects
+	if (pdf->objects != NULL){
+		freePDFObjectStruct(pdf->objects);		
+	}
 	
 	// Free trailer
-	if(pdf->trailers != NULL)
+	if (pdf->trailers != NULL){
 		freePDFTrailerStruct(pdf->trailers);
+	}
 	
-	if (pdf->fh != NULL)
+	if (pdf->fh != NULL){
 		fclose(pdf->fh);
+		pdf->fh = NULL;
+	}
 
-	if (pdf->version != NULL)
+	if (pdf->version != NULL){
 		free(pdf->version);
+		pdf->version = NULL;
+	}		
 
-	if (pdf->content != NULL)
+	if (pdf->content != NULL){
 		free(pdf->content);
+		pdf->content = NULL;
+	}
 
-	if (pdf->testStruct != NULL)
+	if (pdf->testStruct != NULL){
 		free(pdf->testStruct);
+		pdf->testStruct = NULL;
+	}
 
-	if (pdf->testObjAnalysis != NULL)
+	if (pdf->testObjAnalysis != NULL){
 		free(pdf->testObjAnalysis);
+		pdf->testObjAnalysis = NULL;
+	}
 
-	if (pdf != NULL)
-		free(pdf);
+	
+	free(pdf);
+	pdf = NULL;
 	
 
 	return ;
@@ -123,32 +160,26 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 }
 
 
-// return the object within the reference given in parameters
+/*
+getPDFObjectByRef() :: return the object corresponding to the reference given in parameter
+parameters:
+- struct pdfDocument * pdf (the pdf document pointer).
+- char * ref (the reference of the object to search)
+returns: (struct pdfObject *)
+- the pointer of the pdf object on success
+- NULL on error or if not found
+*/
 struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 
 	struct pdfObject * obj = NULL;
 
-
-	if(pdf == NULL ){
-
-		#ifdef DEBUG
-			printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
-		#endif
-
-		return NULL;
-	}
-
-	if(ref == NULL ){
-		#ifdef DEBUG
-			printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
-		#endif
-
+	if(pdf == NULL  || ref == NULL){		
+		err_log("getPDFObjectByRef :: invalid parameter\n");
 		return NULL;
 	}
 
 	obj = pdf->objects;
-	
-	
+		
 	while(obj != NULL){
 	
 		if( strncmp(ref,obj->reference,strlen(ref)) == 0 ){
@@ -156,40 +187,29 @@ struct pdfObject * getPDFObjectByRef(struct pdfDocument * pdf, char * ref){
 		}
 		
 		obj = obj->next;	
-	}
-	
-	//printf("Object \"%s\" not found\n",ref);
+	}	
 
 	return NULL;
 }
 
-// return the object within the reference given in parameters (get the next object in the list, starting from obj, with the reference given in parameter)
+
+/*
+getPDFNextObjectByRef() :: return the object within the reference given in parameters (get the next object in the list, starting from obj, with the reference given in parameter)
+parameters:
+- struct pdfDocument * pdf (the pdf document pointer).
+- char * ref (the reference of the object to search)
+returns: (struct pdfObject *)
+- the pointer of the pdf object on success
+- NULL on error or if not found
+*/
 struct pdfObject * getPDFNextObjectByRef(struct pdfDocument * pdf, struct pdfObject * obj, char * ref){
 
 	struct pdfObject * tmp = NULL;
 
-
-	if(pdf == NULL ){
-
-		#ifdef DEBUG
-			printf("Error :: getPDFObjectByRef :: NULL parameter \"pdf\" \n");
-		#endif
-
+	if (pdf == NULL || ref == NULL || obj == NULL){
+		err_log("getPDFNextObjectByRef :: invalid parameter\n");
 		return NULL;
 	}
-
-	if(ref == NULL ){
-		#ifdef DEBUG
-			printf("Error :: getPDFObjectByRef :: NULL parameter \"ref\" \n");
-		#endif
-
-		return NULL;
-	}
-
-	if(obj == NULL){
-		return NULL;
-	}
-
 
 	tmp = obj->next;
 
@@ -201,23 +221,26 @@ struct pdfObject * getPDFNextObjectByRef(struct pdfDocument * pdf, struct pdfObj
 		
 		tmp = tmp->next;	
 	}
-	
-	//printf("Object \"%s\" not found\n",ref);
 
 	return NULL;
 }
 
 
-// This function add an object in the list
+/*
+addObjectInList() :: add an object in the pdf document object list
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+*/
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 
 	struct pdfObject* tmp = NULL;
 
-	if(obj == NULL){
-		#ifdef DEBUG
-			printf("Error :: addObjectInList :: Object is NULL\n");
-		#endif
-
+	if(obj == NULL || pdf == NULL){		
+		err_log("addObjectInList :: invalid parameter\n");
 		return -1;	
 	}
 	
@@ -229,25 +252,19 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 
 		// Object collision detection
 		if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
-			#ifdef DEBUG
-				printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
-			#endif
-
+			
+			warn_log("addObjectInList :: Object collision :: %s\n", obj->reference);
 			pdf->testStruct->object_collision ++;
 		}
 
 
 		while(tmp->next != NULL){
 
-			// Object collision detection
-			
+			// Object collision detection			
 			tmp = tmp->next;
 
 			if(strncmp(tmp->reference,obj->reference,strlen(tmp->reference)) == 0 && strncmp(tmp->reference,obj->reference,strlen(obj->reference)) == 0){
-				#ifdef DEBUG
-					printf("Warning :: addObjectInList :: Object collision :: %s\n",obj->reference);
-				#endif
-
+				warn_log("addObjectInList :: Object collision :: %s\n", obj->reference);
 				pdf->testStruct->object_collision ++;
 			}	
 		}
@@ -259,14 +276,20 @@ int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf){
 }
 
 
-
-// Init 
+/*
+initTestsPDFStruct() :: Initialize PDF Tests structure.
+parameters:
+- none
+returns: (struct testsPDFStruct *)
+- the testsPDFStruct pointer on success.
+- NULL on error.
+*/
 struct testsPDFStruct * initTestsPDFStruct(){
 
 	struct testsPDFStruct * testStruct = NULL;
 
 	if( !(testStruct = (struct testsPDFStruct *)calloc(1,sizeof(struct testsPDFStruct)) ) ){
-		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");		
+		err_log("initTestsPDFStruct :: memory allocation failed\n");
 		return NULL;
 	}
 
@@ -286,13 +309,21 @@ struct testsPDFStruct * initTestsPDFStruct(){
 	return testStruct;
 }
 
-// Init 
+
+/*
+initTestsPDFObjAnalysisStruct() :: Initialize PDF Tests structure.
+parameters:
+- none
+returns: (struct testsPDFObjAnalysis *)
+- the testsPDFObjAnalysis pointer on success.
+- NULL on error.
+*/
 struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
 
 	struct testsPDFObjAnalysis * testObjAnalysis = NULL;
 
 	if( !(testObjAnalysis = (struct testsPDFObjAnalysis *)calloc(1,sizeof(struct testsPDFObjAnalysis)) ) ){
-		printf("Error :: initTestsPDFStruct :: memory allocation1 failed\n");
+		err_log("initTestsPDFObjAnalysisStruct :: memory allocation failed\n");
 		return NULL;
 	}
 
@@ -312,31 +343,41 @@ struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
 }
 
 
-// Init a pdfDocument object structure
+/*
+initPDFDocument() :: Initialize pdfDocument structure.
+parameters:
+- none
+returns: (struct pdfDocument *)
+- the pdfDocument pointer on success.
+- NULL on error.
+*/
 struct pdfDocument* initPDFDocument(){
 
 	struct pdfDocument* pdf = NULL;
+	int err = 0;
 	
 	if( (pdf = (struct pdfDocument *)calloc(1,sizeof(struct pdfDocument))) == NULL ){
-		printf("Error :: initPDFDocument :: memory allocation failed\n");
-		return NULL;
+		err_log("initPDFDocument :: memory allocation failed\n");
+		err++;
+		goto clean;		
 	}
 
 	if( (pdf->testStruct = initTestsPDFStruct()) == NULL ){
-		printf("Error :: initPDFDocument :: memory allocation1 failed\n");
-		return NULL;
+		err_log("initPDFDocument :: testsPDFstruct initialization failed!\n");
+		err++;
+		goto clean;
 	}
 
 	if( (pdf->testObjAnalysis = initTestsPDFObjAnalysisStruct()) == NULL ){
-		printf("Error :: initPDFDocument :: memory allocation2 failed\n");
-		return NULL;
+		err_log("initPDFDocument :: testsPDFObjAnalysisStruct initialization failed!\n");
+		err++;
+		goto clean;		
 	}
 
-
-	
 	// Initialize entries
 	pdf->fh = NULL;
 	pdf->fd = -1;
+	pdf->fname = NULL;
 	pdf->content = NULL;
 	pdf->objects =NULL;
 	pdf->coef = 0;
@@ -344,22 +385,37 @@ struct pdfDocument* initPDFDocument(){
 	pdf->version = NULL;
 	pdf->trailers = NULL;
 	pdf->xref = NULL;
-
 	pdf->errors = 0;
 	pdf->scan_time=0;
+
+clean:
+	if (err != 0){
+		if (pdf != NULL){
+			freePDFDocumentStruct(pdf);
+			pdf = NULL;
+		}
+	}
+
 	return pdf;
 
 }
 
 
-// Init a pdfObject object structure
+/*
+initPDFObject() :: Initialize pdfObject object structure.
+parameters:
+- none
+returns: (struct pdfObject *)
+- the pdfObject pointer on success.
+- NULL on error.
+*/
 struct pdfObject* initPDFObject(){
 
 	struct pdfObject* obj = NULL;
 	
 	
 	if( !(obj = (struct pdfObject*)calloc(1,sizeof(struct pdfObject)) ) ){
-		printf("Error :: initPDFDocument :: memory allocation failed\n");
+		err_log("initPDFObject :: memory allocation failed\n");
 		return NULL;
 	}
 	
@@ -383,13 +439,21 @@ struct pdfObject* initPDFObject(){
 
 }
 
-// Init a pdfDocument object structure
+
+/*
+initPDFTrailer() :: Initialize pdf trailer structure
+parameters:
+- none
+returns: (struct pdfTrailer *)
+- the pdfTrailer pointer on success.
+- NULL on error.
+*/
 struct pdfTrailer* initPDFTrailer(){
 
 	struct pdfTrailer* trailer = NULL;
 	
 	if( !(trailer = (struct pdfTrailer *)calloc(1,sizeof(struct pdfTrailer)) ) ){
-		printf("Error :: initPDFTrailer :: memory allocation failed\n");
+		err_log("initPDFTrailer :: memory allocation failed\n");
 		return NULL;
 	}
 	
@@ -403,71 +467,44 @@ struct pdfTrailer* initPDFTrailer(){
 
 }
 
-// This function search a pattern in a stream
+
+/*
+searchPattern() :: search a pattern in a stream
+parameters:
+- char * src (the source stream).
+- char * pat (the pattern to search)
+- int pat_size (the size of the pattern)
+- int size (the size of the src stream)
+returns: (char*)
+- a pointer to the pattern string on success.
+- NULL if not found or on error.
+*/
 void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 
 	char* res = NULL;
-	
-	//int i =0;
 	char * tmp = NULL;
-	//int diff = 0;
 	char * end = NULL;
 	int len = 0;
 	int len_verif = 0;
 	
 	
-	
-	//printf("src = %s\n",src);
-	//printf("pat = %s\n",pat);
-	//printf("hey! %d :: %d\n",src, size);
 	if( size < pat_size || src == NULL || pat == NULL || pat_size == 0 || size == 0){
-		//printf("Error :: searchPattern :: Bad arguments\n");
+		err_log("searchPattern :: invalid parameters\n");
 		return NULL;
 	}
-	
-	//tmp =  (char*)malloc(pat_size*sizeof(char));
+		
 	tmp =  (char*)calloc(pat_size+1,sizeof(char));
 	tmp[pat_size] = '\0';
-	//printf("hey2!\n");
-	/*
-	while(i < size - pat_size ){
 	
-		//i = 0;
-		res = memchr(src,pat[0],size-i);
-		//printf("src  = %d && res = %d\n",src,res);
-		//i++;
-		
-		if(res == NULL){
-			//printf("Not found\n");
-			return NULL;
-		}
-		
-		
-		memcpy(tmp,res,pat_size);
-		
-		if( memcmp(tmp,pat,pat_size) == 0){
-			return res;
-		}
-		
-		//diff = (int)(res - src);
-		//i+=diff;
-		i=(int)(res-src);
-
-		src = res + 1;
-
-	}*/
-
 
 	len = size; 
 	end = src;
 	while(len >= pat_size){
 	
-		//i = 0;
-		res = memchr(end,pat[0],len);
-		//printf("res = %s\n",res);
+		
+		res = memchr(end,pat[0],len);		
 		if(res == NULL){
-			free(tmp);
-			//printf("Not found\n");
+			free(tmp);			
 			return NULL;
 		}
 
@@ -480,10 +517,6 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 			return NULL;
 		}
 
-		//printf("src  = %d && res = %d\n",src,res);
-		//i++;
-		
-
 		memcpy(tmp,res,pat_size);
 		
 		if( memcmp(tmp,pat,pat_size) == 0){
@@ -491,9 +524,6 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 			return res;
 		}
 		
-		//diff = (int)(res - src);
-		//i+=diff;
-
 		end = res +1;
 
 		len=(int)(end-src);
@@ -502,10 +532,10 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	}
 	
 	free(tmp);
+	tmp = NULL;
 	
 	return NULL;
 }
-
 
 
 // Print object in a debug file (debug.txt)
@@ -597,7 +627,6 @@ void printObjectInFile(struct pdfObject * obj){
 }
 
 
-
 // Print object in a debug file (debug.txt)
 void printObject(struct pdfObject * obj){
 
@@ -650,16 +679,10 @@ void printObjectByRef(struct pdfDocument * pdf, char * ref){
 	struct pdfObject * obj = NULL;
 
 
-	if(pdf == NULL ){
-		printf("Error :: printObjectByRef :: NULL parameter \"pdf\" \n");
+	if(pdf == NULL || ref == NULL ){
+		err_log("printObjectByRef :: invalid parameter\n");
 		return;
 	}
-
-	if(ref == NULL ){
-		printf("Error :: printObjectByRef :: NULL parameter \"ref\" \n");
-		return;
-	}
-
 
 	obj = pdf->objects;
 	
@@ -672,8 +695,6 @@ void printObjectByRef(struct pdfDocument * pdf, char * ref){
 		
 		obj = obj->next;	
 	}
-	
-	//printf("Object \"%s\" not found\n",ref);
 
 	return;
 
@@ -681,24 +702,24 @@ void printObjectByRef(struct pdfDocument * pdf, char * ref){
 }
 
 
-
-
-// Prints all object described in the PDF Document
+/*
+printPDFObjects() :: Prints all object described in the PDF Document
+parameters:
+- struct pdfDocument * pdf (pdf document structure)
+returns: (void)
+- none.
+*/
 void printPDFObjects(struct pdfDocument * pdf){
 
 
 	struct pdfObject * obj =  NULL;
 
-	if(pdf->objects == NULL)
+	if(pdf == NULL || pdf->objects == NULL)
 		return;
-
 
 	printf("\n::: Objects Lists :::\n");
 
-
 	obj = pdf->objects;
-
-	
 
 	while(obj){
 
@@ -714,15 +735,28 @@ void printPDFObjects(struct pdfDocument * pdf){
 }
 
 
-// This function return a number in a string or stream at a given pointer
+/*
+getNumber() :: Return a number (int) in a string or stream at a given pointer
+parameters:
+- char * ptr (the pointer of the string)
+- int size (the size of the string)
+returns: (int)
+- A digit number.
+- An error code (<0) on error.
+*/
 int getNumber(char* ptr, int size){
 
 	int num;
-	char * num_a;
-	char * end;
+	char * num_a = NULL;
+	char * end = NULL;
 	int len = 0;
 
 	end = ptr;
+
+	if (ptr == NULL || size <= 0){
+		err_log("getNumber :: invalid parameters\n");
+		return -1;
+	}
 
 	while( (end[0] >= 48 && end[0] <= 57) &&  len < size ){
 		len ++;
@@ -733,85 +767,82 @@ int getNumber(char* ptr, int size){
 		return -1;
 	}
 
-	/*
-	do{
-		//printf("end[0] = %c\n",end[0]);
-		len ++;
-		end ++;
-	}while( (end[0] >= 48 && end[0] <= 57) || len >= size );
-	*/
-
-
 	num_a = (char*)calloc(len+1,sizeof(char));
 	num_a[len]='\0';
 	memcpy(num_a,ptr,len);
-	//printf("num_a = %s\n",num_a);
 
 	num = atoi(num_a);
-	//printf("num = %d\n",num);
 	free(num_a);
+	num_a = NULL;
+
+	if (num < 0)
+		return -1;
 
 	return num;
 }
 
-// This function return a number (in ascii string) in a string or stream at a given pointer
-char* getNumber_a(char* ptr, int size){
 
-	//int num;
+/*
+getNumber_s() :: Return a number (in ascii string) in a string or stream at a given pointer
+parameters:
+- char * ptr (the pointer of the string)
+- int size (the size of the string)
+returns: (char *)
+- A digit string.
+- NULL on error.
+*/
+char* getNumber_s(char* ptr, int size){
+	
 	char * num_a = NULL;
 	char * end = NULL;
 	int len = 0;
 
 	if (ptr == NULL || size <= 0) {
-		printf("[-] Error :: getNumber_a :: invalid parameters!\n");
+		err_log("getNumber_s :: invalid parameters\n");
 		return NULL;
 	}
 
 	end = ptr;
-
-	/*
-	do{
-		//printf("end[0] = %c\n",end[0]);
-		len ++;
-		end ++;
-	}while( (end[0] >= 48 && end[0] <= 57) &&  len < size );
-	*/
 
 	while( len < size && (end[0] >= 48 && end[0] <= 57)  ){
 		len ++;
 		end ++;
 	}
 
-
 	if(len == 0){
 		return NULL;
 	}
-
-
 
 	num_a = (char*)calloc(len+1,sizeof(char));
 	num_a[len]='\0';
 	memcpy(num_a,ptr,len);
 
-	//num = atoi(num_a);
-	//printf("num = %d\n",num);
-
-
 	return num_a;
 
 }
 
-// This function get the indirect reference in a string at a given pointer
+
+/*
+getIndirectRef() :: Get the indirect reference string at a given pointer
+parameters:
+- char * ptr (the pointer of the string)
+- int size (the size of the string)
+returns: (char *)
+- the indirect reference string. (Ex: 1 0 R)
+- NULL on error.
+*/
 char * getIndirectRef(char * ptr, int size){
 
 	char * ref = NULL;
 	char * obj_num = NULL; // object number
-	char * gen_num = NULL; // generation number
-
-	//char * start = NULL;
+	char * gen_num = NULL; // generation number	
 	char * end = NULL;
 	int len = 0;
 
+	if (ptr == NULL || size <= 0) {
+		err_log("getIndirectRef :: invalid parameters\n");
+		return NULL;
+	}
 
 	end = ptr;
 	len = size;
@@ -821,13 +852,8 @@ char * getIndirectRef(char * ptr, int size){
 	}
 
 	// Get the object number
-	obj_num = getNumber_a(end,len);
-	
-
-	if(obj_num == NULL)
+	if ((obj_num = getNumber_s(end, len)) == NULL)
 		return NULL;
-
-	//printf("obj_num = %s\n",obj_num);
 
 	end += strlen(obj_num);
 	len -=  strlen(obj_num);
@@ -835,12 +861,9 @@ char * getIndirectRef(char * ptr, int size){
 	// Move ptr for white space
 	end ++ ;
 
-	//printf("end[0] = %c\n",end[0]);
-
-	gen_num = getNumber_a(end,len);
+	gen_num = getNumber_s(end,len);
 	if(gen_num == NULL)
 		return NULL;
-	//printf("gen_num = %s\n",gen_num);
 
 	end += strlen(gen_num);
 	len -=  strlen(gen_num);
@@ -853,7 +876,6 @@ char * getIndirectRef(char * ptr, int size){
 	if(end[0] != 'R'){
 		return NULL;
 	}
-	//printf("end[0] = %c\n",end[0]);
 
 	len = strlen(obj_num) + strlen(gen_num) + 5 ;
 	ref = (char*)calloc(len+1,sizeof(char));
@@ -863,7 +885,6 @@ char * getIndirectRef(char * ptr, int size){
 	os_strncat(ref,len+1, " ", strlen(obj_num));
 	os_strncat(ref,len+1, gen_num, strlen(gen_num));
 	os_strncat(ref,len+1, " obj", 4);
-	//printf("ref = %s\n",ref);	
 
 	free(gen_num);
 	free(obj_num);
@@ -872,7 +893,18 @@ char * getIndirectRef(char * ptr, int size){
 
 }
 
-// this function get a string delimited by a given character/pattern (take into account sub delimiters) Ex : << foo << bar >> >>
+
+/*
+getDelimitedStringContent() :: get a string delimited by a given character/pattern (take into account sub delimiters) Ex : << foo << bar >> >>
+parameters:
+- char * src
+- char * delimiter1
+- char * delimiter2
+- int src_len
+returns: (char *)
+- string between delimiters
+- NULL on error.
+*/
 char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter2, int src_len){
 
 	char * content = NULL;
@@ -886,8 +918,8 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	char * echap = NULL; // bug fix when Ex: (string = "parenthesis =\) " )  ;where delimiters are "(" and ")"	
 	//int found = NULL;
 
-	if (src == NULL || src_len <= 0){
-		printf("[-] Error :: getDelimitedStringContent :: bad parameters\n");
+	if (src == NULL || src_len <= 0 || delimiter1 == NULL || delimiter2 == NULL){
+		err_log("getDelimitedStringContent :: invalid parameters\n");
 		return NULL;
 	}
 
@@ -899,7 +931,8 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 
 	start = src;
-	//printf("start = %d\n",start);
+
+
 	memcpy(tmp,start,strlen(delimiter1));
 
 	// find start point
@@ -920,39 +953,28 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 		
 
 	len = (int)(start - src);
-	//printf("start = %d\n",start);
 
 	end = start + strlen(delimiter1);
 
-
-	//free(tmp);
-	//tmp = NULL;
-
-
-	//tmp2 = (char*)calloc(strlen(delimiter2),sizeof(char));
 	memcpy(tmp2,start,strlen(delimiter2));
 
-
-	//while( strncmp(tmp,delimiter2,strlen(delimiter2)) != 0  && sub = 0){
+	
 	while( sub > 0  && len <= src_len-2){ // TODO :: why? src_len-2 or src_len -1;
 
-		//printf("hey\n");
 		memcpy(tmp,end,strlen(delimiter1));
 		memcpy(tmp2,end,strlen(delimiter2));
 		echap = end-1;
 
 
 		if( memcmp(tmp,delimiter1,strlen(delimiter1)) == 0 && echap[0]!='\\'){
-			//printf("clic\n");
-			//printf("echap = %c\n",echap[0]);
+
 			sub ++;
 			end += strlen(delimiter1);
 			len += strlen(delimiter1);
 		}else{
 
 			if( memcmp(tmp2,delimiter2,strlen(delimiter2)) == 0 && echap[0]!='\\'){
-				//printf("clac\n");
-				//printf("echap = %c\n",echap[0]);
+
 				sub --;
 				end += strlen(delimiter2);
 				len += strlen(delimiter2);
@@ -963,23 +985,13 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 			}
 		}
 
-		//end ++;
-		//len ++;
 	}
-
-
-
-	//end += (strlen(delimiter2)-1);
-
-	//printf("end = %d :: %c\n",end,end[0]);
-	//printf("len = %d\n",len);
 	
 	
 	if( sub > 0){
-		#ifdef DEBUG
-		printf("Warning :: getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s :: delimiter1 = %s :: delimiter2 = %s\n",sub,src,delimiter1,delimiter2);
-		#endif
-
+		
+		warn_log("getDelimitedStringContent :: Odd number of delimiters :: %d :: src = %s :: delimiter1 = %s :: delimiter2 = %s\n",sub,src,delimiter1,delimiter2);
+		
 		free(tmp);
 		free(tmp2);
 		tmp = NULL;
@@ -989,9 +1001,8 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 	
 
 	if(len > src_len){
-		#ifdef DEBUG
-		printf("Error :: getDelimitedStringContent :: delimiter2 not found :: len > src_len\n");
-		#endif
+
+		err_log("getDelimitedStringContent :: delimiter2 (%s) not found :: len > src_len\n", delimiter2);		
 
 		free(tmp);
 		free(tmp2);
@@ -999,43 +1010,45 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 		tmp2 = NULL;
 		return NULL;
 	}
-	//printf("len = %d\n",len);
 
-	//printf("hey \n");
 	len = (int)(end - start);
 	
 	content = (char*)calloc(len+1,sizeof(char));
 	content[len] = '\0';
 
 	memcpy(content,start,len);
-	//printf("content = %s\n", );
-
 
 	free(tmp);
 	free(tmp2);
 	tmp = NULL;
 	tmp2 = NULL;
 
-
 	return content;
 }
 
-// This function get a indirect reference in a string starting in "ptr" :: return NULL if there is not
+
+/*
+getIndirectRefInString() :: search an object indirect reference in a string starting in "ptr"
+parameters:
+- char * ptr
+- int size
+returns: (char *)
+- string between delimiters
+- NULL on error.
+*/
 char * getIndirectRefInString(char * ptr, int size){
 
 	char * ref = NULL;
 	char * start = NULL;
-	//char * end = NULL;
 	int len = 0;
 
-	if( ptr == NULL){
-		printf("[-] Error :: getIndirectRefInString :: invalid parameter!\n");
+	if( ptr == NULL || size <= 0){
+		err_log("getIndirectRefInString :: invalid parameter!\n");
 		return NULL;
 	}
 
 	start = ptr;
 	len = size;
-	//printf("len = %d\n",len);
 
 	while(ref == NULL && len >= 5 ){
 
@@ -1097,25 +1110,34 @@ char * getPattern(char * ptr, int size, int len){
 }
 
 
-// This function return the first unicode string if present in the stream given in parameters
+/*
+getUnicodeInString() :: Return the first unicode string if present in the stream given in parameters
+parameters:
+- char * stream
+- int size
+returns: (char*)
+- the unicode string if found.
+- NULL if not found or on error.
+*/
 char * getUnicodeInString(char * stream, int size){
 
 	char * unicode = NULL;
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
+
+	if (stream  == NULL || size <= 0) {
+		err_log("getUnicodeInString :: invalid parameters\n");
+		return NULL;
+	}
 	
-	//start = stream;
 	len = size ;
 	end = stream;
 
 
 	while( unicode == NULL && len > 6){
 
-
 		start = searchPattern(end, "%u", 2, len);
-		
-
 		if(start == NULL){
 			//printf("No unicode detected\n");
 			return NULL;
@@ -1142,13 +1164,21 @@ char * getUnicodeInString(char * stream, int size){
 
 	}
 
-
-
 	return NULL;
 }
 
-// This function replace all occurrences of the pattern in the stream, returns the new string with a new length.
-// TODO improve by replacing all occurrences
+
+/*
+replaceInString() ::  replace all occurrences of the pattern in the stream by another pattern
+parameters:
+- char * src (the source entry).
+- char * toReplace (the string to replace).
+- char * pat (the pattern which replace the string).
+returns: (char*)
+- the new string with the pattern replaced.
+- NULL if not found or on error.
+// TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
+*/
 char * replaceInString(char * src, char * toReplace , char * pat){
 
 	char * dest = NULL;
@@ -1158,23 +1188,18 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 	int len_alloc = 0;
 	int off = 0;
 
-	if(src == NULL || toReplace == NULL || pat == NULL)
+	if (src == NULL || toReplace == NULL || pat == NULL){
+		err_log("replaceInString :: invalid parameter\n");
 		return NULL;
+	}
 
-
-	//printf("\nreplace in string\n");
-	//printf("src = %s\n",src );
-
-	// calc the number of occurrencies of the pattern to replace
+	// TODO: calc the number of occurrencies of the pattern to replace
 
 	// get the positions
 	start = searchPattern(src,toReplace,strlen(toReplace),strlen(src));
 
 	if(start == NULL){
-		#ifdef DEBUG
-		printf("Error :: String to replace (%s) not found in src \n",toReplace);
-		#endif
-
+		err_log("String to replace (%s) not found in src \n",toReplace);
 		return src;
 	}
 
@@ -1183,46 +1208,37 @@ char * replaceInString(char * src, char * toReplace , char * pat){
 	len = strlen(src) - (strlen(toReplace) - strlen(pat));
 	len_alloc = len;
 
-	//printf("src_len = %d :: len = %d\n",strlen(src),len);
-
 	dest = (char*)calloc(len+1,sizeof(char));
 	dest[len] = '\0';
 
 
 	// get the position
 	off = (int)(start - src);
-	//printf("off = %d\n",off);
-
 
 	memcpy(dest, src, off);
-	//strncpy(dest, src, off-1);
-	//printf("dest = %s\n",dest);
 
 	// replace
 	os_strncat(dest,len_alloc+1,pat,strlen(pat));
-	//printf("dest = %s\n",dest);
 
 	end = start + strlen(toReplace);
-	//printf("end0 = %c\n",end[0]);
-
-
-
-	//len = (int)(end - src);
-	//len = strlen(src) - len ;
-	//printf("len = %d\n",len);
 
 	len = strlen(src) - off - strlen(toReplace);
-	//printf("off = %d\n",off);
-	//printf("Debug :: len = %d :: len")
+	
 	os_strncat(dest,len_alloc+1,end,len);
-	//printf("dest = %s\n",dest);	
-
-
+	
 	return dest;
 }
 
 
-//  this function return a pointer to the first hexa string (#F6) or NULL not;
+/*
+getHexa() ::  return a pointer to the first hexa string (#F6) or NULL if any;
+parameters:
+- char * dico (object dictionnary).
+- int size, the size of the dico
+returns: (char*)
+- the hex string found
+- NULL if not found or on error.
+*/
 char * getHexa(char * dico, int size){
 
 	char *  start = NULL;
@@ -1234,30 +1250,25 @@ char * getHexa(char * dico, int size){
 	start = dico;
 	end = dico;
 
+	if (dico == NULL || size <= 0){
+		err_log("getHexa :: invalid parameter\n");
+		return NULL;
+	}
+
 	while( hexa == NULL && len >= 3  ){
 
-		//printf("heyhey :: end = %s :: len = %d :: size =  %d \n",end,len,size);
-		
-		start = searchPattern(end,"#",1,len);
-
-		//printf("oooh\n");
-		
+		start = searchPattern(end,"#",1,len);		
 		if(start == NULL){
 			return NULL;
 		}
 
 		end = start +1 ;
 
-		//len = 0;
-		//printf("end0 =  %c :: end1 =  %c\n",end[0],end[1]);
-
 		// test the two next characters
 		if( ((end[0] >= 65 && end[0] <=70) || (end[0] >= 97 && end[0] <= 102) || (end[0] >= 48 && end[0] <= 57)) && ((end[1] >= 65 && end[1] <=70) || (end[1] >= 97 && end[1] <= 102) || (end[1] >= 48 && end[1] <= 57)) ){
-			//printf("hex found\n");
+			//dbg_log("getHexa :: hex found\n");
 			return start;
-		}
-
-		//start ++;
+		}		
 
 		len = (int)(end - dico);
 		len = size - len;
@@ -1269,15 +1280,22 @@ char * getHexa(char * dico, int size){
 	return NULL;
 }
 
-// add a trailer in the list of trailers
+
+/*
+addTrailerInList() ::  add a trailer in the list of trailers
+parameters:
+- struct pdfDocument * pdf
+- struct pdfTrailer * trailer
+returns: (int)
+- 0 on success
+- -1 on error.
+*/
 int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 
 	struct pdfTrailer * tmp =  NULL;
 
-
 	if(pdf == NULL || trailer == NULL){		
-		printf("Error :: addTrailerInPDF :: Bad arguments pdf and trailer \n");
-
+		err_log("addTrailerInList :: invalid parameters\n");
 		return -1;
 	}
 
@@ -1297,6 +1315,7 @@ int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 	return 0;
 }
 
+
 void printObjectReferences(struct pdfDocument* pdf){
 
 	if(pdf->objects == NULL)
@@ -1304,7 +1323,7 @@ void printObjectReferences(struct pdfDocument* pdf){
 
 
 	while(pdf->objects != NULL){
-		printf("object = %s\n",pdf->objects->reference);
+		dbg_log("object = %s\n",pdf->objects->reference);
 
 		pdf->objects = pdf->objects->next;
 	}
@@ -1313,30 +1332,21 @@ void printObjectReferences(struct pdfDocument* pdf){
 
 }
 
+
 void debugPrint(char * stream, int len){
 
 	FILE * debug = NULL;
 
 	if(stream == NULL || len <= 0){
-		printf("Error :: debugPrint :: NULL parameters \n");
-
+		err_log("debugPrint :: invalid parameter\n");
 		return;
 	}
 
 	// Open en file
 	if(!(debug = os_fopen("debug","wb+"))){
-		printf("open failed\n");
+		err_log("debugPrint :: open failed\n");
 		return ;
 	}
-
-	//printf("DEBUG ::: \n");
-
-	//printf("stream in debug = %s\n",stream);
-	//fputc('\n',debug);
-	//fputc('\n',debug);
-	//fputc('\n',debug);
-	//fwrite("---------------------------------------------",sizeof(char),45,debug);
-	//fputc('\n',debug);
 
 	// Reference
 	fwrite(stream,sizeof(char),len,debug);
@@ -1348,7 +1358,6 @@ void debugPrint(char * stream, int len){
 
 	return;
 }
-
 
 
 // This function convert a string into binary.
