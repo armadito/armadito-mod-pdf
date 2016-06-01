@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\main.c" />
     <ClCompile Include="..\..\..\src\filters.c" />
+    <ClCompile Include="..\..\..\src\log.c" />
     <ClCompile Include="..\..\..\src\osdeps.c" />
     <ClCompile Include="..\..\..\src\pdfAnalysis.c" />
     <ClCompile Include="..\..\..\src\pdfObjectsAnalysis.c" />
@@ -90,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\includes\filters.h" />
+    <ClInclude Include="..\..\..\includes\log.h" />
     <ClInclude Include="..\..\..\includes\osdeps.h" />
     <ClInclude Include="..\..\..\includes\pdfAnalyzer.h" />
   </ItemGroup>

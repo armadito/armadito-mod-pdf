@@ -45,6 +45,9 @@
     <ClCompile Include="..\..\..\main.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\log.c">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\includes\filters.h">
@@ -54,6 +57,9 @@
       <Filter>Fichiers d%27en-tête\osdeps</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\includes\pdfAnalyzer.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\includes\log.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
