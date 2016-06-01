@@ -1,96 +1,98 @@
-/*  
-	<ARMADITO PDF ANALYZER is a tool to parse and analyze PDF files in order to detect potentially dangerous contents.>
-    Copyright (C) 2015 by Teclib' 
-	<ufausther@teclib.com>
-    
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+/***
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+Copyright (C) 2015, 2016 Teclib'
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+This file is part of Armadito module PDF.
 
-*/
+Armadito module PDF is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Armadito module PDF is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
+
+***/
+
+
 
 
 #include "pdfAnalyzer.h"
 
 
-
-
-
-// spot Javascript :: returns 1 if found and 0 if not.
+/*
+getJavaScript() ::  Get Javascript content in the document.
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 1 if js content is found
+- 0 if no active content.
+- an error code (<0) on error.
+*/
 int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 	char * js = NULL;
 	char * js_obj_ref = NULL;
 	char * start = NULL;
-	//char * end = NULL;
 	int len = 0;
+	int ret = 0;
 	struct pdfObject * js_obj = NULL;
+	
 
-
-	if( obj->dico == NULL){
-		//printf("No dictionary in object %s\n",obj->reference);
+	if (pdf == NULL || obj == NULL){
+		err_log("getJavaScript :: invalid parameters\n");
 		return -1;
 	}
 
-	start = searchPattern(obj->dico, "/JS" , 3 ,  strlen(obj->dico));
-
-	if(start == NULL){
-		//printf("No Javascript detected in object %s\n",obj->reference);
+	if( obj->dico == NULL){		
 		return 0;
 	}
 
-	//printf("JavaScript Entry in dictionary detected in object %s\n", obj->reference);
-	//printf("dictionary = %s\n", obj->dico);
+	if ((start = searchPattern(obj->dico, "/JS", 3, strlen(obj->dico))) == NULL){
+		return 0;
+	}
+
+	//dbg_log("getJavaScript :: JavaScript Entry in dictionary detected in object %s\n", obj->reference);
+	//dbg_log("getJavaScript :: dictionary = %s\n", obj->dico);
 
 
-	start += 3;
+	start += 3; // 3 => /JS
 
-	// If there is a space
-	//printf("start[0] = %c\n",start[0]);
+	// skip space
 	if(start[0] == ' '){
 		start ++;
 	}
 
+	len = strlen(obj->dico) - (int)(start - obj->dico);	
 
-	//printf("start[0] = %c\n",start[0]);
-
-	len = strlen(obj->dico) - (int)(start - obj->dico);
-	//printf("len = %d\n",len);
-
-	// get an indirect reference
+	// get an indirect reference object containing of js content.
 	js_obj_ref = getIndirectRef(start,len);
-
-
-	//printf("js_obj_ref = %s\n", js_obj_ref);
 
 	// Get javascript
 	if(js_obj_ref != NULL){
 
-
-		js_obj = getPDFObjectByRef(pdf,js_obj_ref);
-
-		if(js_obj == NULL){
-			#ifdef DEBUG
-				printf("Error :: getJavaScript :: Object %s not found\n",js_obj_ref);
-			#endif
+		if ((js_obj = getPDFObjectByRef(pdf, js_obj_ref)) == NULL){
+			err_log("getJavaScript :: Object %s not found\n",js_obj_ref);
+			pdf->errors++;
+			free(js_obj_ref);
 			return -1;
 		}
 
-
 		// Decode object stream
-		if(js_obj->filters != NULL){		
-			decodeObjectStream(js_obj);			
+		if (js_obj->filters != NULL){
+			if (decodeObjectStream(js_obj) < 0){
+				err_log("getJavaScript :: decode object stream failed!\n");
+				// if decoding object stream failed then exit.
+				pdf->errors++;
+				free(js_obj_ref);
+				return -2;
+			}
 		}
-
 
 		if( js_obj->decoded_stream != NULL){
 			js = js_obj->decoded_stream;
@@ -99,92 +101,103 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 		}
 
 
-		if(js != NULL){
-			#ifdef DEBUG
-				printf("Found JS content in object %s\n",js_obj_ref);
-			#endif
-			//printf("Javascript content = %s\n",js);	
-			// TODO Launch analysis on content
+		if (js != NULL){
+			dbg_log("getJavaScript :: Found JS content in object %s\n", js_obj->reference);
+			pdf->testObjAnalysis->active_content++;
+			pdf->testObjAnalysis->js++;
 
-			//printf("js = %s\n",js);
-
+			// Launch js content analysis			
+			if (unknownPatternRepetition(js, strlen(js), pdf, js_obj) < 0){
+				err_log("getJavaScript :: get pattern high repetition failed!\n");
+				return -1;
+			}
 			
-			pdf->testObjAnalysis->active_content ++;
-			pdf->testObjAnalysis->js ++;
-			unknownPatternRepetition(js, strlen(js),pdf,js_obj);
-			findDangerousKeywords(js,pdf,js_obj);
-			
-
-		}else{
-			#ifdef DEBUG
-				printf("Debug :: getJavaScript :: Empty js content in object %s\n",js_obj_ref);
-			#endif
+			if (findDangerousKeywords(js, pdf, js_obj) < 0){
+				err_log("getJavaScript :: get dangerous keywords failed!\n");
+				return -1;
+			}
+		}
+		else{
+			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
 		free(js_obj_ref);
+		js_obj_ref = NULL;
+
 
 	}else{
 
-		// TODO process js script directly
-		//printf("Warning :: getJavaScript :: JS object reference is null\n");
-
+		// get js content in dictionary string.
 		js = getDelimitedStringContent(start,"(",")",len);
-		//printf("JavaScript content = %s :: len = %d\n",js,len);
 
-		if(js != NULL){
-			#ifdef DEBUG
-				printf("Debug :: getJavaScript :: Found JS content in object %s\n",obj->reference);
-			#endif
+		if (js != NULL){
 
-			//printf("js = %s\n",js);
+			dbg_log("getJavaScript :: Found JS content in object %s\n", obj->reference);
 
-			pdf->testObjAnalysis->active_content ++;
-			pdf->testObjAnalysis->js ++;
-			unknownPatternRepetition(js, strlen(js),pdf,obj);
-			findDangerousKeywords(js,pdf,obj);
+			pdf->testObjAnalysis->active_content++;
+			pdf->testObjAnalysis->js++;
+
+			// Launch js content analysis
+			if (unknownPatternRepetition(js, strlen(js), pdf, obj) < 0){
+				err_log("getJavaScript :: get pattern high repetition failed!\n");
+				return -1;
+			}
+			
+			if (findDangerousKeywords(js, pdf, obj) < 0){
+				err_log("getJavaScript :: get dangerous keywords failed!\n");
+				return -1;
+			}
 
 		}
-
-
-
+		else{
+			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
+		}
+	
 	}
 
-	#ifdef DEBUG
-		printf("\n\n");
-	#endif
 
-	return 1;
+	return ret;
 
 }
 
-// This function get the JavaScript content in XFA form description (xml). // and analyze it
-// return NULL if there is no JS content 
-int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
-	//TODO
 
+/*
+getJSContentInXFA() :: Get and analyze JavaScript content in XFA form description (xml).
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+- struct pdfObject* obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+// TODO :: getJSContentInXFA :: Check the keyword javascript
+*/
+int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
+	
+	
+	int len = 0;
+	int rest = 0;
+	int found = 0;
 	char * start = NULL;
 	char * end = NULL;
 	char * js_content = NULL;
-	int len = 0;
-	int rest = 0;
-	//int rest_size = 0;
-	char * script_balise = NULL;
-	//char * script_balise_end = NULL;
+	char * script_balise = NULL;	
 	char * tmp = NULL;
-	int found  = 0;
+	
 
-
-
-	// get the 
+	if (stream == NULL || size <= 0 || obj == NULL || pdf == NULL){
+		err_log("getJSContentInXFA :: invalid parameter\n");
+		return -1;
+	}
 
 	end = stream;
 	rest = size;
 
 	while((start = searchPattern(end,"<script",7,rest)) != NULL && rest > 0){
 
-		#ifdef DEBUG
-			printf("Debug :: getJSContentInXFA :: javascript content found in %s\n",obj->reference);
-		#endif
+		
+		dbg_log("getJSContentInXFA :: javascript content found in %s\n",obj->reference);
+		
 
 		rest = (int)(start-stream);
 		rest = size - rest;
@@ -198,9 +211,7 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 		script_balise = (char*)calloc(len+1,sizeof(char));
 		script_balise[len]= '\0';
 		memcpy(script_balise,start,len);
-		//printf("script_balise = %s\n",script_balise);
-
-		//TODO :: Check the keyword javascript 
+		//dbg_log("getJSContentInXFA :: script_balise = %s\n",script_balise);
 
 		// save the script start ptr
 		tmp = start;
@@ -225,9 +236,6 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 			len ++;
 		}
 
-		//printf("end0 = %c\n",end[0] );
-
-
 		len = (int)(end - tmp);
 		len ++;
 
@@ -237,14 +245,19 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		memcpy(js_content,tmp,len);
 
-		//printf("Debug :: getJSContentInXFA :: js_content = %s\n",js_content);
+		//dbg_log("getJSContentInXFA :: js_content = %s\n",js_content);
 		found = 1;
+		
+		// Launch js content analysis
+		if (unknownPatternRepetition(js_content, len, pdf, obj) < 0){
+			err_log("getJSContentInXFA :: get pattern high repetition failed!\n");
+			return -1;
+		}
 
-		// Analyze the js content
-		unknownPatternRepetition(js_content,len,pdf,obj);
-		findDangerousKeywords(js_content,pdf,obj);
-
-
+		if (findDangerousKeywords(js_content, pdf, obj) < 0){
+			err_log("getJSContentInXFA :: get dangerous keywords failed!\n");
+			return -1;
+		}
 	
 		rest = (int)(start-stream);
 		rest = size - rest;
@@ -255,93 +268,75 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 		script_balise = NULL;
 		js_content  = NULL;
 
-		//printf("\n\n");
-
-
 	}
-
-	
-	/*
-	if(start == NULL){
-		//printf("Debug :: getJSContentInXFA No js content script found in xfa xml :: %s\n",obj->reference );
-		//printf("Debug :: getJSContentInXFA :: stream = %s\n",stream);
-
-		return NULL;
-	}*/
 
 	if(found == 1){
 		pdf->testObjAnalysis->js ++;
 	}
-
-	
-
-	//printf("start = %s\n",start);
-
-	
 
 
 	return found;
 }
 
 
-// get Object
+/*
+getXFA() ::  Get XFA form in the document.
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+- struct pdfObject* obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+*/
 int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 	char * xfa = NULL;
 	char * xfa_obj_ref = NULL;
 	char * start = NULL;
 	char * end = NULL;
-	char * obj_list = NULL;
-	//char * stream = NULL;
+	char * obj_list = NULL;	
 	int len = 0;
 	int len2 = 0;
+	int ret = 0;
 	struct pdfObject * xfa_obj = NULL;
 
-
-	//printf("Analysing object :: %s\n",obj->reference);
+	if (pdf == NULL || obj == NULL){
+		err_log("getXFA :: invalid parameters\n");
+		return -1;
+	}
 
 	if( obj->dico == NULL ){
-		//printf("No dictionary in object %s\n",obj->reference);
-		return -1;
+		//dbg_log("getXFA :: No dictionary in object %s\n",obj->reference);
+		return 0;
 	}
 
 	start = searchPattern(obj->dico, "/XFA" , 4 , strlen(obj->dico));
 
-	/*if( strncmp(obj->reference,"5 0 obj",7) == 0 && strncmp(obj->reference,"5 0 obj",strlen(obj->reference)) == 0 ){
-		printf("dico = %s\n",obj->dico);
-	}*/
-
 	if(start == NULL){
-		//printf("No XFA entry detected in object dictionary %s\n",obj->reference);
+		//dbg_log("getXFA :: No XFA entry detected in object dictionary %s\n",obj->reference);
 		return 0;
 	}
 
-	//printf("XFA Entry in dictionary detected in object %s\n", obj->reference);
-	//printf("dictionary = %s\n", obj->dico);
+	dbg_log("getXFA :: XFA Entry in dictionary detected in object %s\n", obj->reference);
+	//dbg_log("getXFA :: dictionary = %s\n", obj->dico);
 
 	start += 4;
 
 	// If there is a space // todo put a while
-	//printf("start[0] = %c\n",start[0]);
 	if(start[0] == ' '){
 		start ++;
 	}
 
-	//printf("start[0] = %c\n",start[0]);
-
 	len = strlen(obj->dico) - (int)(start - obj->dico);
-	//printf("len = %d\n",len);
-
-
+	
 	// Get xfa object references
 
 	// If its a list get the content
 	if(start[0] == '['){
 
 		obj_list =  getDelimitedStringContent(start,"[", "]", len); 
-		//printf("obj_list = %s\n",obj_list);
-
-
+		
 		end = obj_list;
 		len2 = strlen(obj_list);
 
@@ -349,7 +344,7 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		// get XFA object reference in array ::
 		while( (xfa_obj_ref = getIndirectRefInString(end, len2)) ){
 
-			//printf("xfa_obj_ref = %s\n",xfa_obj_ref);
+			//dbg_log("getXFA :: xfa_obj_ref = %s\n",xfa_obj_ref);
 
 			end = searchPattern(end, xfa_obj_ref , 4 , len2); // change value 4
 			end += strlen(xfa_obj_ref) - 2;
@@ -359,17 +354,19 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 			// get xfa object 
 			xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
-
-			if(xfa_obj == NULL){
-				#ifdef DEBUG
-					printf("Error :: getXFA :: Object %s not found\n",xfa_obj_ref);
-				#endif
+			if(xfa_obj == NULL){				
+				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);				
 				continue;
 			}
 
-			// Decode object stream			
-			if(xfa_obj->filters != NULL){		
-				decodeObjectStream(xfa_obj);			
+			// Decode object stream
+			if (xfa_obj->filters != NULL){
+				if (decodeObjectStream(xfa_obj) < 0){
+					err_log("getXFA :: decode object stream failed!\n");
+					// if decoding object stream failed then continue.
+					pdf->errors++;					
+					continue;
+				}
 			}
 		
 
@@ -381,22 +378,27 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			}
 
 			if(xfa != NULL){
-				//printf("XFA content = %s\n",xfa);
 
-				getJSContentInXFA(xfa,strlen(xfa),xfa_obj,pdf);
+				// dbg_log("getXFA :: xfa content = %s\n",xfa);
 
-				#ifdef DEBUG
-					printf("Found XFA content in object %s\n",xfa_obj_ref);
-				#endif
-				// Analyze xfa content
-				//unknownPatternRepetition(xfa, strlen(xfa),pdf, xfa_obj);
-				//findDangerousKeywords(xfa,pdf,xfa_obj);
 				pdf->testObjAnalysis->active_content ++;
 				pdf->testObjAnalysis->xfa ++;
+				ret++;
+
+				if (getJSContentInXFA(xfa, strlen(xfa), xfa_obj, pdf) < 0){
+					err_log("getXFA :: get js content in xfa failed!\n");
+				}
+
+				dbg_log("getXFA :: Found XFA content in object %s\n",xfa_obj_ref);
+				
+				// Analyze xfa content 
+				/* This part is commented because only js content in XFA form will be analyzed.*/
+				//unknownPatternRepetition(xfa, strlen(xfa),pdf, xfa_obj);
+				//findDangerousKeywords(xfa,pdf,xfa_obj);
+				
 			}else{
-				#ifdef DEBUG
-					printf("Warning :: Empty XFA content in object %s\n",xfa_obj_ref);
-				#endif
+				
+				warn_log("getXFA :: Empty XFA content in object %s\n",xfa_obj_ref);				
 			}
 
 
@@ -409,28 +411,28 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 
 		xfa_obj_ref = getIndirectRefInString(start, len2);
-
 		if(xfa_obj_ref == NULL){
-			#ifdef DEBUG
-				printf("Error :: getXFA :: get xfa object indirect reference failed\n");
-			#endif
+			err_log("getXFA :: get xfa object indirect reference failed\n");			
 			return -1;
 		}
 
-		//printf("xfa_obj_ref = %s\n",xfa_obj_ref);
+		//dbg_log("getXFA :: xfa_obj_ref = %s\n",xfa_obj_ref);
 
 		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
-
 		if(xfa_obj == NULL){
-			#ifdef DEBUG
-				printf("Error :: getXFA :: Object %s not found\n",xfa_obj_ref);
-			#endif
+			err_log("getXFA :: Object %s not found\n",xfa_obj_ref);
 			return -1;
 		}
 
-		// Decode object stream			
-		if(xfa_obj->filters != NULL){		
-			decodeObjectStream(xfa_obj);			
+		// Decode object stream
+		if (xfa_obj->filters != NULL){
+			if (decodeObjectStream(xfa_obj) < 0){
+				err_log("getXFA :: decode object stream failed!\n");
+				// if decoding object stream failed then continue.
+				pdf->errors++;
+				free(xfa_obj_ref);
+				return -1;
+			}
 		}
 
 		// get xfa content
@@ -441,53 +443,62 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		}
 
 		if(xfa != NULL){
-			#ifdef DEBUG
-				printf("Found XFA content in object %s\n",xfa_obj_ref);
-			#endif
-			//printf("XFA content = %s\n",xfa);	
 
-			getJSContentInXFA(xfa,strlen(xfa),xfa_obj,pdf);
-			// TODO Analyze xfa content
+			dbg_log("Found XFA content in object %s\n",xfa_obj_ref);
+			ret++;
+			//dbg_log("getXFA :: xfa content = %s\n",xfa);
+
+			pdf->testObjAnalysis->active_content++;
+			pdf->testObjAnalysis->xfa++;
+			
+			if (getJSContentInXFA(xfa, strlen(xfa), xfa_obj, pdf) < 0){
+				err_log("getXFA :: get js content in xfa failed!\n");
+			}
+
+			// Analyze xfa content
+			/* This part is commented because only js content in XFA form will be analyzed.*/
 			//unknownPatternRepetition(xfa, strlen(xfa), pdf, xfa_obj);
 			//findDangerousKeywords(xfa,pdf,xfa_obj);
-			pdf->testObjAnalysis->active_content ++;
-			pdf->testObjAnalysis->xfa ++;
+			
 		}else{
-			#ifdef DEBUG
-				printf("Warning :: Empty XFA content in object %s\n",xfa_obj_ref);
-			#endif
+			warn_log("getXFA :: Empty XFA content in object %s\n",xfa_obj_ref);			
 		}
 
 		free(xfa_obj_ref);
+		xfa_obj_ref = NULL;
 
 	}
-
 	
-	#ifdef DEBUG
-		printf("\n\n");
-	#endif
-	
-	return 1;
+	return ret;
 
 }
 
 
-
-// This function get Embedded file content and analyze it ; returns 0 ther is no embedded file
+/*
+getEmbeddedFile() ::  Get Embedded file content and analyze it.
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+- struct pdfObject* obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+*/
 int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 	char * ef = NULL;
 	struct pdfObject * ef_obj = NULL;
 	char * ef_obj_ref = NULL;
 	char * start = NULL;
-	//char * isDico = NULL;
-	//char * end = NULL;
 	int len = 0;
-	//int ef_len 
+	int ret = 0;
 
-	//printf("Analysing object :: %s\n",obj->reference);
-
-	// verif params
+	//dbg_log("getEmbeddedFile :: Analysing object :: %s\n",obj->reference);
+	if (pdf == NULL || obj == NULL){
+		err_log("getEmbeddedFile :: invalid parameter\n");
+		return -1;
+	}
+	
 	if(obj->dico == NULL || obj->type == NULL){
 		return 0;
 	}
@@ -497,9 +508,15 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	if( strncmp(obj->type,"/EmbeddedFile",13) == 0){
 
 
-		// Decode object stream			
-		if(obj->filters != NULL){		
-			decodeObjectStream(obj);			
+		// Decode object stream	
+		if (obj->filters != NULL){
+
+			if (decodeObjectStream(obj) < 0){
+				err_log("getEmbeddedFile :: decode object stream failed!\n");
+				// if decoding object stream failed then exit.
+				pdf->errors++;
+				return -2;
+			}
 		}
 
 		if(obj->decoded_stream != NULL ){
@@ -509,18 +526,14 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 		}
 
 		if(ef != NULL){
-			#ifdef DEBUG
-				printf("Found EmbeddedFile object %s\n",obj->reference);
-			#endif
-			//printf("ef content = %s\n",ef);
+			dbg_log("getEmbeddedFile :: Found EmbeddedFile object %s\n",obj->reference);			
+			//dbg_log("getEmbeddedFile :: ef content = %s\n",ef);
 			// TODO Process to ef stream content analysis.
 			//unknownPatternRepetition(ef, strlen(xfa), pdf, xfa_obj);
 			//findDangerousKeywords(xfa,pdf,obj);
 			
 		}else{
-			#ifdef DEBUG
-				printf("Warning :: Empty EF stream content in object %s\n",obj->reference);
-			#endif
+			warn_log("getEmbeddedFile :: Empty EF stream content in object %s\n",obj->reference);			
 		}
 
 
@@ -534,13 +547,12 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 		start = searchPattern(obj->dico, "/EF" , 3 , strlen(obj->dico));
 
 		if(start == NULL){
-			//printf("No EF detected in object %s\n",obj->reference);
+			//dbg_log("getEmbeddedFile :: No EF detected in object %s\n",obj->reference);
 			return 0;
 		}
 
-		#ifdef DEBUG
-			printf("Found EmbeddedFile in file specification %s\n",obj->reference);
-		#endif
+		dbg_log("getEmbeddedFile :: Found EmbeddedFile in file specification %s\n",obj->reference);
+		
 
 		start += 3;
 
@@ -551,11 +563,6 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 
 		// The case <</EF <</F 3 0 R>>
-		//isDico = searchPattern
-		#ifdef DEBUG
-			printf("start[0] = %c\n",start[0]);
-		#endif
-
 		if(start[0] == '<' && start[1] == '<'){
 
 			len = (int)(start - obj->dico);
@@ -564,37 +571,30 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			ef_obj_ref = obj->reference;
 			ef_obj = obj;
 
-
-
 		}else{
 
 			len = (int)(start - obj->dico);
 			len = strlen(obj->dico) - len;
 			// get indirect ref of the 
 			ef_obj_ref = getIndirectRef(start,len);
-			//printf("ef_obj_ref = %s\n",ef_obj_ref);
+			//dbg_log("getEmbeddedFile :: ef_obj_ref = %s\n",ef_obj_ref);
 			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
 
 		}
 
 
-
-		
-
 		if(ef_obj != NULL){
 
 
 			if(ef_obj->dico == NULL){
-				#ifdef DEBUG
-					printf("Warning :: No dictionary found in object %s\n",ef_obj_ref);
-				#endif
+				warn_log("getEmbeddedFile :: No dictionary found in object %s\n",ef_obj_ref);				
 				return -1;
 			}
 			// Get the /F entry in the dico
 			start = searchPattern(ef_obj->dico, "/F" , 2 , strlen(ef_obj->dico));
 
 			if(start == NULL){
-				//printf("No EF detected in object %s\n",obj->reference);
+				//dbg_log("No EF detected in object %s\n",obj->reference);
 				return 0;
 			}
 
@@ -609,18 +609,20 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			len = strlen(ef_obj->dico) - len;
 
 			ef_obj_ref = getIndirectRef(start,len);
-			#ifdef DEBUG
-				printf("EF_obj_ref = %s\n",ef_obj_ref);
-			#endif
-
+			dbg_log("getEmbeddedFile :: EF_obj_ref = %s\n",ef_obj_ref);
 
 			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
 
 			if(ef_obj != NULL){
 
-				// Decode object stream			
-				if(ef_obj->filters != NULL){		
-					decodeObjectStream(ef_obj);			
+				// Decode object stream
+				if (ef_obj->filters != NULL){
+					if (decodeObjectStream(ef_obj) < 0){
+						err_log("getEmbeddedFile :: decode object stream failed!\n");
+						// if decoding object stream failed then exit.
+						pdf->errors++;
+						return -2;
+					}
 				}
 
 				if(ef_obj->decoded_stream != NULL ){
@@ -630,69 +632,65 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 				}
 
 				if( ef != NULL){
-					#ifdef DEBUG
-						printf("Found EmbeddedFile object %s\n",ef_obj_ref);
-					#endif
-					//printf("ef content = %s\n",ef);
+					dbg_log("getEmbeddedFile :: Found EmbeddedFile object %s\n",ef_obj_ref);					
+					dbg_log("getEmbeddedFile :: ef content = %s\n",ef);
 					// TODO Process to ef stream content analysis.
 				}else{
-					#ifdef DEBUG
-						printf("Warning :: Empty EF stream content in object %s\n",obj->reference);
-					#endif
+					warn_log("getEmbeddedFile :: Empty EF stream content in object %s\n",obj->reference);					
 				}
 
 			}else{
-				#ifdef DEBUG
-					printf("Warning :: getEmbeddedFile :: object not found %s\n",ef_obj_ref);
-				#endif
+				warn_log("getEmbeddedFile :: object not found %s\n",ef_obj_ref);				
 			}
 
 
 
 		}else{
-			#ifdef DEBUG
-				printf("Warning :: getEmbeddedFile :: object not found %s\n",ef_obj_ref);
-			#endif
+			warn_log("getEmbeddedFile :: object not found %s\n",ef_obj_ref);			
 		}
 		
 
 	}
 
-	/*if(ef != NULL){
-		ptr2_len > pattern_size
-	}*/
-
 	if(ef != NULL){
 
 		pdf->testObjAnalysis->active_content ++;
 		pdf->testObjAnalysis->ef ++;
-		// Analysi
+
+		// TODO :: launch ef content analysis.
 	}
 
-
-
-	return 1;
+	return ret;
 }
 
 
-// This function get the Info obejct
+/*
+getInfoObject() ::  Get the Info object
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+*/
 int getInfoObject(struct pdfDocument * pdf){
 
+	int len = 0;
+	int res = 0;
 	char * info = NULL;
 	char * info_ref = 0;
-	struct pdfObject * info_obj = NULL;
 	char * start = NULL;
-	//char * end = NULL;
-	int len = 0;
+	struct pdfObject * info_obj = NULL;
 	struct pdfTrailer* trailer = NULL;
-	int res = 0;
-
+	
+	if (pdf == NULL){
+		err_log("getInfoObject :: invalid parameter\n");
+		return -1;
+	}
 
 	// Get the trailer
-	if(pdf->trailers == NULL){
-		#ifdef DEBUG
-			printf("Warning :: getInfoObject :: No trailer found !");
-		#endif
+	if(pdf->trailers == NULL){		
+		warn_log("getInfoObject :: No trailer found in the document!\n");		
 		return -1;
 	}
 
@@ -701,13 +699,8 @@ int getInfoObject(struct pdfDocument * pdf){
 	while(trailer != NULL){
 
 
-		//printf("trailer content = %s\n",trailer->content );
-		//printf("trailer size = %d\n",strlen(trailer->content));
-
 		if(trailer->content == NULL){
-			#ifdef DEBUG
-				printf("Error :: getInfoObject :: Empty trailer content\n");
-			#endif
+			err_log("getInfoObject :: Empty trailer content\n");			
 			trailer = trailer->next;
 			continue;
 		}
@@ -715,9 +708,7 @@ int getInfoObject(struct pdfDocument * pdf){
 		start = searchPattern(trailer->content, "/Info" , 5 , strlen(trailer->content));
 
 		if(start == NULL){
-			#ifdef DEBUG
-				printf("No /Info entry found in the trailer dictionary\n");
-			#endif
+			dbg_log("No /Info entry found in the trailer dictionary\n");			
 			return 0;
 		}
 
@@ -729,55 +720,49 @@ int getInfoObject(struct pdfDocument * pdf){
 
 		info_ref = getIndirectRefInString(start,len);
 
-		#ifdef DEBUG
-			printf("info_ref =  %s\n", info_ref);
-		#endif
+		//dbg_log("getInfoObject :: info_ref =  %s\n", info_ref);		
 
 		info_obj = getPDFObjectByRef(pdf, info_ref);
 
 		if(info_obj == NULL){
-			#ifdef DEBUG
-				printf("Warning :: getInfoObject :: Info object not found %s\n", info_ref);
-			#endif
+			warn_log("getInfoObject :: Info object not found %s\n", info_ref);			
 			return 0;
 		}
 
 		if(info_obj->dico != NULL){
 			info = info_obj->dico;
-			#ifdef DEBUG
-				printf("info = %s\n",info);
-			#endif
+			// dbg_log("getInfoObject :: info = %s\n",info);			
 
-			// TODO analyze the content
+			// analyze the content
 			res = unknownPatternRepetition(info, strlen(info), pdf, info_obj);
-			if(res > 0){
-				#ifdef DEBUG
-					printf("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);
-				#endif
-				pdf->testObjAnalysis->dangerous_keyword_high ++; // TODO find another variable for this test :: MALICIOUS_INFO_OBJ
+			if (res < 0){
+				err_log("getJavaScript :: get pattern high repetition failed!\n");
+				continue;
 			}
 
-			res = findDangerousKeywords(info,pdf,info_obj);
+			if (res > 0){
+				warn_log("getInfoObject :: found potentially malicious /Info object %s\n", info_ref);
+				pdf->testObjAnalysis->dangerous_keyword_high++; // TODO set another variable for this test :: MALICIOUS_INFO_OBJ
+			}
+
+			res = findDangerousKeywords(info, pdf, info_obj);
+			if(res < 0){
+				err_log("getJavaScript :: get dangerous keywords failed!\n");
+				continue;
+			}
+
 			if(res > 0){
-				#ifdef DEBUG
-					printf("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);
-				#endif
+				warn_log("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);				
 				pdf->testObjAnalysis->dangerous_keyword_high ++;
 			}
 
 		}else{
-			#ifdef DEBUG
-				printf("Warning :: getInfoObject :: Empty dictionary in info object :: %s\n",info_ref);
-			#endif
+			warn_log("Warning :: getInfoObject :: Empty dictionary in info object :: %s\n",info_ref);			
 		}
 
 
 		trailer = trailer->next;
 		free(info_ref);
-
-		#ifdef DEBUG
-		printf("\n\n");
-		#endif
 
 	}
 
@@ -785,17 +770,23 @@ int getInfoObject(struct pdfDocument * pdf){
 }
 
 
-
-// This function detects potentially malicious URI.
+/*
+analyzeURI() :: detects potentially malicious URI.
+parameters:
+- char * uri (uri to analyze).
+- struct pdfDocument * pdf (pdf document pointer)
+- struct pdfObject* obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+// TODO :: analyzeURI :: Path traveral detection.
+// TODO :: analyzeURI :: Malicious uri detection.
+*/
 int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
-	#ifdef DEBUG
-		printf("\tTODO... URI analysis :: %s\n", uri);
-	#endif
 	
-	// Path traveral detection.
-	// Malicious uri detection
-
+	//dbg_log("\tTODO... URI analysis :: %s\n", uri);
 	if(pdf == NULL || obj == NULL)
 		return -1;
 
@@ -804,8 +795,16 @@ int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
-
-//This function get the URI defined in the object and analyze it
+/*
+getEmbeddedFile() ::  Get the URI defined in the object and analyze it
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+- struct pdfObject* obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- an error code (<0) on error.
+*/
 int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 
 
@@ -814,13 +813,8 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 	char * uri = NULL;
 	int len = 0;
 
-
-
-
 	if(obj == NULL || pdf == NULL){
-		#ifdef DEBUG
-			printf("Error :: getURI :: Bad (null) parameters\n");
-		#endif
+		err_log("getURI :: invalid parameter\n");		
 		return -1;
 	}
 
@@ -829,8 +823,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 	}
 
 	// get the URI entry in the dico
-	//start = searchPattern(obj->dico,"/URI",4,strlen(obj->dico));
-
 	end= obj->dico;
 	len = strlen(obj->dico);
 
@@ -843,7 +835,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 			start ++;
 		}
 
-		//printf("start0 = %c\n",start[0]);
 		end = start;
 
 		if(start[0] != '('){
@@ -855,7 +846,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		len = strlen(obj->dico) - len;
 
 		uri = getDelimitedStringContent(start,"(",")", len);
-		//printf("uri = %s\n",uri);
 
 		// Analyze uri
 		if (uri != NULL) {
@@ -871,53 +861,54 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
-// Get Suspicious actions 
+/*
+getActions() ::  Get Suspicious actions in the document.
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 1 if dangerous content is found
+- 0 if no active content.
+- an error code (<0) on error.
+// TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
+*/
 int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
 
-
 	char * start = NULL;
-	//char * end = NULL;
-	//char * openAction_dico = NULL;
-	//int len = 0;
 	int dico_len = 0;
-
 
 	// Check parameters
 	if(pdf == NULL || obj == NULL){
+		err_log("getActions :: invalid parameters!\n");
 		return -1;
 	}
 
 	if(obj->dico == NULL){
-		return -1;
+		return 0;
 	}
 
 	dico_len = strlen(obj->dico);
 
-
-	// get OpenAction dictionary
-	//start = searchPattern(obj->dico,);
-
-
 	// get Launch actions
 	start = searchPattern(obj->dico,"/Launch",7,dico_len);
 	if(start != NULL){
-
-		#ifdef DEBUG
-			printf("Warning :: getActions :: Found /Launch action in object %s\n",obj->reference);
-		#endif
-
+		warn_log("getActions :: Found /Launch action in object %s\n",obj->reference);
 		pdf->testObjAnalysis->dangerous_keyword_high ++;
+		return 1;
 	}
-
-
-	// get Actions :: Launch - GoToE - GoToR - 
 
 	return 0;
 }
 
 
-
-// This function remove whites space in a given stream
+/*
+removeWhiteSpace() ::  Remove all whites spaces in a given stream
+parameters:
+- char * stream
+- int size.
+returns: (char *)
+- the new string without white spaces on success.
+- NULL on error.
+*/
 char * removeWhiteSpace(char * stream, int size){
 
 	char * out = NULL;
@@ -928,18 +919,19 @@ char * removeWhiteSpace(char * stream, int size){
 	int len2 = 0;
 	int count = 0;
 	int i = 0;
-	// count white spaces
-
 	
 
+	if (stream == NULL || size <= 0){
+		err_log("removeWhiteSpace :: invalid parameters\n");
+		return NULL;
+	}
+
+	// count white spaces
 	for(i = 0; i<size; i++){
 		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == '\n' || stream[i] == ' ' ){
 			count ++;
 		}
-
-	}
-
-	//printf("There are %d white space in this stream\n",count);
+	}	
 
 	// calc the new len
 	len = size - count;
@@ -947,15 +939,10 @@ char * removeWhiteSpace(char * stream, int size){
 	out = (char*)calloc(len+1,sizeof(char));
 	out[len] = '\0';
 
-	
 
 	start = stream;
 	end = start;
 	len = 0;
-
-	//printf("end0 = %c\n",end[0]);
-
-	
 	
 	while( len < (size - count) ){
 
@@ -980,62 +967,52 @@ char * removeWhiteSpace(char * stream, int size){
 		end = start;
 	}
 
-	
-
-	//printf("out = %s\n",out);
 	return out;
 }
 
 
-
-
-// This function detects when a string (unknown) is repeted in the stream with a high frequency.
-// TODO remove white spaces to improve results.
+/*
+unknownPatternRepetition() ::  Detect when a string (unknown) is repeated in the stream with a high frequency.
+parameters:
+- 
+returns: (int)
+- 1 if found
+- 0 if not found
+- error code (<0) on error.
+*/
 int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, struct pdfObject * obj){
 
 	//int ret = 0;
-	char * pattern = NULL;
-	int pattern_size = 5;
-	//char * start = NULL;
-	//char * end = NULL;
-	//char * len = 0;
-	int rep = 0;
-	int lim_rep = 150;
-	//int off = 0;
-	char * ptr = NULL;
-	char * ptr_bis = NULL;
 	int ptr_len = 0;
 	int ptr2_len = 0;
+	int pattern_size = 5;
+	int rep = 0;
+	int lim_rep = 150;
+	int time_exceeded = 6;
+	char * pattern = NULL;
+	char * ptr = NULL;
+	char * ptr_bis = NULL;	
 	char * tmp = NULL;
 	char * whithout_space = NULL;
 	time_t start_time, end_time;
 	double time_elapsed = 0;
-	int time_exceeded = 6;
 
-	/*
-	if(pdf != NULL){
-		return 0;
-	}*/
 
-	//printf("Debug :: Stream = %s\n",stream);
+	if(pdf == NULL || obj == NULL || stream == NULL || size <= 0 ){
+		err_log("unknownPatternRepetition :: invalid parameter\n");
+		return -1;
+	}
 
 	time(&start_time);
-	//char * test = "Bonjour je suis une stream de test";
 
-
-	//printf("\n\nDebug :: unknownPatternRepetition \n");
-
-	// remove white space in stream ? 
-	
-	//whithout_space =  removeWhiteSpace(test,strlen(test));
-
-	//printf("whithout_space = %s\n",whithout_space);
-
-	
+	// remove white space.
 	whithout_space =  removeWhiteSpace(stream,size);
+	if (whithout_space == NULL){
+		err_log("unknownPatternRepetition :: removing spaces failed !!\n");
+		return -1;
+	}
 	
-
-	//printf("whithout_space = %s\n",ptr);
+	//dbg_log("unknownPatternRepetition :: whithout_space = %s\n",without_space);
 	
 	ptr = whithout_space;
 	ptr_len = strlen(whithout_space);
@@ -1044,30 +1021,11 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	ptr2_len = strlen(whithout_space);
 
 
-	/*
-	ptr = stream;
-	ptr_len = strlen(stream);
-
-	ptr_bis = stream;
-	ptr2_len = strlen(stream);
-	*/
-
-
-	/*
-	printf("ptr[0] = %c\n", ptr[0] );
-	printf("ptr[1] = %c\n", ptr[1] );
-	printf("ptr[2] = %c\n", ptr[2] );
-	printf("ptr[3] = %c\n", ptr[3] );
-	printf("ptr[4] = %c\n", ptr[4] );
-	*/
-
-
-
 	// get pattern
 	while( ptr_len > pattern_size && (pattern = getPattern(ptr,pattern_size,ptr_len)) != NULL ){
 
 		rep = 0;
-		//printf("pattern = %s :: ptr_len = %d:: ptr = %d\n",pattern,ptr_len, ptr);
+		//dbg_log("unknownPatternRepetition ::pattern = %s :: ptr_len = %d:: ptr = %d\n",pattern,ptr_len, ptr);
 		ptr ++;
 		ptr_len --;
 
@@ -1079,20 +1037,13 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 		while( ptr2_len > pattern_size && (tmp = getPattern(ptr_bis,pattern_size,ptr2_len)) != NULL){
 
-			//printf("tmp = %s\n",tmp);
-
 			if(strncmp(pattern,tmp,pattern_size) == 0){
 				rep ++;
 			}
 
-			
 			if(rep > lim_rep){
-				#ifdef DEBUG
-					printf("Warning :: unknownPatternRepetition :: Found pattern repetition in object %s\n",obj->reference);
-				#endif
-				#ifdef DEBUG
-					printf("pattern = %s :: rep = %d--\n\n",pattern,rep);
-				#endif
+				
+				warn_log("unknownPatternRepetition :: Found pattern repetition in object %s :: pattern = %s\n",obj->reference,pattern);							
 				pdf->testObjAnalysis->pattern_high_repetition ++;
 				free(pattern);
 				free(tmp);
@@ -1106,12 +1057,12 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 
 			time_elapsed = difftime(end_time,start_time);
 			
-			//printf("\ntmp = %s, %.2lf sec \n",tmp,time_elapsed);
+			//dbg_log("\n unknownPatternRepetition :: tmp = %s, %.2lf sec \n",tmp,time_elapsed);
 
 			if(time_elapsed > time_exceeded){
-				#ifdef DEBUG
-					printf("Warning :: unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference );
-				#endif
+				
+				warn_log("unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference);
+				
 				pdf->testObjAnalysis->time_exceeded++;
 				free(whithout_space);
 				free(tmp);
@@ -1126,27 +1077,14 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 			
 		}
 
-		
-
-		//printf("heyhey :: %d :: %d :: %d :: \n",ptr2_len,pattern_size,rep, );
-
-		/*
-		if(rep > 100){
-			return 100;
-		}
-		*/
 
 		time(&end_time);
 
 		time_elapsed = difftime(end_time,start_time);
 
-		//printf("heyhoo :: %d\n",time_elapsed);
-		//printf("\nExecution time : %.2lf sec \n",time_elapsed);
+		if (time_elapsed > time_exceeded){
+			warn_log("unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n", obj->reference);
 
-		if(time_elapsed > 5){
-			#ifdef DEBUG
-				printf("Warning :: unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference );
-			#endif
 			pdf->testObjAnalysis->time_exceeded++;
 			free(whithout_space);
 			free(pattern);
@@ -1165,9 +1103,17 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 }
 
 
-
-
-// Find a potentially dangerous pattern in the given stream; return High = 3 ; Medium = 2 ; Low = 1 ; none = 0
+/*
+findDangerousKeywords() ::  Find a potentially dangerous pattern in the given stream; return High = 3 ; Medium = 2 ; Low = 1 ; none = 0
+parameters:
+- char * stream
+- struct pdfDocument * pdf
+- struct pdfObject * obj
+returns: (int)
+- 1 if found
+- 0 if not found
+- error code (<0) on error.
+*/
 int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfObject * obj){
 
 	int i = 0;
@@ -1184,23 +1130,15 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	int ret = 0;
 
 
-	//printf(":: Searching Dangerous Keywords in %s\n",obj->reference);
-
-	//printf("\n\n content to analyze = %s\n",stream);
-
-	//stream = "hackbonjour";
-
-	//printf("Test :: %s\n",high_keywords[i]);
+	if (pdf == NULL || obj == NULL || stream == NULL){
+		err_log("findDangerousKeywords :: invalid parameters\n");
+		return -1;
+	}
 
 	for(i = 0; i< num_high ; i++){
 
-		//printf("Test :: %s\n",high_keywords[i]);
-		//if(strnstr(stream,high_keywords[i],strlen(high_keywords[i])) != NULL ){
-		
-		if(searchPattern(stream,high_keywords[i],strlen(high_keywords[i]),strlen(stream)) != NULL ){
-			#ifdef DEBUG
-				printf("Warning :: findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);
-			#endif
+		if(searchPattern(stream,high_keywords[i],strlen(high_keywords[i]),strlen(stream)) != NULL ){			
+			warn_log("findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);			
 			pdf->testObjAnalysis->dangerous_keyword_high ++;
 			ret = 3;
 		}
@@ -1216,11 +1154,9 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 	while( len >= 6 && (start = getUnicodeInString(start,len)) != NULL && unicode_count < 50 ){
 
-
 		memcpy(unicode, start, 6);
-		#ifdef DEBUG
-			printf("Warning :: findDangerousKeywords :: Found unicode string %s in object %s\n",unicode,obj->reference);
-		#endif
+
+		warn_log("findDangerousKeywords :: Found unicode string %s in object %s\n", unicode, obj->reference);		
 
 		unicode_count ++ ;
 		start ++;
@@ -1228,32 +1164,20 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 		len = (int)(start - stream);
 		len = strlen(stream) - len;
 
-
-		//printf("len = %d\n",len);
-
-
-
 	}
 
 	if(unicode_count > 10){
-		#ifdef DEBUG
-			printf("Warning :: findDangerousKeywords :: Unicode string found in object %s\n", obj->reference);
-		#endif
+
+		warn_log("findDangerousKeywords :: Unicode string found in object %s\n", obj->reference);		
 		pdf->testObjAnalysis->dangerous_keyword_high ++;
 		ret = 3;
 	}
-	
-
-	//printf("stream = %s\n",stream);
 
 	for(i = 0; i< num_medium ; i++){
 
-		//printf("Test :: %s\n",medium_keywords[i]);
-		//if(strnstr(stream,medium_keywords[i],strlen(medium_keywords[i])) != NULL ){
 		if(  searchPattern(stream,medium_keywords[i],strlen(medium_keywords[i]),strlen(stream)) != NULL ){
-			#ifdef DEBUG
-				printf("Warning :: findDangerousKeywords :: Medium dangerous keyword (%s) found in object %s\n",medium_keywords[i], obj->reference);
-			#endif
+
+			warn_log("findDangerousKeywords :: Medium dangerous keyword (%s) found in object %s\n", medium_keywords[i], obj->reference);			
 			pdf->testObjAnalysis->dangerous_keyword_medium ++;			
 			ret=  2;
 		}
@@ -1263,12 +1187,9 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 	for(i = 0; i< num_low ; i++){
 
-		//printf("Test :: %s\n",medium_keywords[i]);
-		//if(strnstr(stream,medium_keywords[i],strlen(medium_keywords[i])) != NULL ){
 		if(  searchPattern(stream,low_keywords[i],strlen(low_keywords[i]),strlen(stream)) != NULL ){
-			#ifdef DEBUG
-				printf("Warning :: findDangerousKeywords :: Low dangerous keyword (%s) found in object %s\n",low_keywords[i], obj->reference);
-			#endif
+		
+			warn_log("findDangerousKeywords :: Low dangerous keyword (%s) found in object %s\n", low_keywords[i], obj->reference);			
 			pdf->testObjAnalysis->dangerous_keyword_low ++;			
 			ret = 1;
 		}
@@ -1281,49 +1202,69 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 }
 
-// This function get all potentially dangerous content (js, embedded files, dangerous pattern) form. and return 1 if any of 0 if not
+
+/*
+getDangerousContent() :: get all potentially dangerous content (actions, js, embedded files, dangerous pattern, forms, url, etc.)
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 1 if dangerous content is found
+- 0 if no active content.
+- an error code (<0) on error.
+*/
 int getDangerousContent(struct pdfDocument* pdf){
 
 	int res = 0;
 	struct pdfObject * obj = NULL;
 
-	if( pdf == NULL || pdf->objects == NULL ){
-		#ifdef DEBUG
-		printf("Error :: getDangerousContent :: Null parameters\n");
-		#endif
+	if( pdf == NULL || pdf->objects == NULL ){		
+		err_log("getDangerousContent :: invalid parameters\n");		
 		return -1;
 	}
 
-	#ifdef DEBUG
-	printf("\n-------------------------\n");
-	printf("---  OBJECT ANALYSIS  ---\n");
-	printf("-------------------------\n\n");
-	#endif
+	//dbg_log("getDangerousContent :: start function...\n");
 
-	//printf("pdfobjects %d\n",pdf->objects);
 	obj = pdf->objects;
-
 
 	while(obj != NULL){
 
-		//printf("Analysing object :: %s\n",obj->reference);
+		dbg_log("getDangerousContent :: Analysing object %s\n",obj->reference);
 
-		getActions(pdf,obj);		
+		if (getActions(pdf, obj) < 0){
+			err_log("getDangerousContent :: get dangerous actions failed!\n");
+			return -1;
+		}
 
-		getJavaScript(pdf,obj);
+		if (getJavaScript(pdf, obj) < 0){
+			err_log("getDangerousContent :: get javascript content failed!\n");
+			return -1;
+		}
+
+		if (getXFA(pdf, obj) < 0){
+			err_log("getDangerousContent :: get xfa content failed!\n");
+			return -1;
+		}
+
+		if (getEmbeddedFile(pdf, obj) < 0){
+			err_log("getDangerousContent :: get embedded file failed!\n");
+			return -1;
+		}
 		
-		getXFA(pdf,obj);
-		
-		getEmbeddedFile(pdf,obj);
-		
-		getURI(pdf,obj);
+		if (getURI(pdf, obj) < 0){
+			err_log("getDangerousContent :: get uri failed!\n");
+			return -1;
+		}
 
 		// next object
 		obj = obj->next;
 		
 	}
 	
-	getInfoObject(pdf);
+	if (getInfoObject(pdf) < 0){
+		err_log("getDangerousContent :: get info object failed!\n");
+		return -1;
+	}
+	
 
 	return res;
 
