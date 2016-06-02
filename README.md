@@ -5,7 +5,6 @@
 
 Copyright (c) NOV'IT/Teclib, 2014, 2015, 2016
 
-Project home: http://www.somewhere.org
 
 What is it?
 -----------
@@ -72,5 +71,4 @@ LIMITATIONS
 Licensing
 ---------
 
-???
 
