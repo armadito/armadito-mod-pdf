@@ -1,30 +1,33 @@
-------------------------
--- ARMADITO PDF ANALYZER --
-------------------------
-=====
+ARMADITO PDF ANALYZER
+=====================
 
-Copyright (c) NOV'IT/Teclib, 2014, 2015, 2016
+Copyright (C) Teclib', 2015, 2016
 
+Project home : http://www.teclib-edition.com/teclib-products/armadito-antivirus
+
+See Online documentation at : http://armadito-av.readthedocs.io/en/latest/
 
 What is it?
 -----------
 
-Analyseur de PDF:
+Armadito PDF analyzert is a module for PDF documents scanning that includes:
 
-	* Parsing du PDF
+* a PDF parser
 
-	* Analyse anti-malware
+* an heuristic analyzer that computes the document confidence level
 
-	* Evaluation (coefficient de suspicion)
-	
+Licensing
+---------
 
-Dépendances
------------
+Armadito PDF analyzer is licensed under the GPLv3 https://www.gnu.org/licenses/license-list.html#GNUGPLv3	
+
+Dependencies
+------------
 
 > miniz.c
 
 FEATURES
----------------------
+--------
 
 ==> Parsing		<==
 
@@ -66,9 +69,5 @@ LIMITATIONS
 - PDF version supportées : %PDF-1.1 à %PDF-1.7
 - Ne traite pas les documents dont le contenu est chiffrés.
 - L'opération consistant à retirer les commentaires postScript est très couteuse en temps pour les fichiers dont la taille est supérieure à 2M.
-
-
-Licensing
----------
 
 
