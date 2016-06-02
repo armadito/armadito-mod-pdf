@@ -205,8 +205,8 @@ int addEntryInDico(struct LZWdico * dico , int code, char * entry, int len){
 	struct LZWdico * tmp = NULL;
 
 	// check parameters
-	if(entry == NULL || dico == NULL){
-		printf("Error :: addInDico :: Invalid parameters\n");
+	if(entry == NULL || dico == NULL || len <= 0 || code <= 0){
+		err_log("addInDico :: invalid parameters\n");
 		return -1;
 	}
 
@@ -410,6 +410,11 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	stream_len = obj->tmp_stream_size;
 	out_len = 2 * stream_len;
 
+	if (stream == NULL || obj == NULL || stream_len <= 0){
+		err_log("LZWDecode :: invalid parameters\n");
+		return NULL;
+	}
+
 	ptr_data = stream;	
 
 
@@ -456,13 +461,22 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		if(code == CLEAR_TABLE){	// Clear table code
 
 			// CLEAR_TABLE marker reached !!
+			//printf("clear_table!!");
 			code_len = 9;			
 			next_code = FIRST_CODE;
 			//last_code = code;
 			w_len = 0;
-			w= NULL;		
+			w= NULL;
+
+			//w = entry;
+			/*w_len = entry_len;
+			w = (char*)calloc(w_len + 1, sizeof(char));
+			w[w_len] = '\0';
+			memcpy(w, entry, entry_len);
+			*/
+
 			freeDico(dico);
-			dico = NULL;
+			dico = NULL;			
 			continue;
 
 		}else if(code == EOD_MARKER){
@@ -493,7 +507,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			//free(entry); entry= NULL;
 
 			// entry = w + w[0]
-			entry_len = w_len+1;
+			entry_len = w_len+2;
 			entry = (char*)calloc(entry_len+1,sizeof(char));
 			entry[entry_len]= '\0';		
 			memcpy(entry,w,w_len);			
@@ -501,9 +515,14 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			// not sure about this line...(to fix)
 			//w_entry0[w_len]= w[0];
 			//entry[w_len]= w[0];
-			tmp = entry;
-			tmp += w_len;
-			memcpy(tmp,w,1);
+			if (w != NULL){
+				tmp = entry;
+				//dbg_log("[1]tmp = %s :: w = %s :: w_len = %d :: entry = %s\n", tmp, w, w_len, entry);
+				tmp += w_len;
+				//dbg_log("[2]tmp = %s :: w = %s :: w_len = %d :: entry = %s\n", tmp, w, w_len, entry);
+				memcpy(tmp, w, 1);
+			}
+			
 
 
 		}else if(code < EOD_MARKER){ /// <257

@@ -760,6 +760,7 @@ int decodeObjectStream(struct pdfObject * obj){
 
 		}else if ((strncmp(filter, "/LZWDecode", 10) == 0 && strncmp(filter, "/LZWDecode", strlen(filter)) == 0) || (strncmp(filter, "/LZW", 4) == 0 && strncmp(filter, "/LZW", strlen(filter)) == 0)){
 
+#if 0
 			dbg_log("decodeObjectStream :: Decode LZWDecode :: %s \n", obj->reference);
 
 			if ((tmp = LZWDecode(stream, obj)) == NULL){
@@ -773,6 +774,17 @@ int decodeObjectStream(struct pdfObject * obj){
 			free(stream);
 			stream  = tmp;
 			filter_applied ++;
+#else
+			// to fix.
+			warn_log("decodeObjectStream :: Filter LZWDecode not implemented (to fix) :: %s\n", obj->reference);
+			filter_applied = 0;
+			free(stream);
+			free(filter);
+			obj->errors++;
+			return -1;
+#endif
+
+
 
 		}else if ((strncmp(filter, "/RunLengthDecode", 16) == 0 && strncmp(filter, "/RunLengthDecode", strlen(filter)) == 0) || (strncmp(filter, "/RL", 3) == 0 && strncmp(filter, "/RL", strlen(filter)) == 0)){
 
@@ -1562,13 +1574,15 @@ int removeComments(struct pdfDocument * pdf){
 	int content_len = 0;
 	int tmp_len = 0;	
 	int len = 0;
-	int line_size = 0;	
+	int line_size = 0;
+	int line_num = 0;
 	int uncomment_len =0;
 	int white_spaces_len = 0;
 	int inStream = 0;
 	int inString = 0;
 	int inQuotes = 0;
 	int after_header = 0; // line juste after header tag
+	int after_eof = 0; // case when there is bytes after %%EOF. // due to file: CVE_2010-2883_PDF_851D895614645756999BD9F6E002C127.pdf
 	int len_tmp = 0;
 	int i = 0;
 
@@ -1625,10 +1639,16 @@ int removeComments(struct pdfDocument * pdf){
 		line[line_size] = '\0';
 
 		memcpy(line,start,line_size);
+		line_num++;
+		//dbg_log("removeComments :: line num = %d\n", line_num);
 
 		/* debug print */
 		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
-		//dbg_log("line = %s\n",line);
+		//dbg_log("removeComments :: line = %s\n",line);
+
+		if (strcmp(line, "trailer") == 0){
+			dbg_log("removeComments :: line = %s\n", line);
+		}
 
 		// calc whites spaces
 		white_spaces_len = 0;
@@ -1691,7 +1711,8 @@ int removeComments(struct pdfDocument * pdf){
 				// %%EOF
 				// %PDF-version
 				if(line_size -i >= 5 && memcmp(ptr+i,"%%EOF",5) == 0){
-					//printf("pdf end of file :: EOF marker !!\n");
+					dbg_log("removeComments :: pdf end of file :: EOF marker !!\n");
+					after_eof = 1;
 					i = line_size;
 					continue;
 				}else{
@@ -1699,7 +1720,7 @@ int removeComments(struct pdfDocument * pdf){
 					if(line_size - i >= 8 && memcmp(ptr,"%PDF-1.",7) == 0){
 						after_header = 1;
 						i = line_size;
-						//dbg_log("removeComments :: PDF Header found !!\n");
+						dbg_log("removeComments :: PDF Header found !!\n");
 						continue;
 					}else{
 
@@ -1735,7 +1756,10 @@ int removeComments(struct pdfDocument * pdf){
 				
 			}
 
-		}
+		} // end for(i > line_len)
+
+
+		inString = 0;
 
 		
 		//--------------------------------------------------------------
@@ -1755,10 +1779,12 @@ int removeComments(struct pdfDocument * pdf){
 			
 		}else{
 
-			if(inStream == 0){
+			if(inStream == 0 && after_eof == 0){
 				
 				
 				dbg_log("removeComments :: Comment found :: %s\n",uncomment);
+				dbg_log("removeComments :: line :: %s\n", line);
+				dbg_log("removeComments :: line num = %d :: after_oef = %d\n", line_num,after_eof);
 				
 				pdf->testStruct->comments ++;
 
@@ -1783,6 +1809,7 @@ int removeComments(struct pdfDocument * pdf){
 		//look if I'm in a stream content before adding the uncommented line
 		if(uncomment_len >=9 && searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){			
 			inStream = 0;
+			
 
 		}else{
 			if( uncomment_len >=6 && searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
@@ -1793,7 +1820,7 @@ int removeComments(struct pdfDocument * pdf){
 
 
 
-		if(inStream == 0){
+		if(inStream == 0 && after_eof == 0){
 
 			//write uncommented line
 			if(content_len > 0){
@@ -1956,11 +1983,13 @@ int parsePDF(struct pdfDocument * pdf){
 		return -1;
 	}
 
-	// remove PostScript comments for a better parsing.
+	// remove PostScript comments for a better parsing. (to fix :: improve comment removing).
+	/*
 	if (removeComments(pdf) < 0) {
 		err_log("parsePDF :: removing comments failed!\n");
 		return -1;
 	}
+	*/
 
 
 	// Get Trailers (before version 1.5)
