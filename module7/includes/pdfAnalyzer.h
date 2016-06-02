@@ -169,6 +169,12 @@ struct pdfDocument{
 };
 
 
+
+typedef int(*dirent_scan_cb)(int fd, char * filename);
+
+int scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data);
+
+
 /* Functions */
 void Helper();
 int analyzePDF(char * filename);

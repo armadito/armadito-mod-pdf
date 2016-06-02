@@ -55,8 +55,12 @@ int main (int argc, char ** argv){
 		Helper();
 		return (-1);
 	}
+
 	
-#if 1
+	
+#if 0
+
+	// scan a simple file.
 
 	// analysis with opened file descriptor.	
 	if(!(f = os_fopen(argv[1],"rb"))){
@@ -70,7 +74,10 @@ int main (int argc, char ** argv){
 
 #else
 
-	ret = analyzePDF(argv[1]);
+	// scan dir.
+	ret = scan_dir(argv[1], 1, (dirent_scan_cb)analyzePDF_ex, NULL);
+
+	//ret = analyzePDF(argv[1]);
 	
 #endif	
 
