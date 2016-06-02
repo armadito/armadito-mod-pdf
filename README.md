@@ -1,7 +1,5 @@
-------------------------
--- ARMADITO PDF ANALYZER --
-------------------------
-=====
+ARMADITO PDF ANALYZER
+=====================
 
 Copyright (C) Teclib', 2015, 2016
 
@@ -14,9 +12,9 @@ What is it?
 
 Armadito PDF analyzert is a module for PDF documents scanning that includes:
 
-	* a PDF parser
+* a PDF parser
 
-	* an heuristic analyzer that computes the document confidence level
+* an heuristic analyzer that computes the document confidence level
 
 Licensing
 ---------
@@ -29,7 +27,7 @@ Dependencies
 > miniz.c
 
 FEATURES
----------------------
+--------
 
 ==> Parsing		<==
 
