@@ -27,8 +27,16 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <errno.h>
 
 
-
-/* Decode FlateDecode Filter */
+/*
+FlateDecode() :: Decode stream FlateDecode filter.
+parameters:
+- char * stream (the stream to decode).
+- struct pdfObject * obj ( the pointer of the object containing the stream).
+returns: (char *)
+- the decoded stream on success.
+- NULL on error.
+// TODO :: FlateDecode :: check if the stream is conform (Ex: '\r')
+*/
 char * FlateDecode(char * stream, struct pdfObject* obj){
 
 
@@ -37,50 +45,69 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	unsigned long src_len = 0;
 	unsigned long len = 150000;
 	int res = 0;
-	//unsigned long streamd_len = 163840; // TODO TOFIX find and set the right length
 	
 	src_len = obj->tmp_stream_size;
 
-	// verify parameters
-	if (stream == NULL || src_len == 0){
-		#ifdef DEBUG
-			printf("Error :: FlateDecode :: Invalid parameter :: obj= %s\n", obj->reference);
-		#endif
+
+	//dbg_log("FlateDecode :: src_len = %d\n", src_len);
+
+	if (obj == NULL || stream == NULL || src_len == 0){
+		err_log("FlateDecode :: invalid parameter\n");
 		return NULL;
 	}	
 
 	dest = calloc(len, sizeof(char));
 
+	while ((res = uncompress((unsigned char*)dest, &len, (unsigned char*)stream, src_len)) != Z_OK){
 
-	res = uncompress((unsigned char*)dest,&len,(unsigned char*)stream,src_len);
-	
-	if(res == Z_DATA_ERROR){
-		printf("[-] Error :: Z_DATA_ERROR :: FlateDecode :: status = %d :: len = %ld\n",res,len);
-		obj->decoded_stream_size = 0;
-		obj->tmp_stream_size = 0;
-		return NULL;
+		switch (res){
+
+			case Z_DATA_ERROR:
+				err_log("Flatedecode :: Z_DATA_ERROR :: the deflate stream is invalid\n");
+				/* TODO :: treat the case when there is NULL character in the dictionary. Ex file : Windows Internals Part 2_6th Edition.pdf  */
+				/* debug log */
+				/*
+				dbg_log("Flatedecode :: res = Z_DATA_ERROR :: len = %d :: strlen = %d :: dest = %s\n", len, strlen(dest),dest);
+				printStream(dest,len);
+				*/
+				obj->decoded_stream_size = 0;
+				obj->tmp_stream_size = 0;
+				goto clean;
+
+			case Z_BUF_ERROR:
+				//warn_log("Flatedecode :: Z_BUF_ERROR :: len = %d\n", len);
+				while (res == Z_BUF_ERROR){
+					free(dest);
+					dest = NULL;					
+					len += 100000; // increase length
+					dest = calloc(len, sizeof(char));
+					res = uncompress((unsigned char*)dest, &len, (unsigned char*)stream, src_len);
+				}
+
+				break;
+			default:
+				err_log("Flatedecode :: res = %d\n", res);
+				obj->decoded_stream_size = 0;
+				obj->tmp_stream_size = 0;
+				goto clean;
+		}
+
 	}
+
+	
+	//dbg_log("Flatedecode :: len = %d\n", len);
 
 	out = (char*)calloc(len+1,sizeof(char));
 	out[len]='\0';
 	memcpy(out,dest,len);
 
-	#ifdef DEBUG
-		printf("FlateDecode :: status = %d :: len = %ld\n",res,len);
-	#endif
-
-
-	if( res != Z_OK){
-		#ifdef DEBUG
-			printf("Warning :: Flatedecode failed for object \"%s\" :: %d \n",obj->reference, res);
-		#endif
-	}
-
-
 	obj->decoded_stream_size = len;
 	obj->tmp_stream_size = len;
 
+clean:
+
 	free(dest);
+	dest = NULL;
 
 	return out;
 }
