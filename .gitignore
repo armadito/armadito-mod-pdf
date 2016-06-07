@@ -1,5 +1,8 @@
-module7/win32/ArmaditoPDF/ArmaditoPDF/Debug/*
-module7/win32/ArmaditoPDF/Debug/*
-module7/win32/ArmaditoPDF/ArmaditoPDF.v12.suo
-module7/win32/ArmaditoPDF/ArmaditoPDF.opensdf
-module7/win32/ArmaditoPDF/ArmaditoPDF.sdf
+win32/ArmaditoPDF/ArmaditoPDF/Debug/*
+win32/ArmaditoPDF/ArmaditoPDF/Release/*
+win32/ArmaditoPDF/Debug/*
+win32/ArmaditoPDF/Release/*
+win32/ArmaditoPDF/ArmaditoPDF.v12.suo
+win32/ArmaditoPDF/ArmaditoPDF.opensdf
+win32/ArmaditoPDF/ArmaditoPDF.sdf
+*.user
