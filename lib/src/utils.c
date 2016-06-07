@@ -563,7 +563,7 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 		start ++;
 		lim--;
-		if (lim < 0)
+		if (lim > 0)
 			memcpy(tmp,start,strlen(delimiter1));
 
 	}
