@@ -1,0 +1,41 @@
+:: Change Log :: 
+All notable changes to the project Armadito-pdf will be documented in this file.
+This project adheres to [Semantic versionning](http://semver.org)
+
+
+Mon, 27 May 2016 :: 0.10.1 :: (ufausther)
+-----------------------------------------
+*** New version 0.10.1 pushed in github (DEV branch).
+
+
+Wed, 1 June 2016 :: 0.11.0 :: (ufausther)
+-----------------------------------------
+
++ add custom log function (cli_log with macro definition.)
++ add "filename" field to pdfDocument struct.
++ modif function printAnalysisReport(struct pdfDocument * pdf) prototype.
++ add errors count in analysis report.
++ add functions headers.
++ remove duplicated call to checkMagicNumber() function
++ rename function getNumber_a(...) => getNumber_s(...)
++ improve error handling.
++ FlateDecode filter : increase destination buffer size on MZ_BUFF_ERROR error.
+
+Fri, 03 June 2016 :: 0.11.1 :: (ufausther)
+------------------------------------------
+
++ FlateDecode filter : increase destination buffer size on MZ_BUFF_ERROR error.
+
+
+Mon, 06 June 2016 :: 0.11.1 :: (ufausther)
+------------------------------------------
+
++ translate/update README.md
+
+Tue, 07 June 2016 :: 0.12.0 :: (ufausther)
+------------------------------------------
+
++ Add header files (armaditopdf.h - pdfStructs.h - pdfParsing.h - pdfAnalysis.h - utils.h ) and corresponding sources files.
++ folders reorganisation.
++ define version string in header (#define a6o_pdf_ver)
++ Add change log file.
