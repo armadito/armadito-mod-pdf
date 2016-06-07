@@ -21,7 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "pdfAnalyzer.h"
+#include "pdfParsing.h"
+#include "utils.h"
+#include "osdeps.h"
+#include "log.h"
+#include "filters.h"
 
 
 /*
@@ -951,7 +955,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 	// avoid parsing object stream not well decoded.
 	if (obj->filters != NULL && obj->decoded_stream == NULL){
-		err_log("[-] Error :: object not decoded successfully!\n");
+		err_log("extractObjectFromObjStream :: object not decoded successfully!\n");
 		return -2;
 	}
 
@@ -960,6 +964,10 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 		stream = obj->decoded_stream;
 		stream_len = obj->decoded_stream_size;
+		//debugPrint(stream,);
+		dbg_log("extractObjectFromObjStream :: stream = %d\n",stream_len);
+		
+
 
 	}else{
 
@@ -1160,7 +1168,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		
 		obj_content[obj_len] = '\0';
 
-		// offset of the object content
+		// offset of the object content = stream ptr + ptr of the first obj + offset of the obj.
 		end = stream + first + off;
 		
 		// Get content
@@ -1506,6 +1514,10 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 
 		len = (int)( end - pdf->content);
 		len = pdf->size - len ;
+
+		if (len <= strlen("startxref")){
+			break;
+		}
 
 	}	
 
@@ -1991,15 +2003,15 @@ int parsePDF(struct pdfDocument * pdf){
 	}
 	*/
 
-
+	
 	// Get Trailers (before version 1.5)
 	if (getPDFTrailers(pdf) < 0) {
 		err_log("parsePDF :: getting PDF trailer v1 failed!\n");
 		return -1;
 	}
-
+	
 	// Get Trailers extension function (from version 1.5)
-	if (pdf->trailers == NULL){
+	if (pdf->trailers == NULL){		
 		if (getPDFTrailers_ex(pdf) < 0) {
 			err_log("parsePDF :: getting PDF trailer v2 failed!\n");
 			return -1;
@@ -2011,7 +2023,7 @@ int parsePDF(struct pdfDocument * pdf){
 		warn_log("parsePDF :: no trailer found in the document!\n");
 		pdf->testStruct->bad_trailer++;
 	}
-
+	
 		
 	// if the document is encrypted
 	if( pdf->testStruct->encrypted > 0){		

@@ -25,13 +25,16 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #define _filters_h_
 
 
+#include "pdfStructs.h"
 
-// ::: LZWDecode :::
+
+// LZWDecode
 #define FIRST_CODE 258
 #define EOD_MARKER 257
 #define CLEAR_TABLE 256
 
 #define MAX_CODES 512
+
 struct LZWdico{
 
 	unsigned short code;
@@ -41,22 +44,35 @@ struct LZWdico{
 	struct LZWdico * next;
 };
 
+/* Functions prototypes */
+
+char * FlateDecode(char * stream, struct pdfObject* obj);
+char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
+char * LZWDecode(char* stream, struct pdfObject * obj);
+char * ASCII85Decode(char * stream, struct pdfObject * obj);
+char * CCITTFaxDecode(char* stream, struct pdfObject * obj);
+
+// LZWDdecode functions.
 struct LZWdico * initDico(int code, char * entry);
 struct LZWdico * initDico_(int code, char * entry, int len);
-int addInDico(struct LZWdico * dico , int code, char * entry);
+int addInDico(struct LZWdico * dico, int code, char * entry);
 void freeDico(struct LZWdico * dico);
-char * getEntryInDico(struct LZWdico * dico , int code);
-unsigned short readData(char ** data, int * partial_code, int * partial_bits, int code_len );
+char * getEntryInDico(struct LZWdico * dico, int code);
+unsigned short readData(char ** data, int * partial_code, int * partial_bits, int code_len);
 void printDico(struct LZWdico * dico);
 
+// CCITTFaxDecode functions.
+int getRunLengthCodeInTable(char ** table, char * bits, int table_size);
+int getMakeUpCodeInTable(char ** table, char *bits, int table_size);
 
-// ::: ASCII85Decode :::
+
+// ASCII85Decode functions
 char * getTuple(char * data, int len);
 
 
-// ::: CCITTFaxDecode ::: 
+// CCITTFaxDecode
 
-char * WHITE_RUN_LENGTH_TERMINATING_CODES[] = {
+static char * WHITE_RUN_LENGTH_TERMINATING_CODES[] = {
 	"00110101",
 	"000111",
 	"0111",
@@ -123,7 +139,7 @@ char * WHITE_RUN_LENGTH_TERMINATING_CODES[] = {
 	"00110100"
 };
 
-char * BLACK_RUN_LENGTH_TERMINATING_CODES[] = {
+static char * BLACK_RUN_LENGTH_TERMINATING_CODES[] = {
 	"0000110111",
 	"010",
 	"11",
@@ -190,7 +206,7 @@ char * BLACK_RUN_LENGTH_TERMINATING_CODES[] = {
 	"000001100111"
 };
 
-char * WHITE_MAKE_UP_CODES[] = {
+static char * WHITE_MAKE_UP_CODES[] = {
 	"11011",
 	"10010",
 	"010111",
@@ -221,7 +237,7 @@ char * WHITE_MAKE_UP_CODES[] = {
 	
 };
 
-char * BLACK_MAKE_UP_CODES[] = {
+static char * BLACK_MAKE_UP_CODES[] = {
 	"0000001111",
 	"000011001000",
 	"000011001001",
@@ -253,7 +269,7 @@ char * BLACK_MAKE_UP_CODES[] = {
 };
 
 
-int WHITE_BLACK_MAKE_UP_CODES_VALUES[] = {
+static int WHITE_BLACK_MAKE_UP_CODES_VALUES[] = {
 	64,
 	128,
 	192,
@@ -283,8 +299,10 @@ int WHITE_BLACK_MAKE_UP_CODES_VALUES[] = {
 	1728
 };
 
-int getRunLengthCodeInTable(char ** table, char * bits, int table_size);
-int getMakeUpCodeInTable(char ** table, char *bits, int table_size);
+
+
+
+
 
 
 #endif

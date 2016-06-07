@@ -53,7 +53,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\lib\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,21 +80,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\main.c" />
-    <ClCompile Include="..\..\..\src\filters.c" />
-    <ClCompile Include="..\..\..\src\log.c" />
-    <ClCompile Include="..\..\..\src\osdeps.c" />
-    <ClCompile Include="..\..\..\src\pdfAnalysis.c" />
-    <ClCompile Include="..\..\..\src\pdfObjectsAnalysis.c" />
-    <ClCompile Include="..\..\..\src\pdfParsing.c" />
-    <ClCompile Include="..\..\..\src\pdfStructAnalysis.c" />
-    <ClCompile Include="..\..\..\src\utils.c" />
+    <ClCompile Include="..\..\..\tools\cli_analyzer\main.c" />
+    <ClCompile Include="..\..\..\lib\src\armaditopdf.c" />
+    <ClCompile Include="..\..\..\lib\src\filters.c" />
+    <ClCompile Include="..\..\..\lib\src\log.c" />
+    <ClCompile Include="..\..\..\lib\src\osdeps.c" />
+    <ClCompile Include="..\..\..\lib\src\pdfObjectsAnalysis.c" />
+    <ClCompile Include="..\..\..\lib\src\pdfParsing.c" />
+    <ClCompile Include="..\..\..\lib\src\pdfStructAnalysis.c" />
+    <ClCompile Include="..\..\..\lib\src\pdfStructs.c" />
+    <ClCompile Include="..\..\..\lib\src\utils.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\includes\filters.h" />
-    <ClInclude Include="..\..\..\includes\log.h" />
-    <ClInclude Include="..\..\..\includes\osdeps.h" />
-    <ClInclude Include="..\..\..\includes\pdfAnalyzer.h" />
+    <ClInclude Include="..\..\..\lib\includes\armaditopdf.h" />
+    <ClInclude Include="..\..\..\lib\includes\filters.h" />
+    <ClInclude Include="..\..\..\lib\includes\log.h" />
+    <ClInclude Include="..\..\..\lib\includes\osdeps.h" />
+    <ClInclude Include="..\..\..\lib\includes\pdfAnalysis.h" />
+    <ClInclude Include="..\..\..\lib\includes\pdfParsing.h" />
+    <ClInclude Include="..\..\..\lib\includes\pdfStructs.h" />
+    <ClInclude Include="..\..\..\lib\includes\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

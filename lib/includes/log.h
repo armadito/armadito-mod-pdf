@@ -25,7 +25,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdarg.h>
 
-#define max_level LOG_LEVEL_DEBUG
+#define max_level LOG_LEVEL_WARNING
 #define print_report 1	// print the analysis report.
 
 enum log_level {

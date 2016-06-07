@@ -21,10 +21,13 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "pdfAnalyzer.h"
+
 #include "filters.h"
 #include "miniz.c"
 #include <errno.h>
+#include "utils.h"
+#include "osdeps.h"
+#include "log.h"
 
 
 /*

@@ -21,15 +21,15 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
     
-#include "pdfAnalyzer.h"
+#include "armaditopdf.h"
 
 
 
 void Banner(){
 	
-	printf("-------------------------\n");
+	printf("----------------------------\n");
 	printf("-- ARMADITO PDF ANALYZER  --\n");
-	printf("-------------------------\n\n");
+	printf("----------------------------\n\n");
 
 	return;
 }

@@ -19,13 +19,14 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 ***/
 
-#ifndef __os_deps_h_
-#define __os_deps_h_
+#ifndef _os_deps_h_
+#define _os_deps_h_
 
 #include <stdio.h>
 
 #ifdef _WIN32
 
+#include <Windows.h>
 #include <io.h>
 #define os_strncat strncat_s
 #define os_sprintf sprintf_s
