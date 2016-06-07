@@ -26,13 +26,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "pdfStructs.h"
 
-/*
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "osdeps.h"
-#include "log.h"
-*/
+#define a6o_pdf_ver "0.12.0"
+
 
 // Tests Coefficients
 
