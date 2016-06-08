@@ -39,3 +39,15 @@ Tue, 07 June 2016 :: 0.12.0 :: (ufausther)
 + folders reorganisation.
 + define version string in header (#define a6o_pdf_ver)
 + Add change log file.
+
+Tue, 07 June 2016 :: 0.12.1 :: (ufausther)
+------------------------------------------
+
++ bug fix: getDelimitedStringContent() temporary buffer was not updated.
+
+
+Wed, 08 June 2016 :: 0.12.1 :: (ufausther)
+------------------------------------------
+
++ modif for linux compatibility.
+
