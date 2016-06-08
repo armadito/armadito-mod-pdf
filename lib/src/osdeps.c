@@ -23,6 +23,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "osdeps.h"
 #include <string.h>
+#include "log.h"
 
 
 #ifdef _WIN32
@@ -99,7 +100,7 @@ int os_scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data)
 		// If it is a directory and we do recursive scan
 		if ((GetFileAttributesA(entryPath) & FILE_ATTRIBUTE_DIRECTORY) && recurse >= 1) {
 
-			ret = scan_dir(entryPath, recurse, dirent_cb, data);
+			ret = os_scan_dir(entryPath, recurse, dirent_cb, data);
 			if (ret != 0){
 				free(entryPath);
 				break;
@@ -115,7 +116,7 @@ int os_scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data)
 	}
 
 
-	// TODO :: scan_dir :: get stats.
+	// TODO :: os_scan_dir :: get stats.
 
 clean:
 	if (rpath != NULL){
