@@ -30,94 +30,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-int scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data){
 
-	char * rpath = NULL, *entryPath = NULL;
-	char * escapedPath = NULL;
-	int ret = 0;
-	int size = 0;
-	HANDLE fh = NULL;
-	WIN32_FIND_DATAA fdata;
-	WIN32_FIND_DATAA tmp;
-	int fd = -1;
-	
-	if (path == NULL || dirent_cb == NULL){
-		err_log("scan_dir :: invalid parameter\n");
-		return -1;
-	}
-
-	dbg_log("scan_dir :: path = %s\n", path);
-
-	// Check if it is a directory
-	if (!(GetFileAttributesA(path) & FILE_ATTRIBUTE_DIRECTORY)) {
-		err_log("scan_dir :: (%s) is not a directory\n", path);
-		return -2;
-	}
-
-	size = strlen(path) + 3;
-	rpath = (char*)calloc(size + 1, sizeof(char));
-	rpath[size] = '\0';
-	sprintf_s(rpath, size, "%s\\*", path);
-
-	dbg_log("scan_dir :: rpath = %s\n",rpath);
-
-	/*
-	FindFirstFile note
-	Be aware that some other thread or process could create or delete a file with this name between the time you query for the result and the time you act on the information. If this is a potential concern for your application, one possible solution is to use the CreateFile function with CREATE_NEW (which fails if the file exists) or OPEN_EXISTING (which fails if the file does not exist).
-	*/
-	fh = FindFirstFile(rpath, &fdata);
-	if (fh == INVALID_HANDLE_VALUE) {
-		warn_log("scan_dir :: FindFirstFileA call failed :: err= [%d]\n", GetLastError());
-		goto clean;
-	}
-
-	while (fh != INVALID_HANDLE_VALUE && FindNextFile(fh, &tmp) != FALSE) {
-
-		// exclude paths "." and ".."
-		if (!strcmp(tmp.cFileName, ".") || !strcmp(tmp.cFileName, ".."))
-			continue;
-
-		// build the entry complete path.
-		size = strlen(path) + strlen(tmp.cFileName) + 2;
-
-		entryPath = (char*)calloc(size + 1, sizeof(char));
-		entryPath[size] = '\0';
-		sprintf_s(entryPath, size, "%s\\%s", path, tmp.cFileName);
-		dbg_log("scan_dir :: cfilename = %s\n", &tmp.cFileName);
-		dbg_log("scan_dir :: entryPath = %s\n", entryPath);
-
-
-		// If it is a directory and we do recursive scan
-		if ((GetFileAttributesA(entryPath) & FILE_ATTRIBUTE_DIRECTORY) && recurse >= 1) {
-
-			ret = scan_dir(entryPath, recurse, dirent_cb, data);
-			if (ret != 0){
-				free(entryPath);
-				break;
-			}
-		}
-		else {
-			
-			ret = (*dirent_cb)(fd,entryPath);			
-		}
-
-		free(entryPath);
-		entryPath = NULL;
-	}
-
-
-	// TODO :: scan_dir :: get stats.
-
-clean:
-	if (rpath != NULL){
-		free(rpath);
-		rpath = NULL;
-	}
-	FindClose(fh);
-
-	return ret;
-
-}
 
 
 /*
@@ -336,7 +249,7 @@ int analyzePDF_ex(int fd, char * filename){
 
 
 	if (fd < 0 && filename == NULL){
-		err_log("analyzePDF_ex :: invalid parameters!");
+		err_log("analyzePDF_ex :: invalid parameters!",0);
 		return -1;
 	}
 

@@ -22,6 +22,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
     
 #include "armaditopdf.h"
+#include "osdeps.h"
+#include "log.h"
 
 
 void Helper(){
@@ -56,32 +58,22 @@ int main (int argc, char ** argv){
 		return (-1);
 	}
 
-	
-	
-#if 0
+	/* Scan a directory */
+	//ret = os_scan_dir(argv[1], 1, (dirent_scan_cb)analyzePDF_ex, NULL);
 
-	// scan a simple file.
 
 	// analysis with opened file descriptor.	
 	if(!(f = os_fopen(argv[1],"rb"))){
 		err_log("Can't open file %s\n", argv[1]);
 		return -1;
 	}
-	
+
+
 	fd = os_fileno(f);
 	ret = analyzePDF_ex(fd, argv[1]);
 	fclose(f);
 
-#else
-
-	// scan dir.
-	ret = scan_dir(argv[1], 1, (dirent_scan_cb)analyzePDF_ex, NULL);
-
-	//ret = analyzePDF(argv[1]);
-	
-#endif	
-
-	system("pause");
+	//system("pause");
 	
 	return ret;
 }

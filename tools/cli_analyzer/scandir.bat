@@ -1,6 +1,6 @@
 @echo off
 
-set ANALYZER="D:\Novit\uhurupdf\module7\win32\UhuruPDF\Debug\UhuruPDF.exe"
+set ANALYZER="a6oPDFAnalyzer.exe"
 set DIRPATH=%1
 
 if [%1]==[] goto :help

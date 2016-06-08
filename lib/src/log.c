@@ -40,8 +40,7 @@ char * lvl_tostring(enum log_level level){
 
 void cli_log(enum log_level level, const char * fmt, ...){
 	
-	va_list ap;
-	FILE * fd = stdout;
+	va_list ap;	
 
 	if (level > max_level)
 		return;

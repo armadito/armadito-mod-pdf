@@ -24,6 +24,9 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 
+typedef int(*dirent_scan_cb)(int fd, char * filename);
+int os_scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data);
+
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -37,6 +40,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #define os_read _read
 #define os_fileno _fileno
 FILE * os_fopen(const char * filename, const char * mode);
+
 
 #else
 

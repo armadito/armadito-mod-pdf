@@ -1055,7 +1055,7 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 void printStream(char * stream, int size){
 
 	int len = 0;
-	int rsize = 0;
+	//int rsize = 0;
 	int nul = 0;
 	char * ptr = NULL;
 

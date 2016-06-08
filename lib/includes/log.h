@@ -38,9 +38,23 @@ enum log_level {
 
 void cli_log(enum log_level level, const char * fmt, ...);
 
+//#define err_log(fmt, ...) cli_log(LOG_LEVEL_ERROR,(fmt),__VA_ARGS__)
+
+#ifdef _WIN32
+
 #define err_log(fmt, ...) cli_log(LOG_LEVEL_ERROR,(fmt),__VA_ARGS__)
 #define warn_log(fmt, ...) cli_log(LOG_LEVEL_WARNING,(fmt),__VA_ARGS__)
 #define dbg_log(fmt, ...) cli_log(LOG_LEVEL_DEBUG,(fmt),__VA_ARGS__)
 #define info_log(fmt, ...) cli_log(LOG_LEVEL_INFO,(fmt),__VA_ARGS__)
+
+#else
+
+#define err_log(fmt, ...) cli_log(LOG_LEVEL_ERROR,(fmt),##__VA_ARGS__)
+#define warn_log(fmt, ...) cli_log(LOG_LEVEL_WARNING,(fmt),##__VA_ARGS__)
+#define dbg_log(fmt, ...) cli_log(LOG_LEVEL_DEBUG,(fmt),##__VA_ARGS__)
+#define info_log(fmt, ...) cli_log(LOG_LEVEL_INFO,(fmt),##__VA_ARGS__)
+
+#endif
+
 
 #endif

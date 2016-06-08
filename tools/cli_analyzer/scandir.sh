@@ -9,7 +9,7 @@
 # VARIABLES
 DIR=$1
 RES_FILE=$2
-EXE=./uhPDFAnalyzer
+EXE=./a6oPDFAnalyzer
 
 if [ -z "$1" ]
   then
