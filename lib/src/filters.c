@@ -21,14 +21,253 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "pdfAnalyzer.h"
+
 #include "filters.h"
 #include "miniz.c"
 #include <errno.h>
+#include "utils.h"
+#include "osdeps.h"
+#include "log.h"
 
 
+char * WHITE_RUN_LENGTH_TERMINATING_CODES[] = {
+	"00110101",
+	"000111",
+	"0111",
+	"1000",
+	"1011",
+	"1100",
+	"1110",
+	"1111",
+	"10011",
+	"10100",
+	"00111",
+	"01000",
+	"001000",
+	"000011",
+	"110100",
+	"110101",
+	"101010",
+	"101011",
+	"0100111",
+	"0001100",
+	"0001000",
+	"0010111",
+	"0000011",
+	"0000100",
+	"0101000",
+	"0101011",
+	"0010011",
+	"0100100",
+	"0011000",
+	"00000010",
+	"00000011",
+	"00011010",
+	"00011011",
+	"00010010",
+	"00010011",
+	"00010100",
+	"00010101",
+	"00010110",
+	"00010111",
+	"00101000",
+	"00101001",
+	"00101010",
+	"00101011",
+	"00101100",
+	"00101101",
+	"00000100",
+	"00000101",
+	"00001010",
+	"00001011",
+	"01010010",
+	"01010011",
+	"01010100",
+	"01010101",
+	"00100100",
+	"00100101",
+	"01011000",
+	"01011001",
+	"01011010",
+	"01011011",
+	"01001010",
+	"01001011",
+	"00110010",
+	"00110011",
+	"00110100"
+};
 
-/* Decode FlateDecode Filter */
+
+char * BLACK_RUN_LENGTH_TERMINATING_CODES[] = {
+	"0000110111",
+	"010",
+	"11",
+	"10",
+	"011",
+	"0011",
+	"0010",
+	"00011",
+	"000101",
+	"000100",
+	"0000100",
+	"0000101",
+	"0000111",
+	"00000100",
+	"00000111",
+	"000011000",
+	"0000010111",
+	"0000011000",
+	"0000001000",
+	"00001100111",
+	"00001101000",
+	"00001101100",
+	"00000110111",
+	"00000101000",
+	"00000010111",
+	"00000011000",
+	"000011001010",
+	"000011001011",
+	"000011001100",
+	"000011001101",
+	"000001101000",
+	"000001101001",
+	"000001101010",
+	"000001101011",
+	"000011010010",
+	"000011010011",
+	"000011010100",
+	"000011010101",
+	"000011010110",
+	"000011010111",
+	"000001101100",
+	"000001101101",
+	"000011011010",
+	"000011011011",
+	"000001010100",
+	"000001010101",
+	"000001010110",
+	"000001010111",
+	"000001100100",
+	"000001100101",
+	"000001010010",
+	"000001010011",
+	"000000100100",
+	"000000110111",
+	"000000111000",
+	"000000100111",
+	"000000101000",
+	"000001011000",
+	"000001011001",
+	"000000101011",
+	"000000101100",
+	"000001011010",
+	"000001100110",
+	"000001100111"
+};
+
+
+char * WHITE_MAKE_UP_CODES[] = {
+	"11011",
+	"10010",
+	"010111",
+	"0110111",
+	"00110110",
+	"00110111",
+	"01100100",
+	"01100101",
+	"01101000",
+	"01100111",
+	"011001100",
+	"011001101",
+	"011010010",
+	"011010011",
+	"011010100",
+	"011010101",
+	"011010110",
+	"011010111",
+	"011011000",
+	"011011001",
+	"011011010",
+	"011011011",
+	"010011000",
+	"010011001",
+	"010011010",
+	"011000",
+	"010011011"
+	
+};
+
+char * BLACK_MAKE_UP_CODES[] = {
+	"0000001111",
+	"000011001000",
+	"000011001001",
+	"000001011011",
+	"000000110011",
+	"000000110100",
+	"000000110101",
+	"0000001101100",
+	"0000001101101",
+	"0000001001010",
+	"0000001001011",
+	"0000001001100",
+	"0000001001101",
+	"0000001110010",
+	"0000001110011",
+	"0000001110100",
+	"0000001110101",
+	"0000001110110",
+	"0000001110111",
+	"0000001010010",
+	"0000001010011",
+	"0000001010100",
+	"0000001010101",
+	"0000001011010",
+	"0000001011011",
+	"0000001100100",
+	"0000001100101"
+	
+};
+
+int WHITE_BLACK_MAKE_UP_CODES_VALUES[] = {
+	64,
+	128,
+	192,
+	256,
+	320,
+	384,
+	448,
+	512,
+	576,
+	640,
+	704,
+	768,
+	832,
+	896,
+	960,
+	1024,
+	1088,
+	1152,
+	1216,
+	1280,
+	1344,
+	1408,
+	1472,
+	1536,
+	1600,
+	1664,
+	1728
+};
+
+/*
+FlateDecode() :: Decode stream FlateDecode filter.
+parameters:
+- char * stream (the stream to decode).
+- struct pdfObject * obj ( the pointer of the object containing the stream).
+returns: (char *)
+- the decoded stream on success.
+- NULL on error.
+// TODO :: FlateDecode :: check if the stream is conform (Ex: '\r')
+*/
 char * FlateDecode(char * stream, struct pdfObject* obj){
 
 
@@ -37,50 +276,69 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	unsigned long src_len = 0;
 	unsigned long len = 150000;
 	int res = 0;
-	//unsigned long streamd_len = 163840; // TODO TOFIX find and set the right length
 	
 	src_len = obj->tmp_stream_size;
 
-	// verify parameters
-	if (stream == NULL || src_len == 0){
-		#ifdef DEBUG
-			printf("Error :: FlateDecode :: Invalid parameter :: obj= %s\n", obj->reference);
-		#endif
+
+	//dbg_log("FlateDecode :: src_len = %d\n", src_len);
+
+	if (obj == NULL || stream == NULL || src_len == 0){
+		err_log("FlateDecode :: invalid parameter\n");
 		return NULL;
 	}	
 
 	dest = calloc(len, sizeof(char));
 
+	while ((res = uncompress((unsigned char*)dest, &len, (unsigned char*)stream, src_len)) != Z_OK){
 
-	res = uncompress((unsigned char*)dest,&len,(unsigned char*)stream,src_len);
-	
-	if(res == Z_DATA_ERROR){
-		printf("[-] Error :: Z_DATA_ERROR :: FlateDecode :: status = %d :: len = %ld\n",res,len);
-		obj->decoded_stream_size = 0;
-		obj->tmp_stream_size = 0;
-		return NULL;
+		switch (res){
+
+			case Z_DATA_ERROR:
+				err_log("Flatedecode :: Z_DATA_ERROR :: the deflate stream is invalid\n");
+				/* TODO :: treat the case when there is NULL character in the dictionary. Ex file : Windows Internals Part 2_6th Edition.pdf  */
+				/* debug log */
+				/*
+				dbg_log("Flatedecode :: res = Z_DATA_ERROR :: len = %d :: strlen = %d :: dest = %s\n", len, strlen(dest),dest);
+				printStream(dest,len);
+				*/
+				obj->decoded_stream_size = 0;
+				obj->tmp_stream_size = 0;
+				goto clean;
+
+			case Z_BUF_ERROR:
+				//warn_log("Flatedecode :: Z_BUF_ERROR :: len = %d\n", len);
+				while (res == Z_BUF_ERROR){
+					free(dest);
+					dest = NULL;					
+					len += 100000; // increase length
+					dest = calloc(len, sizeof(char));
+					res = uncompress((unsigned char*)dest, &len, (unsigned char*)stream, src_len);
+				}
+
+				break;
+			default:
+				err_log("Flatedecode :: res = %d\n", res);
+				obj->decoded_stream_size = 0;
+				obj->tmp_stream_size = 0;
+				goto clean;
+		}
+
 	}
+
+	
+	//dbg_log("Flatedecode :: len = %d\n", len);
 
 	out = (char*)calloc(len+1,sizeof(char));
 	out[len]='\0';
 	memcpy(out,dest,len);
 
-	#ifdef DEBUG
-		printf("FlateDecode :: status = %d :: len = %ld\n",res,len);
-	#endif
-
-
-	if( res != Z_OK){
-		#ifdef DEBUG
-			printf("Warning :: Flatedecode failed for object \"%s\" :: %d \n",obj->reference, res);
-		#endif
-	}
-
-
 	obj->decoded_stream_size = len;
 	obj->tmp_stream_size = len;
 
+clean:
+
 	free(dest);
+	dest = NULL;
 
 	return out;
 }
@@ -199,15 +457,14 @@ struct LZWdico * initDico_(int code, char * entry, int len){
 }
 
 
-
 int addEntryInDico(struct LZWdico * dico , int code, char * entry, int len){
 
 
 	struct LZWdico * tmp = NULL;
 
 	// check parameters
-	if(entry == NULL || dico == NULL){
-		printf("Error :: addInDico :: Invalid parameters\n");
+	if(entry == NULL || dico == NULL || len <= 0 || code <= 0){
+		err_log("addInDico :: invalid parameters\n");
 		return -1;
 	}
 
@@ -411,6 +668,11 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	stream_len = obj->tmp_stream_size;
 	out_len = 2 * stream_len;
 
+	if (stream == NULL || obj == NULL || stream_len <= 0){
+		err_log("LZWDecode :: invalid parameters\n");
+		return NULL;
+	}
+
 	ptr_data = stream;	
 
 
@@ -457,13 +719,22 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		if(code == CLEAR_TABLE){	// Clear table code
 
 			// CLEAR_TABLE marker reached !!
+			//printf("clear_table!!");
 			code_len = 9;			
 			next_code = FIRST_CODE;
 			//last_code = code;
 			w_len = 0;
-			w= NULL;		
+			w= NULL;
+
+			//w = entry;
+			/*w_len = entry_len;
+			w = (char*)calloc(w_len + 1, sizeof(char));
+			w[w_len] = '\0';
+			memcpy(w, entry, entry_len);
+			*/
+
 			freeDico(dico);
-			dico = NULL;
+			dico = NULL;			
 			continue;
 
 		}else if(code == EOD_MARKER){
@@ -494,7 +765,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			//free(entry); entry= NULL;
 
 			// entry = w + w[0]
-			entry_len = w_len+1;
+			entry_len = w_len+2;
 			entry = (char*)calloc(entry_len+1,sizeof(char));
 			entry[entry_len]= '\0';		
 			memcpy(entry,w,w_len);			
@@ -502,9 +773,14 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			// not sure about this line...(to fix)
 			//w_entry0[w_len]= w[0];
 			//entry[w_len]= w[0];
-			tmp = entry;
-			tmp += w_len;
-			memcpy(tmp,w,1);
+			if (w != NULL){
+				tmp = entry;
+				//dbg_log("[1]tmp = %s :: w = %s :: w_len = %d :: entry = %s\n", tmp, w, w_len, entry);
+				tmp += w_len;
+				//dbg_log("[2]tmp = %s :: w = %s :: w_len = %d :: entry = %s\n", tmp, w, w_len, entry);
+				memcpy(tmp, w, 1);
+			}
+			
 
 
 		}else if(code < EOD_MARKER){ /// <257

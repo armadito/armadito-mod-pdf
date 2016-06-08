@@ -21,25 +21,43 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "pdfAnalyzer.h"
+#include "armaditopdf.h"
+#include "pdfParsing.h"
+#include "pdfAnalysis.h"
+#include "osdeps.h"
+#include "log.h"
+#include <time.h>
 
-// This function print a report of the analysis
-int printAnalysisReport(struct pdfDocument * pdf, char * filename){
 
-	if (!PRINT_REPORT) {
-		return 0;
+
+
+
+
+/*
+printAnalysisReport() :: print a report of the analysis (debug only).
+parameters:
+- struct pdfDocument * pdf
+returns:
+- none.
+// TODO :: printAnalysisReport :: filter report informations by log level.
+*/
+void printAnalysisReport(struct pdfDocument * pdf){
+
+
+	if (!print_report || pdf == NULL){
+		return;
 	}
 
 	printf("\n\n");
-	printf("-------------------------------\n");
+	printf("----------------------------------\n");
 	printf("-- ARMADITO PDF ANALYZER REPORT --\n");
-	printf("-------------------------------\n\n");
+	printf("----------------------------------\n\n");
 
-	printf("Filename = %s\n",filename);
-	//printf("Execution time = %d sec\n",0);
-	printf("PDF version = %s\n",pdf->version);
+	printf("Filename = %s\n",pdf->fname);
+	if (pdf->version)
+		printf("PDF version = %s\n",pdf->version);
 
-	//#ifdef DEBUG
+	printf("size = %d bytes\n", pdf->size);
 	
 	printf("\n\n");
 	printf("::: PDF Document Structure Tests :::\n\n");
@@ -74,8 +92,7 @@ int printAnalysisReport(struct pdfDocument * pdf, char * filename){
 
 	printf("\n\n");
 	printf("::: Suspicious Coefficient :::\n\n");
-
-	//#endif
+	printf("errors = %d\n", pdf->errors);
 
 	if(pdf->testStruct->bad_header > 0)
 		printf("Coef = BAD_HEADER\n");
@@ -91,13 +108,14 @@ int printAnalysisReport(struct pdfDocument * pdf, char * filename){
 
 	printf("-------------------------------------------------------\n");
 	//printf("-------------------------------------------------------\n");
-	printf("Execution time : %.2lf sec \n",pdf->scan_time); // put in analysis report function 
+	printf("Execution time : %.2lf sec \n",pdf->scan_time);
 	printf("-------------------------------------------------------\n");
 	printf("-------------------------------------------------------\n\n");
 
-	return 0;
+	return;
 
 }
+
 
 // This function calc the suspicious coefficient according to the tests results
 // TODO Improve  this fucntion by calc the coef with the operation coef += test_result * test_coef
@@ -211,208 +229,101 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf){
 }
 
 
-
-/*
-	int analyzePDF(...)
-	This function launch analysis on a PDF file (parsing, analysis and evaluation).
-	Returns a suspicion coef on success.
-	Returns -1 on error.
-	Returns -2 if the file is not supported (bad header or encrypted file).
+/* 
+	analyzePDF_ex() :: Analyze pdf extension function 
+	parameters: 
+		- int fd (file descriptor of the file to analyze)
+		- char * filename (file name of the file).
+	returns:
+		- the suspicious coefficient (>=0) on success.
+		- an error code (<0) on error.
 */
-int analyzePDF(char * filename){
-
-
-	int ret = 0;
-	FILE * f = NULL;
-	struct pdfDocument * pdf = NULL;
-	time_t start_time, end_time;
-	double time_elapsed = 0;
-	int res = 0;
-
-	if (filename == NULL) {
-		printf("[-] Error :: analyzePDF :: invalid parameter\n");
-		return -1;
-	}
-
-	time(&start_time);
-	
-	// Open file
-	if(!(f = os_fopen(filename,"rb"))){
-		printf("[-] Error :: analyzePDF :: Error while opening file %s\n",filename);
-		return -1;
-	}
-	
-	// Initialize the pdfDocument struct
-	if(!(pdf = initPDFDocument())){
-		printf("[-] Error :: analyzePDF :: Error while allocating memory for pdfDocument structure\n");
-		fclose(f);
-		return -1;
-	}
-	pdf->fh = f;
-	
-	
-
-	// PDF Parsing
-	res = parsePDF(pdf);
-
-	if(res < 0 ){
-
-		// If bad file header or the file is encrypted.
-		if (res == -2 || pdf->testStruct->bad_header > 0) {
-			printAnalysisReport(pdf,filename);
-			freePDFDocumentStruct(pdf);
-			return -2;
-		}
-
-		freePDFDocumentStruct(pdf);
-		return -1;
-	}
-	
-	#ifdef DEBUG
-		//printPDFObjects(pdf);
-	#endif
-		
-	
-	// Object analysis
-	if(pdf->objects != NULL){
-		res = getDangerousContent(pdf);
-	}
-
-
-	// Document structure analysis
-	res = documentStructureAnalysis(pdf);
-
-	time(&end_time);
-	time_elapsed = difftime(end_time,start_time);
-
-
-	// print all objects references
-	//printObjectReferences(pdf);
-
-	// Analysis summary
-	calcSuspiciousCoefficient(pdf);
-	printAnalysisReport(pdf,filename);
-	printf("Execution time : %.2lf sec \n",time_elapsed);
-	printf("-------------------------------------------------------\n");
-	printf("-------------------------------------------------------\n\n");
-
-	ret = pdf->coef;
-		
-	
-	freePDFDocumentStruct(pdf);
-	//fclose(f);
-	return ret;
-
-}
-
-/*
-	int analyzePDF_fd(...) with file descriptor
-	This function launch analysis on a PDF file (parsing, analysis and evaluation).
-	Returns a suspicion coef on success.
-	Returns -1 on error.
-	Returns -2 if the file is not supported (bad header or encrypted file).
-*/
-int analyzePDF_fd(int fd, char * filename){
-
-
-	int ret = 0;
-	struct pdfDocument * pdf = NULL;
-	time_t start_time, end_time;
-	double time_elapsed = 0;
-	int res = 0;
-
-	// Check parameters
-	if (fd < 0) {
-		printf("[-] Error :: analyzePDF_fd :: Invalid parameter :: fd = %d\n",fd);
-		return -1;
-	}
-
-	time(&start_time);
-
-	
-	// Initialize the pdfDocument struct
-	if(!(pdf = initPDFDocument())){
-		printf("[-] Error :: analyzePDF :: Error while allocating memory for pdfDocument structure\n");
-		return -1;
-	}
-	pdf->fh = NULL;
-	pdf->fd = fd;
-	
-	// Check the magic number of the file
-	res = checkMagicNumber(pdf);
-
-	
-	if(pdf->testStruct->bad_header > 0){
-		#ifdef DEBUG
-		printf("[-] Error :: analyzePDF :: Bad PDF header :: This file is not a PDF file :: %s \n",filename);
-		printAnalysisReport(pdf,filename);
-		#endif		
-		freePDFDocumentStruct(pdf);
-		return -2;
-	}
-
-	// PDF Parsing
-	res = parsePDF(pdf);
-	
-	if(res < 0 ){
-
-		// If the file is encrypted.
-		if (res == -2) {
-#ifdef DEBUG
-			printAnalysisReport(pdf,filename);
-#endif
-			freePDFDocumentStruct(pdf);
-			return -2;
-		}
-
-		freePDFDocumentStruct(pdf);
-		return -1;
-	}
-		
-	#ifdef DEBUG
-		//printPDFObjects(pdf);
-	#endif
-		
-	
-	// Object analysis
-	if(pdf->objects != NULL){
-		res = getDangerousContent(pdf);
-	}
-
-
-	// Document structure analysis
-	res = documentStructureAnalysis(pdf);
-
-	time(&end_time);
-	time_elapsed = difftime(end_time,start_time);
-
-	pdf->scan_time = time_elapsed;
-
-	// print all objects references
-	//printObjectReferences(pdf);
-	//printPDFObjects(pdf);
-
-	
-	calcSuspiciousCoefficient(pdf);
-
-	// Analysis summary
-	#ifdef DEBUG	
-	printAnalysisReport(pdf,filename);
-	
-	#endif
-	ret = pdf->coef;
-	printf("[MODULEPDF] Coef = %d\n", ret);
-		
-	
-	freePDFDocumentStruct(pdf);
-	//fclose(f);
-	return ret;
-
-}
-
-/* Analyze pdf extention function*/
 int analyzePDF_ex(int fd, char * filename){
 
 	int ret = 0;
+	struct pdfDocument * pdf = NULL;
+	time_t start_time =0, end_time = 0;
+	double time_elapsed = 0;
+	int res = 0;
+	FILE * fh = NULL;
+
+
+	if (fd < 0 && filename == NULL){
+		err_log("analyzePDF_ex :: invalid parameters!",0);
+		return -1;
+	}
+
+	dbg_log("analyzePDF_ex :: Analyzing file :: [%s]\n", filename);
+
+	// open the file if fd is invalid	
+	if (fd < 0 && !(fh = os_fopen(filename, "rb"))){
+		err_log("analyzePDF_ex :: Can't open file %s\n", filename);
+		return -1;
+	}
+	
+
+	// Initialize pdfDocument struct
+	if (!(pdf = initPDFDocument())){
+		err_log("analyzePDF_ex :: pdfDocument initialization failed!\n");
+		return -1;
+	}
+
+	pdf->fh = fh;
+	pdf->fd = fd;
+	pdf->fname = os_strdup(filename);
+
+	// start time initialization.
+	time(&start_time);	
+
+	// Parse pdf document content.	
+	if ((ret = parsePDF(pdf)) < 0){
+		err_log("analyzePDF_ex :: parsing PDF document failed\n");
+		goto clean;
+	}
+
+	/* this is for debug purpose only */
+	// printPDFObjects(pdf);
+	// printObjectReferences(pdf);
+
+
+	// PDF objects analysis.
+	if ((ret = getDangerousContent(pdf)) < 0){
+		err_log("analyzePDF_ex :: get dangerous content failed\n");
+		goto clean;
+	}
+	
+
+	// Document structure analysis
+	if((ret = documentStructureAnalysis(pdf))< 0){
+		err_log("analyzePDF_ex :: document structure Analysis failed\n");
+		goto clean;
+	}
+
+
+clean:
+
+	time(&end_time);
+	time_elapsed = difftime(end_time, start_time);
+
+	pdf->scan_time = time_elapsed;
+
+	// calc supicious coefficient of the document.
+	calcSuspiciousCoefficient(pdf);
+
+	// print report. (debug only)
+	printAnalysisReport(pdf);
+
+	if (ret >= 0){
+		ret = pdf->coef;
+		dbg_log("[armaditoPDF] Coef = %d\n", ret);
+	}
+	
+	if (pdf != NULL){
+		freePDFDocumentStruct(pdf);
+	}
+
+
 	return ret;
+
+
 }

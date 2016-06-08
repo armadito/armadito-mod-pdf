@@ -20,35 +20,50 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 
+#include "pdfParsing.h"
+#include "utils.h"
+#include "osdeps.h"
+#include "log.h"
+#include "filters.h"
 
-#include "pdfAnalyzer.h"
 
 
-// This function checks if the header is correct
+/*
+checkMagicNumber() :: check the presence of a PDF header and fill the pdf struct version field.
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+
+// TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
+// TODO :: checkMagicNumber :: Thread XDP files.
+*/
 int checkMagicNumber(struct pdfDocument * pdf){
-	
 	
 	int version_size = 8;
 	int ret = 0;
+	char * version = NULL;
 
-	
-	char * version;
-	version = (char*)calloc(9,sizeof(char));
-	version[8]='\0';
+	version = (char*)calloc(version_size+1, sizeof(char));
+	version[version_size] = '\0';
 	
 	if (pdf->fh == NULL && pdf->fd < 0) {
-		printf("[-] Error :: checkMagicNumber :: invalid parameters\n");
+		err_log("checkMagicNumber :: invalid parameters!\n");
 		return -1;
 	}
-
-	// In this case use file handle.
+	
 	if (pdf->fh != NULL) {
 
 		// Go to the beginning of the file
 		fseek(pdf->fh,0,SEEK_SET);
 
-		// Read the 8 first bytes Ex: %PDF-1.
+		// Read the 8 first bytes Ex: %PDF-1.x
 		ret = fread(version,1,version_size,pdf->fh);
+		if (ret != version_size){
+			err_log("checkMagicNumber :: read file failed!\n");
+			return -1;
+		}
 
 	}
 	else {
@@ -57,30 +72,33 @@ int checkMagicNumber(struct pdfDocument * pdf){
 		os_read(pdf->fd, version, version_size);
 	}
 
-	//printf("pdf header = %s\n",version);
+	dbg_log("checkMagicNumber :: pdf header = %s\n",version);
 	
 	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
 	
-#ifdef DEBUG
-		printf ("PDF Header OK = %s\n",version);
-#endif
 		pdf->version = version;
 	
 	}else{
-		//printf ("PDF Header KO : This document is not a PDF file.\n");
+		
 		pdf->testStruct->bad_header = 1;
-		//pdf->version = "none";
-		
-		//TODO XDP files
-		
-		return -1;
+		return -2;
 	}
 	
 	return 0;
 	
 }
 
-// This function get the content of the PDF document
+
+/*
+getPDFContent() :: Get the content of the PDF document
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- the size of the document on success.
+- an error code (<=0) on error.
+
+// TODO :: getPDFContent :: set max_size limit.
+*/
 int getPDFContent(struct pdfDocument * pdf){
 
 	char * content = NULL;
@@ -89,7 +107,7 @@ int getPDFContent(struct pdfDocument * pdf){
 
 
 	if (pdf->fh == NULL && pdf->fd < 0) {
-		printf("[-] Error :: getPDFContent :: invalid parameters\n");
+		err_log("getPDFContent :: invalid parameters!\n");
 		return -1;
 	}
 
@@ -103,24 +121,20 @@ int getPDFContent(struct pdfDocument * pdf){
 	}
 	else {
 
-		doc_size =  os_lseek(pdf->fd,0,SEEK_END);
-		//printf("Document Size  = %d\n",doc_size);
+		doc_size =  os_lseek(pdf->fd,0,SEEK_END);		
 		//doc_size = _tell(pdf->fd);
 		os_lseek(pdf->fd,0,SEEK_SET); // rewind		
 
 	}
 	
+	dbg_log("getPDFContent :: Document Size  = %d\n",doc_size);
 	
-	
-	#ifdef DEBUG
-		printf("Document Size  = %d\n",doc_size);
-	#endif
-	
-	content = (char*)calloc(doc_size+1,sizeof(char));
-	content[doc_size]= '\0';
-	if (content == NULL) {
+	if ((content = (char*)calloc(doc_size + 1, sizeof(char))) == NULL) {
+		err_log("getPDFContent :: content allocation failed!\n");
 		return -1;
-	}
+	}	
+	content[doc_size]= '\0';
+	
 	
 	if (pdf->fh != NULL) {
 		read_bytes = fread(content, 1, doc_size, pdf->fh);
@@ -128,10 +142,10 @@ int getPDFContent(struct pdfDocument * pdf){
 	else {		
 		read_bytes = os_read(pdf->fd, content, doc_size);
 	}
-	
-	//printf("read bytes = %d\n",read_bytes);
-	
-	//printf("Document content = %s",content);
+
+	if (read_bytes != doc_size){
+		warn_log("getPDFContent :: read_byte (%d)  != doc_size (%d)\n",read_bytes,doc_size);
+	}
 	
 	pdf->content = content;	
 	pdf->size = read_bytes;
@@ -141,44 +155,46 @@ int getPDFContent(struct pdfDocument * pdf){
 }
 
 
-
-// This function decode a dictionnary obfuscated with hexa; return the modified dico or the original if there is no obfuscation.
+/*
+hexaObfuscationDecode() :: Decode a dictionnary obfuscated with hexa; return the modified dico or the original if there is no obfuscation.
+parameters:
+- char * dico (object dictionnary).
+returns: (char*)
+- the modified dictionary.
+- NULL if there is no hexa obfuscation or on error.
+*/
 char * hexaObfuscationDecode(char * dico){
 
 	char * start = NULL;
-	int len = 0, start_len = 0;
 	char * decoded_dico = NULL;
 	char * hexa = NULL;
 	char * hexa_decoded = NULL;
-	int is_space_hexa = 1;
 	char * tmp = NULL;
+	int len = 0, start_len = 0;	
+	int is_space_hexa = 1;
+	
 
 	if (dico == NULL) {
+		err_log("hexaObfuscationDecode :: invalid parameter\n");
 		return NULL;
 	}
-
+	
+	// TODO :: len= obj->dico_len;
 	len = strlen(dico);
 	
 	start = searchPattern(dico,"#",1,len);
-
 	if(start == NULL){
 		return NULL;
 	}
 
 	start_len = (int)(start - dico);
 	start_len = len - start_len;
-	//printf("dico_len =  %d:: start_len = %d\n",len,start_len );
-	//printf("dico = %s\n\n",dico);
-	
-	//decoded_dico = (char*)calloc(len,sizeof(char));
+		
 	hexa = (char*)calloc(4,sizeof(char));
 	hexa[3] = '\0';
-
-	//hexa = (char*)calloc(2,sizeof(char));
+	
 	hexa_decoded = (char*)calloc(2,sizeof(char));
 	hexa_decoded[1] = '\0';
-
-
 
 	//memcpy(decoded_dico,dico,len);
 	tmp = (char*)calloc(len+1,sizeof(char));
@@ -186,85 +202,65 @@ char * hexaObfuscationDecode(char * dico){
 	memcpy(tmp,dico,len);
 	
 
-
 	while( start != NULL && start_len >= 3){
-
 		
-		//printf("FLAG1\n");
 		// get the pointer of the hexa code
-		start = getHexa(start,start_len);
-		//printf("FLAG2\n");
-		
+		start = getHexa(start,start_len);		
 		if(start == NULL){
-			//start += 3;
-			//len -=3;
-			//len = 0;
 			continue;
 		}
-			
-		
+					
 		memcpy(hexa, start, 3);
 
 		// #20 = space - #2F = '/' (slash) - #E9 = é - #2C = ','
 		if(memcmp(hexa,"#20",3) != 0 && memcmp(hexa,"#2F",3) != 0 && memcmp(hexa,"#E9",3) != 0 && memcmp(hexa,"#2C",3) != 0){
 			is_space_hexa = 0;
 		}
-
-		//memcpy(hexa, start, 2);
-		//hexa[2]='\0';
-		//printf("hexa = %s\n",hexa);
-		
-		//sscanf(hexa,"%x",&hexa_decoded[0]);
-		os_sscanf(hexa,"%x",&hexa_decoded[0]);
-		
-		//printf("hexa_decoded_s = %s\n",hexa_decoded);
+				
+		os_sscanf(hexa,"%x",&hexa_decoded[0]);			
 
 		decoded_dico = replaceInString(tmp,hexa,hexa_decoded);
-
 		if(decoded_dico != NULL){
 
 			free(tmp);
 			tmp = NULL;
+			tmp = decoded_dico;		
 
-			tmp = decoded_dico;
-
-			//printf("decoded_dico___  = %s\n\n",tmp);
-
-
-		}else{
-			#ifdef DEBUG
-				printf("Error :: hexaObfuscationDecode :: replaceInString returns NULL \n");
-			#endif
+		}else{			
+			err_log("hexaObfuscationDecode :: replaceInString returns NULL \n");
 			return NULL;
 		}
 
 
-		start += 3;
-		//start += 3;
+		start += 3;		
 
 		start_len = (int)(start - dico);
 		start_len = strlen(dico) -start_len;
-		//printf("len = %d\n",len);
-
 
 	}
 	
 	free(hexa);
 	free(hexa_decoded);
 
-	if(decoded_dico != NULL && is_space_hexa == 0){
-		//printf("dico = %s\n",dico);
-		//printf("decoded_dico  = %s\n\n",decoded_dico);
+	if(decoded_dico != NULL && is_space_hexa == 0){		
+		dbg_log("hexaObfuscationDecode :: decoded_dico  = %s\n",decoded_dico);
 		return decoded_dico;
 	}
-		
-
-
+	
 	return NULL ; 
 
 }
 
-//This function get the object dictionary
+
+/*
+getObjectDictionary() :: Get the object dictionary
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (char*)
+- a pointer to the dictionary string on success.
+- NULL on error.
+*/
 char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	char  * dico = NULL;
@@ -275,35 +271,29 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	int inQuotes = 0;
 	int inString = 0;
 	int sub = 0;
-	int flag = 0;
-	//char * dico_end = NULL;
+	int flag = 0;	
 	int len = 0;
-	//int i = 0;
-		
-	//char* src, char* pat , int pat_size ,  int size
 
-
+	if (obj == NULL || pdf == NULL){
+		err_log("getObjectDictionary :: invalid parameter\n");
+		return NULL;
+	}	
 	
 	// Search the beginning of the
 	dico_start = searchPattern(content,"<<",2,obj->content_size);
 
-
 	if(dico_start == NULL){
-		//printf("No dictionary found in object %s!!\n", obj->reference);
+		//dbg_log("getObjectDictionnary :: No dictionary found in object %s!!\n", obj->reference);
 		return NULL;
 	}
 
-	//printf("hey == %s\n",content);
-	
-	// TODO search other occurencies of "<<" to detect sub dictionaries
-	// TODO Found the same number of occurencies of stream ">>"
+	// search other occurencies of "<<" to detect sub dictionaries
+	// check if you find the same number of occurencies of stream ">>"
 	
 	len = (int)(dico_start - obj->content);
 	len = obj->content_size - len;
 
 	end = dico_start;
-	// Scan the line
-	//for(i= 0; i< len ; i++){
 
 	while(len >= 2 && flag == 0){
 
@@ -370,44 +360,37 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	dico[len]='\0';
 
 	memcpy(dico,dico_start,len);
-
-	
-	//dico =  getDelimitedStringContent(dico_start,"<<", ">>", len);
-
-	/*
-	if(dico == NULL){
-		#ifdef DEBUG
-			printf("Warning :: getObjectDictionary :: No dictionary found in object %s\n",obj->reference);
-		#endif
-		return NULL;
-	}*/
-
-	//len = strlen(dico);
-
-	//printf("dico = %s---->\n",dico);
 	
 
 	// decode hexa obfuscated dictionaries
 	decoded_dico = hexaObfuscationDecode(dico);
 
-	if(decoded_dico != NULL){
-		#ifdef DEBUG
-			printf("Warning :: getObjectDictionary :: Obfuscated Object dictionary in %s\n", obj->reference);
-		#endif
+	if(decoded_dico != NULL){		
+		warn_log("getObjectDictionary :: Obfuscated Object dictionary in object %s\n", obj->reference);
 		free(dico);
 		pdf->testStruct->obfuscated_object ++;
 		return decoded_dico;
 	}
 
-	if (decoded_dico != NULL)
+	if (decoded_dico != NULL){
 		free(decoded_dico);
+		decoded_dico = NULL;
+	}
+		
+
 	return dico;
 	
 }
 
 
-
-// This function get the Object type described in dictionary
+/*
+getObjectType() :: Get the object type defined in dictionary "/Type"
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+returns: (char *)
+- the type of the object if any.
+- NULL if not or on error.
+*/
 char * getObjectType(struct pdfObject * obj){
 
 	char * type = NULL;
@@ -422,16 +405,17 @@ char * getObjectType(struct pdfObject * obj){
 	int type_len =0;
 
 
+	if (obj == NULL || obj->dico == NULL){
+		err_log("getObjectType :: invalid parameter\n");
+		return NULL;
+	}
+
 	pattern = (char*)calloc(pattern_len+1,sizeof(char));
 
 
 	dico_len = strlen(obj->dico);
 	len = dico_len;
 	start = obj->dico;
-
-	//printf("Dico = %s \n",obj->dico);
-	//printf("len = %d\n",len);
-	//printf("start0 = %c\n",start[0]);
 
 	// skip first dico delimiter
 	while(start[0] == '<'){
@@ -443,8 +427,6 @@ char * getObjectType(struct pdfObject * obj){
 	while(len >= pattern_len && flag == 0){
 
 		if(start[0] == '<' && start[1] == '<'){
-			//printf("sub dico start :: %d\n",sub);
-			//printf("start0 = %c :: %d\n",start[0],len);
 			sub ++;
 			start += 2;
 			len = (int)(start - obj->dico);
@@ -453,8 +435,6 @@ char * getObjectType(struct pdfObject * obj){
 		}
 
 		if(start[0] == '>' && start[1] == '>'){
-			//printf("sub dico end :: %d\n",sub);
-			//printf("start0 = %c :: %d\n",start[0],len);
 			sub --;
 			start += 2;
 			len = (int)(start - obj->dico);
@@ -465,13 +445,10 @@ char * getObjectType(struct pdfObject * obj){
 		memcpy(pattern,start,5);
 
 		if(sub == 0 && memcmp(pattern,"/Type",5) == 0 && start[5] != '1' && start[5] != '2' ){
-			//printf("Found type delimiter :: start[5] = %c\n",start[5]);
+			//dbg_log("getObjectType :: Found type delimiter :: start[5] = %c\n",start[5]);
 			flag ++;		
 			continue;
 		}
-		//printf("pattern = %s\n",pattern);
-
-		//printf("start0 = %c :: %d\n",start[0],len);
 
 		start++;
 
@@ -482,11 +459,6 @@ char * getObjectType(struct pdfObject * obj){
 
 	free(pattern);
 	pattern = NULL;
-
-
-	//printf("start0 = %c%c\n",start[0],start[1]);
-	//printf("sub = %d\n",sub);
-	//printf("len = %d\n",len);
 
 	// If no type found
 	if(flag == 0){
@@ -510,9 +482,6 @@ char * getObjectType(struct pdfObject * obj){
 		type_len ++;
 	}
 
-	//printf("start0 = %c :: end0 = %c\n",start[0],end[0]);
-
-
 	if(type_len == 0){
 		return NULL;
 	}
@@ -520,50 +489,48 @@ char * getObjectType(struct pdfObject * obj){
 	type_len ++; // add it for '/'
 	type = (char*)calloc(type_len+1,sizeof(char));
 	type[type_len]= '\0';
-	//printf("getObjectType :: len = %d \n",len);
-	//start += 4;
-	//len = (int)(end-start);
+
 	memcpy(type,start,type_len);
 	
-
 	return type;
 }
 
 
-// This function get the stream content of an object (returns NULL if there is no stream)
+/*
+getObjectType() :: Get the stream content of an object (returns )
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+returns: (char *)
+- the stream content.
+- NULL if there is no stream or on error.
+*/
 char * getObjectStream(struct pdfObject * obj){
 
 	char * stream = NULL;
 	char * start = NULL;
 	char * end = NULL;
 	int len = 0;
-	//char * tmp = NULL;
 
-	start = searchPattern(obj->content,"stream",6,obj->content_size);
-
-	
-	if(start == NULL){
+	if (obj == NULL){
+		err_log("getObjectStream :: invalid parameter\n");
 		return NULL;
 	}
 
+	start = searchPattern(obj->content,"stream",6,obj->content_size);
+	if(start == NULL){
+		return NULL;
+	}
 		
 	len = (int)(start - obj->content);
 	len = obj->content_size -len;
 
-	//printf("getObjectStream :: len = %d\n",len);
-
-	//printf("start = %d\n",start);
+	
 	end = searchPattern(start,"endstream",9,len);
-	//printf("end = %d\n",end);
-
+	
 	if(end == NULL){
 		return NULL;
 	}
 
-
-	
-	//len = (int)(end-start);
-	
 	// Remove white space after "stream" and before "endstream"
 	start += 6;
 	while(start[0] == '\n' || start[0] == '\r'){
@@ -575,18 +542,12 @@ char * getObjectStream(struct pdfObject * obj){
 		end --;
 	}
 	end++;
-	//printf("end = %d\n",end);
 
 	len = (int)(end-start);
-	if(len <= 0 ){
-		#ifdef DEBUG
-			printf("Warning :: Empty stream content in object %s\n", obj->reference);
-		#endif
+	if(len <= 0 ){		
+		warn_log("getObjectStream :: Empty stream content in object %s\n", obj->reference);		
 		return NULL;
 	}
-
-
-	//printf("Stream len = %d\n",len);
 
 	obj->stream_size = len; // -1 for the white space
 	obj->tmp_stream_size = obj->stream_size;
@@ -601,7 +562,14 @@ char * getObjectStream(struct pdfObject * obj){
 }
 
 
-
+/*
+getStreamFilters() :: Get stream's filters
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+returns: (char *)
+- the filters applied to the stream in on success.
+- NULL on error.
+*/
 char * getStreamFilters(struct pdfObject * obj){
 
 	char * start = NULL;
@@ -610,22 +578,20 @@ char * getStreamFilters(struct pdfObject * obj){
 	int len = 0;
 	char * filters = NULL;
 	
-
+	if (obj == NULL || obj->dico == NULL){
+		err_log("getStreamFilters :: invalid parameter\n");
+		return NULL;
+	}
 
 	
-	start = searchPattern(obj->dico,"/Filter",7,strlen(obj->dico));
-	//printf("getStreamFilters :: start = %d\n",start);
-	
+	start = searchPattern(obj->dico,"/Filter",7,strlen(obj->dico));		
 	if( start == NULL ){
-		//printf("I got no filter !!\n");
+		// No filter found.
 		return NULL;
 	}
 	
 	len = (int)(start - obj->dico);
 	start += 1;
-	//printf("len = %d \t start = %d \t obj->dico = %d\n",len, start,obj->dico);
-	
-	
 	
 	end = memchr(start,'/',strlen(obj->dico)-len);
 	end_tmp = memchr(start,'[',strlen(obj->dico)-len);
@@ -633,12 +599,9 @@ char * getStreamFilters(struct pdfObject * obj){
 	if(end == NULL){
 		return NULL;
 	}
-
 	
 	// if a bracket is before the first / that means it's an array of filters
 	if( end_tmp != NULL && end_tmp < end ){
-
-		//printf("getStreamFilters :: heyhey = %d\n",end);
 		
 		end  = end_tmp;
 		start = end;
@@ -650,16 +613,13 @@ char * getStreamFilters(struct pdfObject * obj){
 		}
 
 		len +=1;
-		//printf("getStreamFilters :: len = %d\n",len);
-		//printf("end debug :: %c",end[0]);
-
 
 	}else{ // a single filter
 	
 		start = end;
 		len = 0;
 		do{
-			//printf("char = %c\n",end[0]);
+			
 			end ++;
 			len++;
 		
@@ -667,20 +627,14 @@ char * getStreamFilters(struct pdfObject * obj){
 		
 	
 	}
-	
-	
-	//filters = (char*)malloc(len*sizeof(char));
+		
 	filters = (char*)calloc(len+1,sizeof(char));
 	filters[len] = '\0';
-	//printf("len = %d \n",len);
-
-	//start += 6;
-	//len = (int)(end - start);
-	//printf("getStreamFilters :: len = %d \n",len);
 
 	os_strncpy(filters,len+1,start,len);
 	
-	//printf("filters = %s \n",filters);
+	/*debuf print*/
+	//dbg_log("getStreamFilters :: filters = %s \n",filters);
 	
 	
 	return filters;
@@ -688,8 +642,15 @@ char * getStreamFilters(struct pdfObject * obj){
 }
 
 
-
-// This function decode an object stream according to the filters applied
+/*
+decodeObjectStream() :: decode an object stream according to the filters applied
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+// TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
+*/
 int decodeObjectStream(struct pdfObject * obj){
 
 	
@@ -702,25 +663,24 @@ int decodeObjectStream(struct pdfObject * obj){
 	unsigned int i =0;
 	int filter_applied = 0;
 	
-	
-	
-	if(obj->filters == NULL){
-		#ifdef DEBUG
-			printf("Error :: decodeObjectStream :: There is no filter implemented\n");
-		#endif
+	if (obj == NULL){
+		err_log("decodeObjectStream :: invalid parameter\n");
 		return -1;
 	}
 	
-	//printf("implemented filters = %s\n",obj->filters);
-	if(obj->stream == NULL){
-		#ifdef DEBUG
-			printf("Error :: decodeObjectStream :: Null Stream in object %s\n", obj->reference);
-		#endif
+	if(obj->filters == NULL){		
+		err_log("decodeObjectStream :: There is no stream filter in object %s\n", obj->reference);
+		return -1;
+	}
+	
+	dbg_log("decodeObjectStream :: obj= %s :: implemented filters = %s\n", obj->reference,obj->filters);
+
+	if(obj->stream == NULL){		
+		err_log("decodeObjectStream :: NULL stream in object %s\n", obj->reference);
 		return -1;
 	}
 
 
-	//stream = obj->stream;
 	end = obj->filters;
 
 	stream = (char*)calloc(obj->stream_size+1,sizeof(char));
@@ -728,15 +688,9 @@ int decodeObjectStream(struct pdfObject * obj){
 	memcpy(stream,obj->stream,obj->stream_size);
 
 
-
-
 	//while( (start = memchr(end, '/',strlen(obj->filters)-len)) != NULL ){
 	while( (start = strchr(end, '/')) != NULL ){
-
-		//printf("Searching filter in :: %d :: %s\n",end,end);
-		//printf("Searching filter in :: %d :: %s\n",start,start);
-		
-		//filter ++;
+				
 		i = 0;
 		end = start;		
 		// Scan the filter name
@@ -746,113 +700,137 @@ int decodeObjectStream(struct pdfObject * obj){
 		}while( i < strlen(obj->filters) && ((end[0] >=97 && end[0] <=122) || (end[0] >=65 && end[0] <=90 ) || (end[0] >=48 && end[0] <= 57)));
 		
 		len = (int)(end-start);
-		
-		//filter = (char*)malloc(len*sizeof(char));
+				
 		filter = (char*)calloc(len+1,sizeof(char));
 		filter[len] = '\0';
 
-		//printf("filter_len = %d\n",len);
-
 		os_strncpy(filter,len+1,start,len);
-		//printf("implemented filter_end = %s\n",filter);
+		//dbg_log("decodeObjectStream :: implemented filter_end = %s\n",filter);
 		
-		//len -= filter - strlen(obj->filter);
-		
-		
+
 		// Apply decode filter
-		
-		//TODO
 		if((strncmp(filter,"/FlateDecode",12) == 0 && strncmp(filter,"/FlateDecode",strlen(filter)) == 0) || (strncmp(filter,"/Fl",3) == 0 && strncmp(filter,"/Fl",strlen(filter)) == 0)){
-				#ifdef DEBUG
-					printf("Decode Fladetecode :: %s\n",obj->reference);
-				#endif
-				tmp = FlateDecode(stream, obj);
+			
+
+			dbg_log("decodeObjectStream :: Decode Fladetecode :: %s\n",obj->reference);
+
+			if ((tmp = FlateDecode(stream, obj)) == NULL){
+				err_log("decodeObjectStream :: FlateDecode failed!\n");
+				dbg_log("decodeObjectStream :: dico = %s\n",obj->dico);
 				free(stream);
-				stream  = tmp;
-
-				/*if(strncmp(obj->reference,"8 0 obj",8) == 0)
-					printf("stream _flatedecode = %s\n",stream);*/
-				filter_applied ++;
-		}else{
-
-			if((strncmp(filter,"/ASCIIHexDecode",15) == 0 && strncmp(filter,"/ASCIIHexDecode",strlen(filter)) == 0) || (strncmp(filter,"/AHx",4) == 0 && strncmp(filter,"/AHx",strlen(filter)) == 0)){
-				#ifdef DEBUG
-					printf("Decode ASCIIHexDecode :: %s\n",obj->reference);
-				#endif
-				tmp = ASCIIHexDecode(stream, obj);
-				free(stream);
-				stream  = tmp;
-				filter_applied ++;
-		
-			}else{
-
-				
-				if((strncmp(filter,"/ASCII85Decode",14) == 0 && strncmp(filter,"/ASCII85Decode",strlen(filter)) == 0) || (strncmp(filter,"/A85",4) == 0 && strncmp(filter,"/A85",strlen(filter)) == 0)){
-					//if(strncmp(obj->reference,"44 0 obj",8) == 0)
-					#ifdef DEBUG
-						printf("Decode ASCII85Decode :: %s \n",obj->reference);
-					#endif
-					tmp = ASCII85Decode(stream, obj);
-
-					free(stream);
-					stream  = tmp;
-					filter_applied ++;
-				}else{
-
-					
-					if((strncmp(filter,"/LZWDecode",10) == 0 && strncmp(filter,"/LZWDecode",strlen(filter)) == 0) || (strncmp(filter,"/LZW",4) == 0 && strncmp(filter,"/LZW",strlen(filter)) == 0)){
-						#ifdef DEBUG
-							printf("Decode LZWDecode :: %s\n",obj->reference);
-						#endif
-						tmp = LZWDecode(stream,obj);
-						free(stream);
-						stream  = tmp;
-						//printf("LZWDecode stream = %s\n",stream );
-						filter_applied ++;
-					}else{
-
-						//TODO
-						if((strncmp(filter,"/RunLengthDecode",16) == 0 && strncmp(filter,"/RunLengthDecode",strlen(filter)) == 0) || (strncmp(filter,"/RL",3) == 0 && strncmp(filter,"/RL",strlen(filter)) == 0) ){
-							#ifdef DEBUG
-								printf("Warning :: Filter RunLengthDecode not implemented :: %s\n",obj->reference );
-							#endif
-							filter_applied = 0;
-										
-						}else{
-
-							
-
-							if((strncmp(filter,"/CCITTFaxDecode",15) == 0 && strncmp(filter,"/CCITTFaxDecode",strlen(filter)) == 0) || (strncmp(filter,"/CCF",4) == 0 && strncmp(filter,"/CCF",strlen(filter)) == 0)){
-								//if(strncmp(obj->reference,"11 0 obj",8) == 0)
-								#ifdef DEBUG
-									printf("Decode CCITTFaxDecode :: %s \n",obj->reference);
-								#endif
-								tmp = CCITTFaxDecode(stream,obj);
-								free(stream);
-								stream  = tmp;
-
-								filter_applied ++;
-								
-							}else{
-								#ifdef DEBUG
-									printf("Filter %s  in object %s not implemented\n",filter,obj->reference);
-								#endif
-								
-							}
-
-						}
-
-
-					}
-
-				}
-
-
+				obj->errors++;
+				return -1;
 			}
 
+			free(stream);
+			stream  = tmp;
+			filter_applied ++;
+
+		}else if((strncmp(filter,"/ASCIIHexDecode",15) == 0 && strncmp(filter,"/ASCIIHexDecode",strlen(filter)) == 0) || (strncmp(filter,"/AHx",4) == 0 && strncmp(filter,"/AHx",strlen(filter)) == 0)){
+
+
+			dbg_log("decodeObjectStream :: Decode ASCIIHexDecode :: %s\n",obj->reference);
+								
+			if ((tmp = ASCIIHexDecode(stream, obj)) == NULL){
+				err_log("decodeObjectStream :: ASCIIHexDecode failed!\n");
+				free(stream);
+				free(filter);
+				obj->errors++;
+				return -1;
+			}
+
+			free(stream);
+			stream  = tmp;
+			filter_applied ++;
+		
+		}else if ((strncmp(filter, "/ASCII85Decode", 14) == 0 && strncmp(filter, "/ASCII85Decode", strlen(filter)) == 0) || (strncmp(filter, "/A85", 4) == 0 && strncmp(filter, "/A85", strlen(filter)) == 0)){
+
+
+			dbg_log("decodeObjectStream :: Decode ASCII85Decode :: %s \n",obj->reference);
+										
+			if ((tmp = ASCII85Decode(stream, obj)) == NULL){
+				err_log("decodeObjectStream :: ASCII85Decode failed!\n");
+				free(stream);
+				free(filter);
+				obj->errors++;
+				return -1;
+			}
+
+			free(stream);
+			stream  = tmp;
+			filter_applied ++;
+
+
+
+		}else if ((strncmp(filter, "/LZWDecode", 10) == 0 && strncmp(filter, "/LZWDecode", strlen(filter)) == 0) || (strncmp(filter, "/LZW", 4) == 0 && strncmp(filter, "/LZW", strlen(filter)) == 0)){
+
+#if 0
+			dbg_log("decodeObjectStream :: Decode LZWDecode :: %s \n", obj->reference);
+
+			if ((tmp = LZWDecode(stream, obj)) == NULL){
+				err_log("decodeObjectStream :: LZWDecode failed!\n");
+				free(stream);
+				free(filter);
+				obj->errors++;
+				return -1;
+			}
+
+			free(stream);
+			stream  = tmp;
+			filter_applied ++;
+#else
+			// to fix.
+			warn_log("decodeObjectStream :: Filter LZWDecode not implemented (to fix) :: %s\n", obj->reference);
+			filter_applied = 0;
+			free(stream);
+			free(filter);
+			obj->errors++;
+			return -1;
+#endif
+
+
+
+		}else if ((strncmp(filter, "/RunLengthDecode", 16) == 0 && strncmp(filter, "/RunLengthDecode", strlen(filter)) == 0) || (strncmp(filter, "/RL", 3) == 0 && strncmp(filter, "/RL", strlen(filter)) == 0)){
+
+			// to implement.
+			warn_log("decodeObjectStream :: Filter RunLengthDecode not implemented :: %s\n",obj->reference);
+			filter_applied = 0;
+			free(stream);
+			free(filter);
+			obj->errors++;
+			return -1;
+		
+
+		}else if ((strncmp(filter, "/CCITTFaxDecode", 15) == 0 && strncmp(filter, "/CCITTFaxDecode", strlen(filter)) == 0) || (strncmp(filter, "/CCF", 4) == 0 && strncmp(filter, "/CCF", strlen(filter)) == 0)){
+
+
+			dbg_log("decodeObjectStream :: Decode CCITTFaxDecode :: %s \n", obj->reference);
+
+			if ((tmp = CCITTFaxDecode(stream, obj)) == NULL){
+				err_log("decodeObjectStream :: CCITTFaxDecode failed!\n");
+				free(stream);
+				free(filter);
+				obj->errors++;
+				return -1;
+			}
+						
+			free(stream);
+			stream  = tmp;
+			filter_applied ++;
+								
+		}else{
+						
+			warn_log("decodeObjectStream :: Filter %s in object %s not implemented :: %s\n",filter,obj->reference);
+			filter_applied = 0;
+			free(stream);
+			free(filter);
+			obj->errors++;
+			return -1;
+					
 		}
 		
 		free(filter);
+		filter = NULL;
 		
 		
 	}
@@ -861,11 +839,11 @@ int decodeObjectStream(struct pdfObject * obj){
 	// Store the decoded stream
 	if(stream != NULL && filter_applied > 0){
 		obj->decoded_stream = stream ;
-	}else{
-		if(stream != NULL){
-			free(stream);
-			stream = NULL;	
-		}
+	}
+	else if (stream != NULL) {
+		
+		free(stream);
+		stream = NULL;		
 		
 	}
 	
@@ -873,183 +851,151 @@ int decodeObjectStream(struct pdfObject * obj){
 }
 
 
-
-// Get object information (types, filters, streams, etc.)
+/*
+getObjectInfos() :: Get object information (types, filters, streams, etc.)
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 if there is no dictionary and 1 on success.
+- an error code (<0) on error.
+*/
 int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf){
 
 	char * dico = NULL;
 	char * type = NULL;
 	char * stream = NULL;
-	char * filters = NULL;
-	//int res = 0;
+	char * filters = NULL;	
 	
 
-	if(obj == NULL){
-		#ifdef DEBUG
-			printf("Error :: getObjectInfos :: null object\n");
-		#endif
+	if(obj == NULL || pdf == NULL){		
+		err_log("getObjectInfos :: invalid parameter\n");
 		return -1;
 	}
 	
 
-	// Get the dictionary
-	dico = getObjectDictionary(obj,pdf);
-	if(dico == NULL){
+	// Get the object dictionary	
+	if ((dico = getObjectDictionary(obj, pdf)) == NULL){
 		return 0;
 	}
-	//printf("dictionary = %s\n\n",dico);
-	obj->dico = dico;
+
+	//dbg_log("getObjectInfos :: dictionary = %s\n\n",dico);
+	obj->dico = dico;	
 	
-	/*if(strncmp(obj->reference,"17 0 obj",8)== 0){
-		type = getObjectType_2(obj);
-		printf("DEBUG :: /Type = %s\n\n",type);
-	
-	}*/
-	
-	// Get the type
-	type = getObjectType(obj);
-	if(type != NULL){
-		//printf("/Type = %s\n\n",type);
+	// Get the object type	
+	if ((type = getObjectType(obj)) != NULL){		
 		obj->type = type;
 	}
 
-	
-	
-	
-
-	// Get stream content
-	stream  = getObjectStream(obj);
-
-	if(stream != NULL){
-		//printf("stream = %s--\n\n",stream);
+	// Get object stream content
+	if ((stream = getObjectStream(obj)) != NULL){		
 		obj->stream = stream;
 	}
 
-	// Get stream filters
-	filters = getStreamFilters(obj);
-	
-	if(filters != NULL){
+	// Get stream's filters
+	if ((filters = getStreamFilters(obj)) != NULL){
 		obj->filters = filters;
-		//decodeObjectStream(obj); // to uncomment
-		//printf("res = %d\n",res);
+		//decodeObjectStream(obj); // to improve analysis time, the stream will be decoded during object analysis
 	}
-
-	// debug
-	
-	/*if(strncmp(obj->reference,"19 0 obj",sizeof(obj->reference)) == 0){
-		printObject(obj);
-	}*/
-	
 		
 	return 1;
-	
-
 }
 
 
-
-// This function extract object in an object stream and add them in the object list
+/*
+extractObjectFromObjStream() :: extract objects embeeded in an object stream and add them in the objects list
+parameters:
+- struct pdfObject * obj (pdf object pointer)
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+*/
 int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 
 	int first = 0;
 	int num = 0;
+	int len = 0;
+	int i = 0;
+	int off = 0;
+	int obj_ref_len = 0;
+	int * obj_offsets;
+	int obj_len = 0;
+	int stream_len = 0;
+	int ret = 0;
+
 	char * stream  = NULL;
 	char * start = NULL;
 	char * end = NULL;
-	int len = 0;
-	int i = 0;
 	char * obj_num_a = NULL;
-	int off = 0;
 	char * off_a = NULL;
-	char * obj_ref = NULL;
-	int obj_ref_len = 0;
+	char * obj_ref = NULL;	
 	char * obj_content = NULL;
-	int * obj_offsets;
-	int obj_len = 0;
+	
 	struct pdfObject * comp_obj  =NULL;
-	int stream_len = 0;
+	
 
-
-
-
-	// verif params
-	if( pdf == NULL || obj == NULL ){
-		#ifdef DEBUG
-			printf("Error :: extractObjectFromObjStream :: NULL Params\n");
-		#endif
-		return -1;
+	if( pdf == NULL || obj == NULL ){		
+		err_log("extractObjectFromObjStream :: invalid parameters\n");		
+		return -2;
 	}
+
+	// first decode the stream if there is a filter applied.
+	if (obj->filters != NULL){
+		
+		if (decodeObjectStream(obj) < 0){
+			err_log("extractObjectFromObjStream :: decode object stream failed!\n");
+			// if decoding object stream failed then exit.
+			pdf->errors++;
+			return -2;
+		}
+	}
+
 
 	// avoid parsing object stream not well decoded.
 	if (obj->filters != NULL && obj->decoded_stream == NULL){
-		printf("[-] Error :: object not decoded successfully!\n");
-		return -1;
+		err_log("extractObjectFromObjStream :: object not decoded successfully!\n");
+		return -2;
 	}
+
 
 	if( obj->decoded_stream != NULL ){
 
 		stream = obj->decoded_stream;
 		stream_len = obj->decoded_stream_size;
+		//debugPrint(stream,);
+		dbg_log("extractObjectFromObjStream :: stream = %d\n",stream_len);
+		
+
 
 	}else{
+
 		stream = obj->stream;
 		stream_len = obj->stream_size;
+
 	}
 
 	if(stream == NULL || stream_len <= 0){
-		#ifdef DEBUG
-			printf("Error :: extractObjectFromObjStream :: No stream in the Object stream %s\n",obj->reference);
-		#endif
-		return -1;
+		err_log("extractObjectFromObjStream :: NULL stream in object %s\n",obj->reference);
+		return -2;
 	}
 
-	if( obj->dico == NULL){
-		#ifdef DEBUG
-			printf("Error :: extractObjectFromObjStream :: No dictionary in the Object stream %s\n",obj->reference);
-		#endif
-		return -1;
+	if( obj->dico == NULL){		
+		err_log("extractObjectFromObjStream :: No dictionary in the Object stream %s\n", obj->reference);
+		return -2;
 	}
 
+	dbg_log("extractObjectFromObjStream :: %s\n",obj->reference);
 
-	#ifdef DEBUG
-		printf("::: extractObjectFromObjStream ::: %s\n",obj->reference);
-	#endif
-
-
-	if(strlen(stream) == 0){
-		#ifdef DEBUG
-			printf("Error :: extractObjectFromObjStream :: Null stream in object %s\n",obj->reference );
-		#endif
-		return -1;
-
-	}
-
-	//printf("stream = %s :: \n\n",stream);
-
-	// stream verification 
-	//printf("strm len = %d\n",strlen(obj->dico));
-
-	/*
-	if(strncmp(obj->reference,"15 0 obj",8) == 0){
-			printf("stream = %s\n\n",stream);
-	}
-	*/
 
 	// Get the number of object embedded in the stream => N in the dictionary
-	start = searchPattern(obj->dico,"/N",2,strlen(obj->dico));
-	//printf("start = %d\n",start);	
-
-	if( start == NULL){
-		#ifdef DEBUG
-			printf("Error :: extractObjectFromObjStream :: Entry /N not found in Object stream dictionary %s\n",obj->reference);
-		#endif
+	if ((start = searchPattern(obj->dico, "/N", 2, strlen(obj->dico))) == NULL){
+		err_log("extractObjectFromObjStream :: Entry /N not found in Object stream dictionary %s\n",obj->reference);		
 		return -1;
 	}
-
 	
 	end = start;
-	//printf("end[0] = %c\n",end[0]);
 	start +=2;
 
 
@@ -1061,49 +1007,23 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	end = start;
 
 	len = strlen(obj->dico) - (int)(start - obj->dico);
+
 	num = getNumber(start,len);
-	//printf("num = %d\n",num);
-
-	/*len = 0;
-	do{
-		//printf("end[0] = %c\n",end[0]);
-		len ++;
-		end ++;
-	}while(end[0] >= 48 && end[0] <= 57);
-
-	//printf("len = %d\n",len);
-
-	num_a = (char*)calloc(len,sizeof(char));
-	memcpy(num_a,start,len);
-
-	num = atoi(num_a);
-	printf("num = %d\n",num);
-	*/
-
-
-	if(num <= 0){
-		#ifdef DEBUG
-			printf("Error:: Incorrect /N entry in object stream %s\n",obj->reference);
-		#endif
+	if(num <= 0){		
+		err_log("extractObjectFromObjStream :: Incorrect /N entry in object stream %s\n",obj->reference);		
 		return -1;
 	}
 
 
 	// Get the byte offset of the first compressed object "/First" entry in dico
-	start = searchPattern(obj->dico,"/First",6,strlen(obj->dico));
-	//printf("start = %d\n",start);	
-
-	if( start == NULL){
-		#ifdef DEBUG
-			printf("Error :: Entry /First not found in Object stream dictionary %s\n",obj->reference);
-		#endif
+	if ((start = searchPattern(obj->dico, "/First", 6, strlen(obj->dico))) == NULL){
+		err_log("extractObjectFromObjStream :: Entry /First not found in Object stream dictionary %s\n", obj->reference);
 		return -1;
 	}
 
 	
 	end = start;
-	//printf("end[0] = %c\n",end[0]);
-	start +=6;
+	start +=6; // 6 => /First
 
 
 	// if there is a space after /First (TODO Replace with a while to prevent several white spaces)
@@ -1114,28 +1034,13 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	end = start;
 	len = 0;
 	len = strlen(obj->dico) - (int)(start - obj->dico);
-	first = getNumber(start,len);
-	//printf("first = %d\n",first);
 
-
-	if(first <= 0){
-		#ifdef DEBUG
-			printf("Error:: Incorrect /First entry in object stream %s\n",obj->reference);
-		#endif
+	if ((first = getNumber(start, len)) <= 0){
+		err_log("extractObjectFromObjStream :: Incorrect /First entry in object stream %s\n", obj->reference);
 		return -1;
 	}
-
-
 	
 	start = stream;
-	//printf("start[0] = %c\n",start[0]);
-
-
-	//len = strlen(stream);
-	//printf("%d\n",strlen(stream));
-
-	
-
 	len = stream_len;
 
 
@@ -1146,82 +1051,66 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	// Get objects number and offset
 	for(i = 0 ; i< num; i++){
 
-		//printf("hey!!\n");
-		//printf("start[0] = %c\n",start[0]);
+
 		// Get the object number
-		obj_num_a = getNumber_a(start,len);
-		if (obj_num_a == NULL){
-			printf("[-] Error :: Can't extract object from object stream :: obj_ref = %s\n",obj->reference);
+		if ((obj_num_a = getNumber_s(start, len)) == NULL){
+			err_log("extractObjectFromObjStream :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_offsets);
 			return -1;
 		}
 
-		//printf("Hey :: %d :: %d\n",start,len);
-
 		len -=  strlen(obj_num_a);
 		start += strlen(obj_num_a);
-
-		//printf("obj_num = %s\n",obj_num_a);
-
 
 		// Move ptr for white space
 		start ++ ;
 
 		// Get the offset
-		off_a = getNumber_a(start,len);
-		if (off_a == NULL){
-			printf("[-] Error :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
-			return -1;
+		if ((off_a = getNumber_s(start, len)) == NULL){
+			err_log("extractObjectFromObjStream :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_num_a);
+			free(obj_offsets);
+			obj_num_a = NULL;
+			return -1;			
 		}
 
 		off = atoi(off_a);
-
 		obj_offsets[i] = off;
-
 
 		len -=  strlen(off_a);
 		start += strlen(off_a);
-
-		//printf("off = %s\n",off_a);
-
+	
 		// Move ptr for white space
 		start ++ ;
-		//printf("start[0] = %c\n",start[0]);
 
 		free(off_a);
 		free(obj_num_a);
 		// calc the length of the object according to the offset of the next object.		
 	}
 
-	#ifdef DEBUG
-		printf("\n\n");
-	#endif
-
-
-
 	start = stream;
 	len = strlen(stream);
 
-	// // Get objects content
+	// Get objects content
 	for(i = 0 ; i< num; i++){
 
-
 		// init object
-		comp_obj = initPDFObject();
-
-		if(comp_obj == NULL){
-			#ifdef DEBUG
-				printf("PDF object initilizing failed\n");
-			#endif
-			return -1;
+		if ((comp_obj = initPDFObject()) == NULL){
+			err_log("extractObjectFromObjStream :: PDF object initilizing failed\n");			
+			ret = -1;
+			goto clean;
 		}
 
-		// Get the object number
-		obj_num_a = getNumber_a(start,len);
-		if (obj_num_a == NULL){
-			printf("[-] Error :: Can't get object number :: obj_ref = %s\n", obj->reference);
-			return -1;
+		// Get the object number		
+		if ((obj_num_a = getNumber_s(start, len)) == NULL){
+			err_log("extractObjectFromObjStream :: Can't get object number :: obj_ref = %s\n", obj->reference);
+			ret = -1;
+			if (comp_obj != NULL){
+				freePDFObjectStruct(comp_obj);
+				comp_obj = NULL;
+			}
+			goto clean;			
 		}
-
 
 		// "X O obj"
 		// Build the object reference
@@ -1231,7 +1120,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		
 		os_strncat(obj_ref, obj_ref_len+1, obj_num_a, strlen(obj_num_a));
 		os_strncat(obj_ref,obj_ref_len+1, " 0 obj", 6);
-		//printf("obj_ref = %s\n",obj_ref);
+		//dbg_log("extractObjectFromObjStream :: obj_ref = %s\n",obj_ref);
 		comp_obj->reference =  obj_ref;
 
 
@@ -1239,24 +1128,19 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		len -=  strlen(obj_num_a);
 		start += strlen(obj_num_a);
 
-
-		//printf("obj_num = %s\n",obj_num_a);
-
-
 		// Move ptr for white space
 		start ++ ;
 
-		// Get the offset
-		off_a = getNumber_a(start,len);
-		if (off_a == NULL){
-			printf("[-] Error :: getNumber_a failed!\n");
-			return -1;
+		// Get the offset		
+		if ((off_a = getNumber_s(start, len)) == NULL){
+			err_log("extractObjectFromObjStream :: getNumber_s failed!\n");
+			ret = -1;
+			goto clean;
 		}
 		off = atoi(off_a);
 
 		len -=  strlen(off_a);
 		start += strlen(off_a);
-		//printf("off = %s\n",off_a);
 
 		// Move ptr for white space
 		start ++ ;
@@ -1268,114 +1152,133 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		// calc the length of the object according to the offset of the next object.
 		if( i != num-1 ){
 			obj_len  = ( obj_offsets[i+1] - off);
-			//printf("obj_len = %d\n",obj_len);
 		}else{
 			// calc according to the end of the stream
 			//obj_len =  strlen(stream) - ( (stream + first + off) - stream ) ;
 			obj_len =  stream_len - ( (stream + first + off) - stream ) ;
-			//printf("obj_len = %d\n",obj_len);
 		}
 		
-		if (obj_len >= 0){
-			printf("[-] Error :: bad object length!\n");
-			return -1;
+		if (obj_len <= 0){
+			err_log("extractObjectFromObjStream :: bad object length! :: obj_len = %d\n", obj_len);
+			ret = -1;
+			goto clean;
 		}
 		obj_content = (char*)calloc(obj_len+1,sizeof(char));
 
 		
 		obj_content[obj_len] = '\0';
 
-		// offset of the object content
+		// offset of the object content = stream ptr + ptr of the first obj + offset of the obj.
 		end = stream + first + off;
-
 		
 		// Get content
 		memcpy(obj_content,end,obj_len);
 		
-
-		//printf("extractObjectFromObjStream :: obj_content = %s\n", obj_content);
-
-
 		comp_obj->content = obj_content;
 		comp_obj->content_size = obj_len;
 
-		//  Get object informations
-		getObjectInfos(comp_obj,pdf);
 
+		//  Get object informations		
+		if (getObjectInfos(comp_obj, pdf) < 0){
+			warn_log("extractObjectFromObjStream :: getObjectInfos failed for object %s\n",comp_obj->reference);
+			pdf->errors++;
+		}
 
-		addObjectInList(comp_obj,pdf);
+		// Add object in list.
+		if (addObjectInList(comp_obj, pdf) < 0){
+			err_log("extractObjectFromObjStream :: Add object in list failed!\n");
+			ret = -1;
+			goto clean;
+		}
 
 		free(off_a);
+		off_a = NULL;
 		free(obj_num_a);
+		obj_num_a = NULL;
 
 		
 	}
-	free(obj_offsets);
 
-	return 0;
+clean:
+	if (obj_offsets != NULL){
+		free(obj_offsets);
+		obj_offsets = NULL;
+	}
+
+	if (off_a != NULL){
+		free(off_a);
+		off_a = NULL;
+	}
+
+	if (obj_num_a != NULL){
+		free(obj_num_a);
+		obj_num_a = NULL;
+	}
+
+	if (ret != 0){
+		pdf->errors++;
+	}
+
+	return ret;
 }
 
 
-
-// This function get all objects defined in the document
+/*
+getPDFObjects() :: get all objects defined in the document
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+// TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
+*/
 int getPDFObjects(struct pdfDocument * pdf){
 
-	char * startobj_ptr;
-	char * endobj_ptr;
-
-	char * content;
-	int len = 0;
+	char * startobj_ptr = NULL;
+	char * endobj_ptr = NULL;
+	char * content = NULL;
 	char * ref = NULL;
+	int len = 0;	
 	int gen_num_len = 0;
 	int obj_num_len = 0;
 	int ref_len =0;
 	int tmp = 0;
-	struct pdfObject* obj = NULL;
 	int offset = 0;
+	struct pdfObject* obj = NULL;
+	
+
+	if (pdf == NULL){
+		err_log("getPDFObjects :: invalid parameter\n");
+		return -1;
+	}
 		
 	
-	//startobj_ptr = startobj_ptr - pdf->content;
-	//printf("content ptr = %d\n\n",pdf->content);
-	//printf("content ptr = %s\n",pdf->content);
-	
-	//startobj_ptr = (char*)malloc(gen_num_len*sizeof(char));
-	
 	endobj_ptr = pdf->content;
-	//tmp = pdf->size;
-	//len = pdf->size;
-
-
 	
 	
 	while( (startobj_ptr = strstr(endobj_ptr,"obj")) != NULL){
 	//while( (startobj_ptr = searchPattern(endobj_ptr,"obj",3,len) ) != NULL) {		
 	
-		//printf("search offset = %d\n",endobj_ptr);
 		gen_num_len = 0;
 		obj_num_len = 0;
 		
-		startobj_ptr -= 2; // point to the generation number
-		//printf("Generation number = %c\n",startobj_ptr[0]);
+		startobj_ptr -= 2; // go to the generation number
+		
 
 		// Check the generation number pointer
 		if(startobj_ptr[0] < 48 || startobj_ptr[0] > 57){
-			//printf("This is not a generation number:: %c \n",startobj_ptr[0]);
+			//dbg_log("getPDFObjects :: This is not a generation number:: %c \n",startobj_ptr[0]);
 			endobj_ptr = startobj_ptr+3;
 			continue;
 		}
 
 
-
+		// get the generation number length
 		while(startobj_ptr[0] >= 48 && startobj_ptr[0] <= 57  ){
-		
-			//printf("Warning :: Treat this case 1 :: \n");
-			startobj_ptr--;
-			//printf("Warning :: Treat this case 1 :: %c\n", startobj_ptr[0] );
+			startobj_ptr--;			
 			gen_num_len++;
 		}
 
-
-	
 		startobj_ptr -= 1; // point to the object number
 
 		// Check the object number pointer
@@ -1385,13 +1288,10 @@ int getPDFObjects(struct pdfDocument * pdf){
 			continue;
 		}
 
-		//printf("object number = %c\n",startobj_ptr[0]);
-		while(startobj_ptr[0] >= 48 && startobj_ptr[0] <= 57  ){
-		
-			startobj_ptr--;
-			//printf("Warning :: Treat this case 2 :: %c\n",startobj_ptr[0] );
-			obj_num_len ++;
-			
+		// get the object number length
+		while(startobj_ptr[0] >= 48 && startobj_ptr[0] <= 57  ){		
+			startobj_ptr--;			
+			obj_num_len ++;			
 		}
 		
 		startobj_ptr++;
@@ -1403,101 +1303,83 @@ int getPDFObjects(struct pdfDocument * pdf){
 		ref[ref_len] = '\0';
 		
 		os_strncpy(ref,ref_len+1,startobj_ptr,ref_len);
-		//printf("object reference = %s :: %d\n",ref,ref_len);
-		
-		//startobj_ptr++;
-		
+				
+		// get the real offset of the object.
 		offset = (int)(startobj_ptr - pdf->content);
 		
-	
-		//printf("object offset = %d\n",offset);
-
-		//printf("start obj ptr = %d\n",startobj_ptr);
-		
-		//endobj_ptr = strstr(startobj_ptr,"endobj");
-		//printf("end obj ptr 1 = %d\n",endobj_ptr);
+		/*debug print*/
+		//dbg_log("getPDFObjects :: object reference = %s :: offset = %d\n", ref, offset);				
+				
 		tmp = (int)(pdf->size - (startobj_ptr - pdf->content));
-		//printf("size of block = %d\n",tmp);
-		endobj_ptr = searchPattern(startobj_ptr,"endobj",6,tmp);
-
-
-		//printf("end obj ptr = %d\n",endobj_ptr);
 		
+		endobj_ptr = searchPattern(startobj_ptr,"endobj",6,tmp);		
 		if(endobj_ptr == NULL){
 			// invalid object no "endobj" pattern found... Malformed PDF.
-			//printf(":: Error :: startobj_ptr = %d\n", startobj_ptr);
-			return -1;
+			err_log("getPDFObjects :: invalid object no \"endobj\" pattern found :: startobj_ptr = %d\n", startobj_ptr);
+			pdf->errors++;
+			return -2;
 		}
-		//printf("end obj ptr = %c\n",endobj_ptr[0]);
 		
-		
-		endobj_ptr += 6;
-		//printf("end obj ptr = %c\n",endobj_ptr[0]);
-		
+		// 6 => endobj
+		endobj_ptr += 6;		
 	
-		len = (int)(endobj_ptr - startobj_ptr);
-		//printf("object len = %d\n",len);
-	
-		//content = (char*)malloc(len*sizeof(char));
+		len = (int)(endobj_ptr - startobj_ptr);		
 		content = (char*)calloc(len+1,sizeof(char));
 		content[len]='\0';
 		
 		memcpy (content, startobj_ptr,len);
 		
-		// Create a object
-		
-		//printf("\nobj content --\n%s--\n\n\n",content);
-		
-		obj = initPDFObject();		
-		
-		//printf("obj_content size = %d\n",len);
-		//printf("obj_content = %s\n",content);
-		if( obj != NULL){
-			obj->reference = ref;
-			obj->content = content;
-			obj->offset = offset;
-			obj->content_size = len;
-			
-			getObjectInfos(obj,pdf);
-			
+		// Create and initialize pdf object
+		if ((obj = initPDFObject()) == NULL){
+			err_log("getPDFObjects :: pdf object creation failed!\n");
+			return -1;
 		}
 
+		obj->reference = ref;
+		obj->content = content;
+		obj->offset = offset;
+		obj->content_size = len;
 
+
+		// get objects informations
+		if (getObjectInfos(obj, pdf) < 0){
+			err_log("getPDFObjects :: get Object infos failed!\n");
+			return -1;
+		}
 		
 
-		// Extract object emebedded in object stream
+		// Extract object embedded in object stream
 		if(obj->type != NULL && strncmp(obj->type,"/ObjStm",7) == 0 ){
 
-			// Decode object stream			
-			if(obj->filters != NULL){		
-				decodeObjectStream(obj);
+			if (extractObjectFromObjStream(pdf, obj) < -1){
+				err_log("getPDFObjects :: extract object from object stream failed!\n");
+				return -1;
 			}
-
-			extractObjectFromObjStream(pdf,obj);
-		}
-		
-		
-		
+		}		
+				
 		// Add in object list.
-		addObjectInList(obj,pdf);
-		//printf("------------------------------------\n\n");
-
-
-	
+		if (addObjectInList(obj, pdf) < 0){
+			err_log("getPDFObjects :: Add object in list failed!\n");
+			return -1;
+		}
 	
 	}
-	
-	//printf("content ptr = %d\n",pdf->content);
-	//printf("startobj ptr = %s\n",startobj_ptr);
+
 	
 	
 	return 0;
 }
 
 
-
-// Get pdf trailer according to PDF
-int getPDFTrailers_1(struct pdfDocument * pdf){
+/*
+getPDFTrailers() :: Get pdf trailer according to PDF documentation (before version 1.5)
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+*/
+int getPDFTrailers(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	char * decoded_content = NULL;
@@ -1505,7 +1387,12 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
-	struct pdfTrailer * trailer;
+	struct pdfTrailer * trailer = NULL;
+
+	if (pdf == NULL){
+		err_log("getPDFTrailers :: invalid parameter\n");
+		return -1;
+	}
 
 
 	end = pdf->content;
@@ -1513,11 +1400,14 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 
 	while( (start = searchPattern(end,"trailer",7,len)) ){
 
-		//printf("hoo\n");
-
 		len = (int)(start - end);
 		len = pdf->size -len ;
 		end = searchPattern(start,"%%EOF",5,len);
+		if (end == NULL){
+			warn_log("getPDFTrailers :: missing end of trailer!\n");
+			continue;
+		}
+
 		end += 5;
 
 		len = (int)(end - start);
@@ -1526,23 +1416,16 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 
 		memcpy(content,start,len);
 	
-		if(!(trailer = initPDFTrailer())){
-			#ifdef DEBUG
-				printf("Error :: getPDFTrailers_1 ::  pdfTrailer structure initilizing failed\n");
-			#endif
+		if(!(trailer = initPDFTrailer())){			
+			err_log("getPDFTrailers ::  pdfTrailer structure initilizing failed\n");
 			return -1;
 		}
-		
-		//printf("hoo :: %s\n",content);
-		// check is the trailer dictionary is no hexa obfuscated
+				
+		// check if the trailer dictionary is hexa obfuscated
 		decoded_content = hexaObfuscationDecode(content);
-		//printf("hoo\n");
 
-
-		if(decoded_content != NULL){
-			#ifdef DEBUG
-				printf("Warning :: getPDFTrailers_1 :: Obfuscated trailer dictionary !!\n");
-			#endif
+		if(decoded_content != NULL){			
+			warn_log("getPDFTrailers :: Obfuscated trailer dictionary !!\n");
 			pdf->testStruct->obfuscated_object ++ ;
 			trailer->content = decoded_content;
 		}else{
@@ -1551,21 +1434,20 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 
 		// check if the file is encrypted
 		if( (encrypt = searchPattern(trailer->content,"/Encrypt",8,len)) != NULL){
-			#ifdef DEBUG
-				printf("Warning :: getPDFTrailers_1 :: This PDF Document is encrypted !\n");
-			#endif
+			warn_log("getPDFTrailers :: This PDF Document is encrypted !\n");
 			pdf->testStruct->encrypted = 1;
 		}
 
-		addTrailerInList(pdf,trailer);
-
-		//pdf->trailers = trailer;
-		//printf("trailer content = %s\n",trailer->content);
+		if (addTrailerInList(pdf, trailer) < 0){
+			err_log("getPDFTrailers :: add trailer failed!\n");
+			return -1;
+		};
+		
+		/* debug print*/
+		//dbg_log("trailer content = %s\n",trailer->content);
 
 		len = (int)( end - pdf->content);
 		len = pdf->size - len;
-
-		//printf("\n");
 
 	}
 
@@ -1574,14 +1456,26 @@ int getPDFTrailers_1(struct pdfDocument * pdf){
 }
 
 
-// Get pdf trailer according to PDF version starting from 1.5
-int getPDFTrailers_2(struct pdfDocument * pdf){
+/*
+getPDFTrailers_ex() :: Get pdf trailer according to PDF documentation (starting from version 1.5)
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+*/
+int getPDFTrailers_ex(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
 	struct pdfTrailer * trailer;
+
+	if (pdf == NULL){
+		err_log("getPDFTrailers_ex :: invalid parameter\n");
+		return -1;
+	}
 
 
 	end = pdf->content;
@@ -1592,6 +1486,10 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 		len = (int)(start - end);
 		len = pdf->size -len ;
 		end = searchPattern(start,"%%EOF",5,len);
+		if (end == NULL){
+			warn_log("getPDFTrailers_ex :: missing end of trailer!\n");
+			continue;
+		}
 		end += 5;
 		
 
@@ -1601,10 +1499,8 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 
 		memcpy(content,start,len);
 	
-		if(!(trailer = initPDFTrailer())){
-			#ifdef DEBUG
-				printf("Error :: getPDFTrailers_2 :: pdfTrailer structure initilizing failed\n");
-			#endif
+		if(!(trailer = initPDFTrailer())){			
+			err_log("Error :: getPDFTrailers_ex :: pdfTrailer structure initilizing failed\n");			
 			return -1;
 		}
 		
@@ -1612,59 +1508,22 @@ int getPDFTrailers_2(struct pdfDocument * pdf){
 		trailer->content = content;
 
 		addTrailerInList(pdf,trailer);
-
-		//pdf->trailers = trailer;
-		//printf("trailer content = %s\n",content);
+		
+		/* debug print*/
+		//dbg_log("getPDFTrailers_ex :: trailer content = %s\n",content);
 
 		len = (int)( end - pdf->content);
 		len = pdf->size - len ;
 
-		//printf("\n\n");
+		if (len <= strlen("startxref")){
+			break;
+		}
 
-	}
-
-	/*
-	
-	start = searchPattern(pdf->content,"startxref",9,pdf->size);
-	
-	if(start == NULL ){
-		return -1;
-	}
-	
-	len = (int)(start - pdf->content);
-	//len = obj->content_size - len;
-	
-	end = searchPattern(start,"%%EOF",5,pdf->size-len);
-	
-	
-	if(end == NULL){
-		return -1;
-	}
-	
-	len = (int)(end - start);
-	
-	content = (char*)calloc(len,sizeof(char));
-	
-	memcpy(content,start,len);
-	
-	if(!(trailer = initPDFTrailer())){
-		printf("Error :: while initilaizing pdfTrailer structure\n");
-		return -1;
-	}
-	
-	trailer->content = content;
-	pdf->trailers = trailer;
-
-	
-	printf("trailer content = %s\n",content);
-	*/
-	
-	// TODO get several trailers
+	}	
 
 	return 0;
 	
 }
-
 
 
 // This function remove the comment in the src stream
@@ -1702,74 +1561,76 @@ char *removeCommentLine(char * src, int size, int * ret_len){
 }
 
 
-
-// This function remove all PostScript comments in the pdf document
+/*
+removeComments() :: remove all PostScript comments in the pdf document
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+// TODO :: removeComments :: split this function (implement function get_line, etc.)
+*/
 int removeComments(struct pdfDocument * pdf){
 
 
 	char * new_content = NULL;
 	char * tmp = NULL;
-	int content_len = 0;
-	int tmp_len = 0;
 	char * uncomment = NULL;
 	char * start = NULL;
 	char * end = NULL;
 	char * line = NULL;
 	char * comment = NULL;
-	int len = 0;
-	int line_size = 0;	
-	int uncomment_len =0;
-	//char white_space = 0;
 	char * white_spaces = NULL;
-	int white_spaces_len = 0;
 	char * ptr = NULL;
 	char * tmp_spaces = NULL;
-
+	int content_len = 0;
+	int tmp_len = 0;	
+	int len = 0;
+	int line_size = 0;
+	int line_num = 0;
+	int uncomment_len =0;
+	int white_spaces_len = 0;
 	int inStream = 0;
-	int inString = 0; // todo multi line string
+	int inString = 0;
 	int inQuotes = 0;
 	int after_header = 0; // line juste after header tag
-
+	int after_eof = 0; // case when there is bytes after %%EOF. // due to file: CVE_2010-2883_PDF_851D895614645756999BD9F6E002C127.pdf
 	int len_tmp = 0;
-
 	int i = 0;
+
+	//char white_space = 0;
 
 	char * mal_comments[] = {"endobj","obj","endstrem","stream","trailer", "startxref", "xref"};
 	int mal_comments_num = 7;
 
 
+	if (pdf == NULL){
+		err_log("removeComments :: invalid parameter!\n");
+		return -1;
+	}
 
-	len = pdf->size;
-	
-	//content = pdf->content;
+	if (pdf->size > LARGE_FILE_SIZE){
+		warn_log("removeComments :: skipping removeComment because of the file size (%d bytes)\n", pdf->size);
+		return 0;
+	}
 
-	if(pdf->content == NULL || pdf->size <= 0){
-		#ifdef DEBUG
-			printf("Warning :: removeComments :: pdf content is NULL \n");
-		#endif
+	if (pdf->content == NULL || pdf->size <= 0){
+		err_log("removeComments :: null pdf content!\n");
 		return -1;
 	}
 
 
+	// variable initialization.
+	len = pdf->size;
 	start = pdf->content;
 	end = start;
 
 	
-	//printf("size = %d\n",pdf->size);
-	//printf("start = %d\n",start);
-	//printf("end[0] = %c\n",end[0]);
-	
-
-
 	//for each line
 	while(len > 0){
-
-		//printf("len = %d\n",len);
+		
 		len_tmp = len;
-
 		start = end;
-
-		//printf("heyhey\n");
 
 		// scan line
 		while( (len_tmp > 0) && (end[0] != '\r') && (end[0] != '\n') && (end[0] != '\f')){
@@ -1780,11 +1641,9 @@ int removeComments(struct pdfDocument * pdf){
 		// If the end of file is reached
 		if(len_tmp == 0){
 			len = 0;
-			//printf("End of file  reached\n");
 		}
 
 		//white_space = end[0];
-
 		
 		// line
 		line_size = (int)(end-start);
@@ -1792,9 +1651,16 @@ int removeComments(struct pdfDocument * pdf){
 		line[line_size] = '\0';
 
 		memcpy(line,start,line_size);
-		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
+		line_num++;
+		//dbg_log("removeComments :: line num = %d\n", line_num);
 
-		//printf("line = %s\n",line);
+		/* debug print */
+		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
+		//dbg_log("removeComments :: line = %s\n",line);
+
+		if (strcmp(line, "trailer") == 0){
+			dbg_log("removeComments :: line = %s\n", line);
+		}
 
 		// calc whites spaces
 		white_spaces_len = 0;
@@ -1807,35 +1673,30 @@ int removeComments(struct pdfDocument * pdf){
 		}
 
 		if(len_tmp == 0){
-			len = 0;
-			//printf("End of file  reached\n");
+			len = 0;			
 		}
-
-		//printf("end[0] = %c\n",end[0]);
 
 		white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
 		white_spaces[white_spaces_len]='\0';
 		if(len_tmp > 0)
 			memcpy(white_spaces,tmp_spaces,white_spaces_len);
-		//printf("white_spaces = %s--\n",white_spaces);
 
 
-		//-----------------------------------------------------
+		//------------------------
 		// Remove comment in line
-		//-----------------------------------------------------
+		//------------------------
 
 		uncomment_len = 0;
 
-		// line after the heaer flag
+		// line after the header flag
 		//after_header = (after_header == 1)?2:0;
-		//printf("DEBUG1 :: line  =  %s :: %d\n",line,after_header );
 		if(after_header == 1)
 			after_header = 2;
 		else
 			after_header  =0;
-		//printf("DEBUG2 :: line  =  %s :: %d\n",line,after_header );
 			
 		ptr = line;
+
 		// Scan the line
 		for(i= 0; i< line_size ; i++){
 
@@ -1862,25 +1723,26 @@ int removeComments(struct pdfDocument * pdf){
 				// %%EOF
 				// %PDF-version
 				if(line_size -i >= 5 && memcmp(ptr+i,"%%EOF",5) == 0){
-					//printf("pdf end of file :: EOF marker !!\n");
+					dbg_log("removeComments :: pdf end of file :: EOF marker !!\n");
+					after_eof = 1;
 					i = line_size;
 					continue;
 				}else{
 
-					if(line_size - i >= 8 && memcmp(ptr,"%%PDF-1.",7) == 0){
+					if(line_size - i >= 8 && memcmp(ptr,"%PDF-1.",7) == 0){
 						after_header = 1;
 						i = line_size;
-						//printf("PDF Header !!\n");
+						dbg_log("removeComments :: PDF Header found !!\n");
 						continue;
 					}else{
 
-						// header line immediatly followed by
+						// header line immediatly followed by %[bin]
 						if(after_header == 2  &&  ((i==0) || ((line_size - i) >= 5 && (unsigned char)ptr[i+1]>=128  && (unsigned char)ptr[i+2]>=128 && (unsigned char)ptr[i+3]>=128 && (unsigned char)ptr[i+4]>=128)) ){  
 							after_header = 1;
 							i = line_size;
 							continue;
 						}else{
-							//printf("heyheyhey::\n");
+							
 							
 							uncomment = (char*)calloc(i+1,sizeof(char));
 							uncomment[i]='\0';
@@ -1892,31 +1754,26 @@ int removeComments(struct pdfDocument * pdf){
 								comment = (char*)calloc((line_size - i)+1,sizeof(char));
 								comment[line_size -i] = '\0';
 								memcpy(comment,ptr+i,line_size -i );
-								//printf("Debug :: removeComments :: comment = %s :: %d :: %d\n",comment,line_size,i);
+								//dbg_log("removeComments :: comment = %s :: %d :: %d\n",comment,line_size,i);
 							}
-							
-							
 
 							i = line_size;
 							continue;
 
 						}
 
-						
-
 					}
 
 				}
 				
-				
-
 			}
 
-		}
+		} // end for(i > line_len)
+
+
+		inString = 0;
 
 		
-
-
 		//--------------------------------------------------------------
 
 		
@@ -1934,20 +1791,20 @@ int removeComments(struct pdfDocument * pdf){
 			
 		}else{
 
-			if(inStream == 0){
+			if(inStream == 0 && after_eof == 0){
 				
-				#ifdef DEBUG
-					printf("DEBUG :: Comment found :: %s\n",uncomment);
-				#endif
+				
+				dbg_log("removeComments :: Comment found :: %s\n",uncomment);
+				dbg_log("removeComments :: line :: %s\n", line);
+				dbg_log("removeComments :: line num = %d :: after_oef = %d\n", line_num,after_eof);
+				
 				pdf->testStruct->comments ++;
 
 				// Check for a malicious comment :: comments puts to defeat parser (with keywords like "endobj", "obj", "stream", "endstream" )
 				for(i = 0; i< mal_comments_num ; i++){
 
-					if(searchPattern(comment,mal_comments[i],strlen(mal_comments[i]),strlen(comment)) != NULL ){
-						#ifdef DEBUG
-							printf("Warning :: removeComments :: potentially malicious comment :: (%s) found in pdf Document\n", comment);
-						#endif
+					if(searchPattern(comment,mal_comments[i],strlen(mal_comments[i]),strlen(comment)) != NULL ){						
+						warn_log("removeComments :: potentially malicious comment :: (%s) found in pdf Document\n", comment);						
 						pdf->testStruct->malicious_comments ++;
 						break;
 					}
@@ -1962,9 +1819,9 @@ int removeComments(struct pdfDocument * pdf){
 
 
 		//look if I'm in a stream content before adding the uncommented line
-		if(uncomment_len >=9 && searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){
-			//printf("removeComments :: Out Stream = 0\n");
+		if(uncomment_len >=9 && searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){			
 			inStream = 0;
+			
 
 		}else{
 			if( uncomment_len >=6 && searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
@@ -1974,16 +1831,9 @@ int removeComments(struct pdfDocument * pdf){
 		}
 
 
-		//printf("to write = %s \n", uncomment);
 
+		if(inStream == 0 && after_eof == 0){
 
-		//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
-
-
-
-		if(inStream == 0){
-
-			//printf("I can write the uncommented line\n");
 			//write uncommented line
 			if(content_len > 0){
 
@@ -2012,33 +1862,24 @@ int removeComments(struct pdfDocument * pdf){
 			ptr=new_content;
 
 			if(tmp != NULL)
-				memcpy(ptr,tmp,content_len-uncomment_len-1);
-
-			//printf("New content1 = %s\n",new_content);
+				memcpy(ptr,tmp,content_len-uncomment_len-1);			
 
 			ptr += tmp_len;
 
 			//ptr = new_content + (content_len - uncomment_len);
-			memcpy(ptr,uncomment,uncomment_len);
-			//printf("New content2 = %s\n",new_content);
+			memcpy(ptr,uncomment,uncomment_len);			
 
 			//ptr = new_content + content_len - 1;
 			ptr += uncomment_len;
 
 			if(white_spaces_len > 0)
 				memcpy(ptr,white_spaces,white_spaces_len);
-			//ptr[0]=white_space;
-
-			//memset(new_content+content_len-1,'\n',1);
-			//strncat(new_content,uncomment,uncomment_len);
-			//printf("New content = %s\n",new_content);
+			
 
 
 		}else{
-
-			//printf("stream content line\n");
-			//write uncommented line
 			
+			//write uncommented line			
 			if(content_len > 0){
 				tmp = (char*)calloc(content_len+1,sizeof(char));
 				tmp_len = content_len;
@@ -2053,8 +1894,7 @@ int removeComments(struct pdfDocument * pdf){
 			if(white_spaces_len > 0)
 				content_len += (line_size + white_spaces_len);
 			else
-				content_len += line_size;
-			//printf("content_len = %d :: line_len = %d\n",content_len,line_size );
+				content_len += line_size;			
 
 			//content_len ++; // due to white space
 			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
@@ -2066,13 +1906,10 @@ int removeComments(struct pdfDocument * pdf){
 			if(tmp != NULL)
 				memcpy(ptr,tmp,tmp_len);
 
-			//printf("New content1 = %s\n",new_content);
-
 			ptr += tmp_len;
 
 			//ptr = new_content + (content_len - uncomment_len);
-			memcpy(ptr,line,line_size);
-			//printf("New content2 = %s\n",new_content);
+			memcpy(ptr,line,line_size);			
 
 			//ptr = new_content + content_len - 1;
 			ptr += line_size;
@@ -2101,18 +1938,15 @@ int removeComments(struct pdfDocument * pdf){
 		line = NULL;
 		uncomment = NULL;
 		comment = NULL;
-		
-		//printf("len = %d\n",len );	
 
 		//printf("\n\n");
 		
 
-	} // end while
+	} // end while(len > 0)
 
-	#ifdef DEBUG
-		printf("Debug :: removeComments :: Old size :: %d\n",pdf->size);
-		printf("Debug :: removeComments :: New size :: %d\n",content_len);
-	#endif
+	
+	dbg_log("removeComments :: Old size :: %d\n",pdf->size);
+	dbg_log("removeComments :: New size :: %d\n", content_len);
 
 	//printf("new content = \n");
 	//printStream(new_content,content_len);
@@ -2130,69 +1964,77 @@ int removeComments(struct pdfDocument * pdf){
 }
 
 
-
+/*
+parsePDF() :: parse the PDF document (extract objects, trailers and xref).
+parameters:
+- struct pdfDocument * pdf (pdf document pointer)
+returns: (int)
+- 0 on success.
+- an error code (<0) on error.
+*/
 int parsePDF(struct pdfDocument * pdf){
 
+	int ret = 0;
+
 	if(pdf == NULL){
-		printf("[-] Error :: parsePDF :: Invalid parameter!\n");
+		err_log("parsePDF :: Invalid parameter!\n");
 		return -1;
 	}
-
-	#ifdef DEBUG
-	printf("\n");
-	printf("------------------------------\n");
-	printf("---  PDF DOCUMENT PARSING  ---\n");
-	printf("------------------------------\n\n");
-	#endif
-
-	// Check the magic number of the file
-	checkMagicNumber(pdf);
 	
-	if(pdf->testStruct->bad_header > 0){
-		#ifdef DEBUG
-		printf("[-] Error :: parsePDF :: Bad PDF header :: This file is not a PDF file ::\n");
-		#endif
-		return -2;
+	// Check the magic number of the file
+	// return -1 if unexpected error or -2 if bad header.
+	if ((ret = checkMagicNumber(pdf)) < 0){
+		err_log("parsePDF :: invalid header for file %s\n", pdf->fname);
+		return ret;
 	}
 
 
 	// Get the content of the document
 	if (getPDFContent(pdf) <= 0) {
-		printf("[-] Error :: parsePDF :: getPDF content failed\n");
+		err_log("parsePDF :: get PDF content failed!\n");
 		return -1;
-	};
-
-
-	// File too large
-	if(pdf->size > LARGE_FILE_SIZE ){
-		printf("Warning :: parsePDF :: Large file :: pdf size =  %d octets ==> Skipping the (RemoveComment) function\n",pdf->size);
-		//pdf->testStruct->large_file ++;
-		//return -3;
-	}else{
-		// Remove comments
-		removeComments(pdf);
 	}
 
+	// remove PostScript comments for a better parsing. (to fix :: improve comment removing).
+	/*
+	if (removeComments(pdf) < 0) {
+		err_log("parsePDF :: removing comments failed!\n");
+		return -1;
+	}
+	*/
 
-	// Get Trailers
-	getPDFTrailers_1(pdf);
+	
+	// Get Trailers (before version 1.5)
+	if (getPDFTrailers(pdf) < 0) {
+		err_log("parsePDF :: getting PDF trailer v1 failed!\n");
+		return -1;
+	}
+	
+	// Get Trailers extension function (from version 1.5)
+	if (pdf->trailers == NULL){		
+		if (getPDFTrailers_ex(pdf) < 0) {
+			err_log("parsePDF :: getting PDF trailer v2 failed!\n");
+			return -1;
+		}
+	}
+
+	// if no trailer found in the document.
 	if(pdf->trailers == NULL){
-		getPDFTrailers_2(pdf);
-
-		if(pdf->trailers == NULL)
-			pdf->testStruct->bad_trailer ++;
+		warn_log("parsePDF :: no trailer found in the document!\n");
+		pdf->testStruct->bad_trailer++;
 	}
 	
-	
+		
 	// if the document is encrypted
-	if( pdf->testStruct->encrypted > 0 ){		
+	if( pdf->testStruct->encrypted > 0){		
 		return -2;
 	}
 
-	// Get objects described in pdf document
+	// Get all objects defined in pdf document
 	if (getPDFObjects(pdf) < 0) {
 		// malformed PDF.
-		//return -1;
+		err_log("parsePDF :: get PDF object failed!\n");
+		return -1;
 	}
 	
 
