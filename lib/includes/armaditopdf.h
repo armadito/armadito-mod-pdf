@@ -26,7 +26,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "pdfStructs.h"
 
-#define a6o_pdf_ver "0.12.1"
+#define a6o_pdf_ver "0.12.2"
 
 
 // Tests Coefficients
@@ -54,12 +54,17 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 //#define LARGE_FILE_SIZE 1500000
 
 
-enum error_code {
-		UNEXPTECTED_ERROR = -1 << 0,
-		BAD_HEADER = -1 << 1,		
-		UNSUPPORTED_FILE = -1 << 2,
-		MALFORMED_PDF = -1 << 3,
-		BAD_STREAM_DECODE = -1 << 4,
+enum err_code {
+
+	unexpected_error = -1 << 0,
+	bad_pdf_version = -1 << 1,
+	bad_pdf_header = -1 << 2,
+	unsupported_file = -1 << 3,
+	bad_xref_format = -1 << 4,
+	bad_trailer_format = -1 << 5,
+	bad_object_format = -1 << 6,
+	stream_not_decoded = -1 << 7
+
 };
 
 

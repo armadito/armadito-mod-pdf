@@ -21,7 +21,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-
+#include "armaditopdf.h"
 #include "pdfAnalysis.h"
 #include "utils.h"
 #include "osdeps.h"
@@ -132,7 +132,10 @@ int checkXRef(struct pdfDocument * pdf){
 	int i = 0;
 	int ref_size = 12; // xxxx 0 obj
 	int off = 0;
+	int gen = 0; // generation number
 
+	char * off_s = NULL;
+	char * gen_s = NULL;
 	char * start = NULL;
 	char * xref = NULL;
 	char * xref_orig = NULL;
@@ -234,7 +237,7 @@ int checkXRef(struct pdfDocument * pdf){
 
 
 			if(xref == NULL){
-				err_log("checkXRef :: Error while getting the xref table\n");
+				err_log("checkXRef :: Error while getting the xref table\n");				
 				return -1;
 			}
 
@@ -253,6 +256,13 @@ int checkXRef(struct pdfDocument * pdf){
 
 			// Get the object number of the first object described in xref table
 			first_obj_num_a = getNumber_s(xref,len);
+			if (first_obj_num_a == NULL){
+				err_log("checkXRef :: can't get first object number\n");
+				//ret = unexpected_error;
+				// goto_clean;
+				return bad_xref_format;				
+			}
+
 			first_obj_num = atoi(first_obj_num_a);
 
 
@@ -268,6 +278,11 @@ int checkXRef(struct pdfDocument * pdf){
 
 			// get the number of entries in the xref table
 			num_entries_a = getNumber_s(xref,len);
+			if (num_entries_a == NULL){
+				err_log("checkXRef :: can't get number of entries\n");
+				return bad_xref_format;
+			}
+
 			num_entries = atoi(num_entries_a);
 
 			//dbg_log("checkXRef :: num_entries = %d\n",num_entries);
@@ -276,20 +291,94 @@ int checkXRef(struct pdfDocument * pdf){
 			xref += strlen(num_entries_a);
 
 			// move for white space
+			// Check xref format.
+			
+
+			// skip white spaces
+			while (*xref == ' '){
+				len--;
+				xref++;
+			}
+
+			// hint after the number of entries it should be '\r' or '\n' not a space.
+			if (*xref != '\r' && *xref != '\n'){
+				err_log("chackXref :: bad xref format!\n");
+				return bad_xref_format;
+			}
+			
+			// skip return carriage.
 			len --;
 			xref ++;
 
 			// For each entry of table
 			for(i = 0; i< num_entries ; i++){
 
+
+				// TODO :: check offset length. :: use get_Number_s first.
+				off_s = getNumber_s(xref, len);
+				if (off_s == NULL || strlen(off_s) != 10){					
+					err_log("chackXref :: bad offset format in xref table! :: offset = %s\n", off_s);
+					ret = bad_xref_format;
+					goto clean;
+				}
+
+				free(off_s);
+				off_s = NULL;
+
 				off = getNumber(xref,len);
-				xref += 17;
+
+				// skip 10 bytes corresponding to obj offset.
+				xref += 10;
+				len -= 10;
+
+				// check white space between offset and generation number.
+				if (*xref != ' '){
+					err_log("chackXref :: bad xref format!\n");
+					ret = bad_xref_format;
+					goto clean;
+				}
+
+				// skip white space between offset and generation number..
+				xref++;
+				len--;
+
+
+				// Get generation number.
+				gen_s = getNumber_s(xref, len);
+				if (gen_s == NULL || strlen(gen_s) != 5){
+					err_log("chackXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+					ret = bad_xref_format;
+					goto clean;
+				}
+
+				free(gen_s);
+				gen_s = NULL;
+
+				gen = getNumber(xref, len);
+
+				// skip 10 bytes corresponding to obj gen number.
+				xref += 5;
+				len -= 5;
+
+				// check white space between generation number and free flag.
+				if (*xref != ' '){
+					err_log("chackXref :: bad xref format!\n");
+					ret = bad_xref_format;
+					goto clean;
+				}
+
+				// skip white space
+				xref++;
+				len--;
+
+				
+				//xref += 17;
 
 				free_obj = xref[0];
 
 				obj_num = first_obj_num + i;
 
-				//dbg_log("checkXRef :: object number = %d\n",obj_num );
+				// dbg_log("checkXRef :: object number = %d :: len :: free = %c\n",obj_num,free_obj);
 
 				ref = (char*)calloc(ref_size+1,sizeof(char));
 				
@@ -345,9 +434,11 @@ int checkXRef(struct pdfDocument * pdf){
 
 
 				// go to the next entry
-				xref += 3;
+				xref += 2;
+				len -= 2;
 
-				free(ref);				
+				free(ref);
+				ref == NULL;
 
 			}
 
@@ -434,21 +525,40 @@ int checkXRef(struct pdfDocument * pdf){
 			}
 
 			free(ref);
+			ref = NULL;
 			free(xref);
+			xref = NULL;
 
 		}
 
+	clean:
+
+		if (off_s != NULL){
+			free(off_s);
+			off_s = NULL;
+		}
+
+		/*if (ref != NULL){
+			free(ref);
+			ref = NULL;
+		}*/
+
+		if (xref_orig != NULL){
+			free(xref_orig);
+			xref_orig = NULL;
+		}
+
 		free(num_entries_a);
+		num_entries_a = NULL;
+
 		free(first_obj_num_a);
+		first_obj_num_a =NULL;
 		free(obj_num_a);
 
 
 		trailer = trailer->next;
 
 	}
-
-//clean:
-	// clean memory.
 
 
 
@@ -677,12 +787,18 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 								start = content_array;
 								len2 = strlen(content_array);
+								dbg_log("checkEmptyDoc :: content = %s\n", start);
+								dbg_log("checkEmptyDoc :: content_len = %d\n",len2);
 
 								while((pageContent_obj_ref = getIndirectRefInString(start,len2) ) != NULL){
 
-									//dbg_log("checkEmptyDocument :: page content ref = %s\n",pageContent_obj_ref );
+									dbg_log("checkEmptyDocument :: page content ref = %s\n",pageContent_obj_ref );
 
 									start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
+									if (start == NULL){
+										err_log("checkEmptyDocument :: can't retrieve object reference in dico\n");
+										break;
+									}
 									start += strlen(pageContent_obj_ref) - 2;
 
 									len2 = (int)(start - content_array);
