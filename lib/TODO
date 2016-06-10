@@ -1,0 +1,29 @@
+
+---------
+TODO LIST
+---------
+
+// TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
+// TODO :: checkMagicNumber :: Thread XDP files.
+// TODO :: printAnalysisReport :: filter report informations by log level.
+// TODO :: getPDFContent :: set max_size limit.
+// TODO :: removeComments :: split this function (implement function get_line, etc.)
+// TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
+// TODO :: check offset :: if the document has been uncommented. the offset should be incorrects.
+// TODO :: getObjectInfo :: fill obj->dico_len;
+// TODO :: replaceString :: replace all occurrences.
+// TODO :: Notation :: empty_doc_with_active_content (if no error).
+// TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
+// TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
+// TODO :: pdfParsing :: continue if the parsing failure is due to bad stream decode.
+// TODO :: getJSContentInXFA :: Check the keyword javascript
+// TODO :: decodeObjectStream :: do not try to decode an object twice.
+// TODO :: getEmbeddedFile :: Threat the case <</EF <</F 3 0 R>> >>
+// TODO :: all :: set error codes.
+// TODO :: all :: use obj->dico_len instead of strlen(dico).
+// TODO :: documentStructureAnalysis :: check trailers.
+// TODO :: TOFIX :: filters implementations.
+// TODO :: TOFIX :: removeComments() function implementation.
+// TODO :: FlateDecode :: check if the stream is conform (Ex: '\r')
+// TODO :: all :: declare a public API. (for version 1.0.0)
+// TODO :: all :: api documentation.
