@@ -438,11 +438,12 @@ int checkXRef(struct pdfDocument * pdf){
 				len -= 2;
 
 				free(ref);
-				ref == NULL;
+				ref = NULL;
 
 			}
 
 			free(xref_orig);
+			xref_orig = NULL;
 			
 
 		}else{
@@ -538,10 +539,10 @@ int checkXRef(struct pdfDocument * pdf){
 			off_s = NULL;
 		}
 
-		/*if (ref != NULL){
+		if (ref != NULL){
 			free(ref);
 			ref = NULL;
-		}*/
+		}
 
 		if (xref_orig != NULL){
 			free(xref_orig);
