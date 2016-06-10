@@ -51,3 +51,8 @@ Wed, 08 June 2016 :: 0.12.1 :: (ufausther)
 
 + modif for linux compatibility.
 
+Thu, 09 June 2016 :: 0.12.2 :: (ufausther)
+------------------------------------------
+
++ fix some crashes detected with fuzzing
+
