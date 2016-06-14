@@ -378,7 +378,7 @@ int checkXRef(struct pdfDocument * pdf){
 
 				obj_num = first_obj_num + i;
 
-				// dbg_log("checkXRef :: object number = %d :: len :: free = %c\n",obj_num,free_obj);
+				dbg_log("checkXRef :: object number = %d :: offset = %d :: free = %c\n",obj_num,off,free_obj);
 
 				ref = (char*)calloc(ref_size+1,sizeof(char));
 				
@@ -432,17 +432,24 @@ int checkXRef(struct pdfDocument * pdf){
 
 				}
 
+				// skip "free object" flag. ( 'f' or 'n' )
+				xref++;
+				len--;
 
-				// go to the next entry
-				xref += 2;
-				len -= 2;
+				// skip white spaces.				
+				while (*xref == '\r' || *xref == '\n' || *xref == ' '){
+					xref += 1;
+					len -= 1;
+				}
+				//dbg_log("xref = %s\n", xref);
 
 				free(ref);
-				ref == NULL;
+				ref = NULL;
 
 			}
 
 			free(xref_orig);
+			xref_orig = NULL;
 			
 
 		}else{
@@ -456,6 +463,7 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
+				xref = NULL;
 				continue;
 			}
 			
@@ -475,6 +483,7 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
+				xref = NULL;
 				continue;
 			}
 			
@@ -482,12 +491,16 @@ int checkXRef(struct pdfDocument * pdf){
 
 			len = strlen(obj_num_a) + 7;
 
+			
+
 			ref = (char*)calloc(len+1,sizeof(char));
 			ref[len] = '\0';
 
 			os_sprintf(ref,len,"%d 0 obj",obj_num);
 			//dbg_log("xref object = %s\n",ref);
 
+			free(obj_num_a);
+			obj_num_a = NULL;
 
 			obj = getPDFObjectByRef(pdf,ref);
 
@@ -548,12 +561,22 @@ int checkXRef(struct pdfDocument * pdf){
 			xref_orig = NULL;
 		}
 
-		free(num_entries_a);
-		num_entries_a = NULL;
+		if (num_entries != NULL){
+			free(num_entries_a);
+			num_entries_a = NULL;
+		}
+		
+		if (first_obj_num_a != NULL){
+			free(first_obj_num_a);
+			first_obj_num_a = NULL;
+		}
 
-		free(first_obj_num_a);
-		first_obj_num_a =NULL;
-		free(obj_num_a);
+		if (obj_num_a != NULL){
+			free(obj_num_a);
+			obj_num_a = NULL;
+		}
+		
+		
 
 
 		trailer = trailer->next;
