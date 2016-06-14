@@ -108,7 +108,7 @@ int os_scan_dir(char * path, int recurse, dirent_scan_cb dirent_cb, void * data)
 		}
 		else {
 			
-			ret = (*dirent_cb)(fd,entryPath);			
+			(*dirent_cb)(fd,entryPath);
 		}
 
 		free(entryPath);
