@@ -578,6 +578,7 @@ char * getStreamFilters(struct pdfObject * obj){
 	int len = 0;
 	char * filters = NULL;
 	
+
 	if (obj == NULL || obj->dico == NULL){
 		err_log("getStreamFilters :: invalid parameter\n");
 		return NULL;
@@ -602,17 +603,17 @@ char * getStreamFilters(struct pdfObject * obj){
 	
 	// if a bracket is before the first / that means it's an array of filters
 	if( end_tmp != NULL && end_tmp < end ){
-		
-		end  = end_tmp;
-		start = end;
-		
-		len = 0;
-		while(end[0] != ']'){
-			end ++;
-			len ++;
-		}
 
-		len +=1;
+		len = strlen(obj->dico) - ((int)(end_tmp - obj->dico));
+
+		filters = getDelimitedStringContent(end_tmp,"[","]",len);
+		if (filters == NULL){
+			// malformed dictionary.
+			obj->errors ++;
+			err_log("getStreamFilters :: malformed dictionary in object %s!\n",obj->reference);
+			return NULL;
+		}
+				
 
 	}else{ // a single filter
 	
@@ -625,13 +626,14 @@ char * getStreamFilters(struct pdfObject * obj){
 		
 		}while( (end[0] >=97 && end[0] <=122) || (end[0] >=65 && end[0] <=90 ) || (end[0] >=48 && end[0] <= 57) ); // Lower case [97 122] or Upper case [65 90] + digit [48 57]
 		
+		filters = (char*)calloc(len + 1, sizeof(char));
+		filters[len] = '\0';
+
+		os_strncpy(filters, len + 1, start, len);
 	
 	}
-		
-	filters = (char*)calloc(len+1,sizeof(char));
-	filters[len] = '\0';
-
-	os_strncpy(filters,len+1,start,len);
+	
+	
 	
 	/*debuf print*/
 	//dbg_log("getStreamFilters :: filters = %s \n",filters);
