@@ -56,3 +56,10 @@ Thu, 09 June 2016 :: 0.12.2 :: (ufausther)
 
 + fix some crashes detected with fuzzing
 
+Tue, 14 June 2016 :: 0.12.3 :: (ufausther)
+------------------------------------------
+
++ fix crash :: getStreamFilters :: malformed dictionary.
++ recursive scan fix :: scan was stopped on error.
++ checkXref :: skip white spaces at the end of the line.
+
