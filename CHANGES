@@ -63,3 +63,7 @@ Tue, 14 June 2016 :: 0.12.3 :: (ufausther)
 + recursive scan fix :: scan was stopped on error.
 + checkXref :: skip white spaces at the end of the line.
 
+Wed, 15 June 2016 :: 0.12.3 :: (ufausther)
+------------------------------------------
+
++ fix craches :: extractObjectFromObjStream() :: invalid offset (/First) and number of object (/N) in dictionary

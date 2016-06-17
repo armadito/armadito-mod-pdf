@@ -926,6 +926,7 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	int obj_len = 0;
 	int stream_len = 0;
 	int ret = 0;
+	int check = 0;
 
 	char * stream  = NULL;
 	char * start = NULL;
@@ -1028,9 +1029,9 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	start +=6; // 6 => /First
 
 
-	// if there is a space after /First (TODO Replace with a while to prevent several white spaces)
-	if(start[0] == ' '){
-		start ++ ;
+	// skip white spaces after /First
+	while (*start == ' '){
+		start++;
 	}
 
 	end = start;
@@ -1047,13 +1048,26 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 
 
 
-	obj_offsets = (int*)calloc(num,sizeof(int));
-
+	if ((obj_offsets = (int*)calloc(num, sizeof(int))) == NULL){
+		err_log("extractObjectFromObjStream :: memory allocation failed!\n");
+		return -1;
+	}
+	
 
 	// Get objects number and offset
 	for(i = 0 ; i< num; i++){
 
-
+		// check if the offset if out-of-bound
+		check = start - stream;
+		if (check >= stream_len){
+			//dbg_log("extractObjectFromObjStream :: check = %d :: stream_len = %d\n",check,stream_len);
+			err_log("extractObjectFromObjStream :: bad offset in object stream %s\n", obj->reference);
+			ret = -1;
+			obj->errors++;
+			pdf->errors++;			
+			goto clean;
+		}
+		
 		// Get the object number
 		if ((obj_num_a = getNumber_s(start, len)) == NULL){
 			err_log("extractObjectFromObjStream :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
@@ -1086,8 +1100,11 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		start ++ ;
 
 		free(off_a);
+		off_a = NULL;
+
 		free(obj_num_a);
-		// calc the length of the object according to the offset of the next object.		
+		obj_num_a = NULL;
+		// calc the length of the object according to the offset of the next object.
 	}
 
 	start = stream;
@@ -1165,14 +1182,29 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			ret = -1;
 			goto clean;
 		}
-		obj_content = (char*)calloc(obj_len+1,sizeof(char));
-
 		
-		obj_content[obj_len] = '\0';
 
 		// offset of the object content = stream ptr + ptr of the first obj + offset of the obj.
 		end = stream + first + off;
-		
+
+		// check if the offset if out-of-bound
+		check = end - stream;
+		if (check >= stream_len){
+			//dbg_log("extractObjectFromObjStream :: check = %d :: stream_len = %d\n",check,stream_len);
+			err_log("extractObjectFromObjStream :: bad offset in object stream %s\n", obj->reference);
+			ret = -1;
+			obj->errors++;
+			pdf->errors++;
+			if (comp_obj != NULL){
+				freePDFObjectStruct(comp_obj);
+				comp_obj = NULL;
+			}
+			goto clean;
+		}
+
+		obj_content = (char*)calloc(obj_len + 1, sizeof(char));
+		obj_content[obj_len] = '\0';
+
 		// Get content
 		memcpy(obj_content,end,obj_len);
 		
