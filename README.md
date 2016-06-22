@@ -68,4 +68,4 @@ LIMITATIONS
 
 - Supported PDF versions are: %PDF-1.1 to %PDF-1.7.
 - PDF documents with encrypted content are not supported.
-- Removing comments is skipped for for document > 2MB
+- Removing comments is skipped for document > 2MB
