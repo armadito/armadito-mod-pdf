@@ -6,28 +6,27 @@ modules_LTLIBRARIES=modulePDF.la
 modulePDF_la_SOURCES= \
 modulePDF.c \
 modulePDF.h \
-armadito-pdf/lib/includes/utils.h \
-armadito-pdf/lib/includes/armaditopdf.h \
-armadito-pdf/lib/includes/filters.h \
-armadito-pdf/lib/includes/log.h \
-armadito-pdf/lib/includes/osdeps.h \
-armadito-pdf/lib/includes/pdfAnalysis.h \
-armadito-pdf/lib/includes/pdfparsing.h \
-armadito-pdf/lib/includes/pdfStructs.h \
-armadito-pdf/lib/src/armaditopdf.c \
-armadito-pdf/lib/src/filters.c \
-armadito-pdf/lib/src/log.c \
-armadito-pdf/lib/src/osdeps.c \
-armadito-pdf/lib/src/pdfObjectsAnalysis.c \
-armadito-pdf/lib/src/pdfParsing.c \
-armadito-pdf/lib/src/pdfStructAnalysis.c \
-armadito-pdf/lib/src/pdfStructs.c \
-armadito-pdf/lib/src/utils.c
-
+../lib/includes/utils.h \
+../lib/includes/armaditopdf.h \
+../lib/includes/filters.h \
+../lib/includes/log.h \
+../lib/includes/osdeps.h \
+../lib/includes/pdfAnalysis.h \
+../lib/includes/pdfparsing.h \
+../lib/includes/pdfStructs.h \
+../lib/src/armaditopdf.c \
+../lib/src/filters.c \
+../lib/src/log.c \
+../lib/src/osdeps.c \
+../lib/src/pdfObjectsAnalysis.c \
+../lib/src/pdfParsing.c \
+../lib/src/pdfStructAnalysis.c \
+../lib/src/pdfStructs.c \
+../lib/src/utils.c
 
 AM_CPPFLAGS= 
 modulePDF_la_LDFLAGS= -module -avoid-version -export-symbols "$(srcdir)/modulePDF.sym"
-modulePDF_la_CFLAGS= -I$(srcdir)/armadito-pdf/lib/includes
+modulePDF_la_CFLAGS= -I$(top_srcdir)/lib/includes
 modulePDF_la_LIBADD=
 modulePDF_la_CFLAGS+= @LIBARMADITO_CFLAGS@ 
 modulePDF_la_LIBADD+= @LIBARMADITO_LIBS@

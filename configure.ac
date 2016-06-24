@@ -10,7 +10,7 @@ AC_ARG_ENABLE([debug],
 
 # check for analysis module sources
 AC_MSG_CHECKING(for armadito-pdf sources)
-AC_CONFIG_SRCDIR(armadito-pdf/lib/src/armaditopdf.c)
+AC_CONFIG_SRCDIR(lib/src/armaditopdf.c)
 AC_MSG_RESULT(yes)
 
 # check for needed programs
@@ -40,5 +40,6 @@ fi
 # Output files
 AC_CONFIG_FILES([
 Makefile
+module/Makefile
 ])
 AC_OUTPUT
