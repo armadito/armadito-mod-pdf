@@ -44,10 +44,9 @@ static enum a6o_update_status modulePDF_info(struct a6o_module *module, struct a
   
 	time_t ts = 0;		
 	struct tm timeptr = {0, 30, 8, 8, 5, 116}; // 01/03/2016 9:30
-	info->update_date = os_strdup("2016-06-08T09:30:00Z");
 
 	ts=mktime(&timeptr);
-	info->timestamp = ts;
+	info->mod_update_ts = ts;
 
 	return ARMADITO_UPDATE_OK;
 }
