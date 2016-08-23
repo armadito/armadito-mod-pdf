@@ -218,6 +218,7 @@ int checkXRef(struct pdfDocument * pdf){
 		
 		//dbg_log("checkXRef :: xref keyword = %s\n",xref);
 
+
 		if(memcmp(xref,"xref",4) == 0){
 
 
@@ -294,21 +295,18 @@ int checkXRef(struct pdfDocument * pdf){
 			// Check xref format.
 			
 
+			// hint after the number of entries it should be '\r' or '\n' not a space.
+			if (*xref != '\r' && *xref != '\n'){
+				err_log("checkXref :: bad xref format!\n");
+				return bad_xref_format;
+			}
+
 			// skip white spaces
-			while (*xref == ' '){
+			while (*xref == ' ' || *xref == '\r' || *xref == '\n'){
 				len--;
 				xref++;
 			}
-
-			// hint after the number of entries it should be '\r' or '\n' not a space.
-			if (*xref != '\r' && *xref != '\n'){
-				err_log("chackXref :: bad xref format!\n");
-				return bad_xref_format;
-			}
 			
-			// skip return carriage.
-			len --;
-			xref ++;
 
 			// For each entry of table
 			for(i = 0; i< num_entries ; i++){
@@ -317,7 +315,7 @@ int checkXRef(struct pdfDocument * pdf){
 				// TODO :: check offset length. :: use get_Number_s first.
 				off_s = getNumber_s(xref, len);
 				if (off_s == NULL || strlen(off_s) != 10){					
-					err_log("chackXref :: bad offset format in xref table! :: offset = %s\n", off_s);
+					err_log("chackXref :: bad offset format in xref table! :: offset = %s :: xref = %s\n", off_s,xref);
 					ret = bad_xref_format;
 					goto clean;
 				}
