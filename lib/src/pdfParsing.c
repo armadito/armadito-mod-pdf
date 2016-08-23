@@ -1432,7 +1432,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 	end = pdf->content;
 	len = pdf->size;
 
-	while( (start = searchPattern(end,"trailer",7,len)) ){
+	while(len > 7 && (start = searchPattern(end,"trailer",7,len)) ){
 
 		len = (int)(start - end);
 		len = pdf->size -len ;
@@ -1482,6 +1482,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 
 		len = (int)( end - pdf->content);
 		len = pdf->size - len;
+
 
 	}
 
