@@ -1272,7 +1272,8 @@ int getPDFObjects(struct pdfDocument * pdf){
 	char * endobj_ptr = NULL;
 	char * content = NULL;
 	char * ref = NULL;
-	int len = 0;	
+	int len = 0;
+	int size;
 	int gen_num_len = 0;
 	int obj_num_len = 0;
 	int ref_len =0;
@@ -1288,10 +1289,9 @@ int getPDFObjects(struct pdfDocument * pdf){
 		
 	
 	endobj_ptr = pdf->content;
+	size = pdf->size;
 	
-	
-	while( (startobj_ptr = strstr(endobj_ptr,"obj")) != NULL){
-	//while( (startobj_ptr = searchPattern(endobj_ptr,"obj",3,len) ) != NULL) {		
+	while((startobj_ptr = searchPattern(endobj_ptr, "obj", 3,size) ) != NULL){	
 	
 		gen_num_len = 0;
 		obj_num_len = 0;
@@ -1346,7 +1346,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 				
 		tmp = (int)(pdf->size - (startobj_ptr - pdf->content));
 		
-		endobj_ptr = searchPattern(startobj_ptr,"endobj",6,tmp);		
+		endobj_ptr = searchPattern(startobj_ptr,"endobj",6,tmp);
 		if(endobj_ptr == NULL){
 			// invalid object no "endobj" pattern found... Malformed PDF.
 			err_log("getPDFObjects :: invalid object no \"endobj\" pattern found :: startobj_ptr = %d\n", startobj_ptr);
@@ -1396,6 +1396,9 @@ int getPDFObjects(struct pdfDocument * pdf){
 			err_log("getPDFObjects :: Add object in list failed!\n");
 			return -1;
 		}
+
+		// calc the length left.
+		size = (int)(pdf->size - (endobj_ptr - pdf->content));
 	
 	}
 

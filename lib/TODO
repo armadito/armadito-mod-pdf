@@ -8,7 +8,6 @@ TODO LIST
 // TODO :: printAnalysisReport :: filter report informations by log level.
 // TODO :: getPDFContent :: set max_size limit.
 // TODO :: removeComments :: split this function (implement function get_line, etc.)
-// TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
 // TODO :: check offset :: if the document has been uncommented. the offset should be incorrects.
 // TODO :: getObjectInfo :: fill obj->dico_len;
 // TODO :: replaceString :: replace all occurrences.
