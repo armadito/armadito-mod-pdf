@@ -1,6 +1,10 @@
 ARMADITO PDF ANALYZER
 =====================
 [![Build Status](https://travis-ci.org/armadito/armadito-mod-pdf.svg?branch=DEV)](https://travis-ci.org/armadito/armadito-mod-pdf)
+<a href="https://scan.coverity.com/projects/armadito-armadito-mod-pdf">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/10496/badge.svg"/>
+</a>
 
 Armadito module PDF is an heuristic module for PDF documents analysis.
 
