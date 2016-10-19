@@ -36,7 +36,7 @@ compiler:
 
 before_script:
   - git clone git://github.com/armadito/armadito-av -b DEV
-  - cd armadito-av/core
+  - cd armadito-av/
   - ./autogen.sh
   - mkdir -p /home/travis/build/armadito-core
   - ./configure --prefix=/home/travis/build/armadito-core
