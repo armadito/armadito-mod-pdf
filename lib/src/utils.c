@@ -486,8 +486,10 @@ char * getIndirectRef(char * ptr, int size){
 	end ++ ;
 
 	gen_num = getNumber_s(end,len);
-	if(gen_num == NULL)
+	if(gen_num == NULL) {
+		free(obj_num);
 		return NULL;
+	}
 
 	end += strlen(gen_num);
 	len -=  strlen(gen_num);
@@ -498,6 +500,8 @@ char * getIndirectRef(char * ptr, int size){
 	
 	// Check the presence of R => 12 0 R 
 	if(end[0] != 'R'){
+		free(gen_num);
+		free(obj_num);
 		return NULL;
 	}
 
