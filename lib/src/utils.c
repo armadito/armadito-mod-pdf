@@ -113,6 +113,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	
 	if( size < pat_size || src == NULL || pat == NULL || pat_size == 0 || size == 0){
 		err_log("searchPattern :: invalid parameters\n");
+		//dbg_log("searchPattern :: src = %s :: pat = %s :: pat_size = %d :: size = %d\n", src, pat, pat_size, size);
 		return NULL;
 	}
 		

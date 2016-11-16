@@ -496,6 +496,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	struct pdfObject * ef_obj = NULL;
 	char * ef_obj_ref = NULL;
 	char * start = NULL;
+	//char * subdir = NULL;
 	int len = 0;
 	int ret = 0;
 
@@ -546,8 +547,8 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 	}
 
 
-	
-	if( strncmp(obj->type,"/Filespec",9) == 0){
+	// looking for Filespec object is not always necessary for Embedded file detection
+	/*if( strncmp(obj->type,"/Filespec",9) == 0){
 
 		// Get EF entry in dico
 		start = searchPattern(obj->dico, "/EF" , 3 , strlen(obj->dico));
@@ -571,11 +572,26 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 		// The case <</EF <</F 3 0 R>>
 		if(start[0] == '<' && start[1] == '<'){
 
+			//printf("Debug:: start = %s\n", start);
+
 			len = (int)(start - obj->dico);
 			len = strlen(obj->dico) - len;
 
+			// get Embedded file sub dictionary
+			if( (subdir = getDelimitedStringContent(start, "<<", ">>", len)) == NULL){
+				warn_log("getEmbeddedFile :: get EF subdirectory failed!\n");
+				ef_obj= NULL;
+				ef_obj_ref = NULL;
+			}
+
+			//printf("Debug :: subdir = %s\n", subdir);
+
+
 			ef_obj_ref = obj->reference;
 			ef_obj = obj;
+
+			free(subdir);
+			subdir=NULL;
 
 		}else{
 
@@ -585,6 +601,8 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			ef_obj_ref = getIndirectRef(start,len);
 			//dbg_log("getEmbeddedFile :: ef_obj_ref = %s\n",ef_obj_ref);
 			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
+
+
 
 		}
 
@@ -599,8 +617,10 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 			// Get the /F entry in the dico
 			start = searchPattern(ef_obj->dico, "/F" , 2 , strlen(ef_obj->dico));
 
+			//printf("Debug :: start = %s :: dico_len = %d\n",start, strlen(ef_obj->dico));
+
 			if(start == NULL){
-				//dbg_log("No EF detected in object %s\n",obj->reference);
+				dbg_log("No EF detected in object %s\n",obj->reference);
 				return 0;
 			}
 
@@ -613,6 +633,8 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 
 			len = (int)(start - ef_obj->dico);
 			len = strlen(ef_obj->dico) - len;
+
+			
 
 			ef_obj_ref = getIndirectRef(start,len);
 			dbg_log("getEmbeddedFile :: EF_obj_ref = %s\n",ef_obj_ref);
@@ -656,7 +678,7 @@ int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
 		}
 		
 
-	}
+	}*/
 
 	if(ef != NULL){
 

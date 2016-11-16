@@ -67,3 +67,10 @@ Wed, 15 June 2016 :: 0.12.3 :: (ufausther)
 ------------------------------------------
 
 + fix craches :: extractObjectFromObjStream() :: invalid offset (/First) and number of object (/N) in dictionary
+
+
+Fri, 19 Aug 2016 :: 0.12.4 :: (ufausther)
+------------------------------------------
+
++ fix warning in function getTrailers :: test file = clam.pdf
++ getEmbeddedFile :: looking for FileSpec object is not necessary for embedded file detection.
