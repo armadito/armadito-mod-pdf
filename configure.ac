@@ -1,4 +1,4 @@
-AC_INIT(armadito-mod-modulePDF, [0.9.0], ufausther@teclib.com)
+AC_INIT(armadito-pdf, [0.12.4], ufausther@teclib.com)
 AM_INIT_AUTOMAKE
 
 # collect arguments
@@ -33,13 +33,29 @@ PKG_PROG_PKG_CONFIG
 
 # check for libarmadito
 PKG_CHECK_MODULES(LIBARMADITO, libarmadito, [HAVE_LIBARMADITO=yes], [HAVE_LIBARMADITO=no])
+
+
+AM_CONDITIONAL([COND_LIBARMADITO], [test "$HAVE_LIBARMADITO" = "yes"])
+
+
 if test "$HAVE_LIBARMADITO" = "no"; then
-   AC_MSG_ERROR("cannot find ARMADITO library")
+   AC_MSG_WARN("cannot find ARMADITO library: skipping module build.")
 fi
+
 
 # Output files
 AC_CONFIG_FILES([
 Makefile
-module/Makefile
+lib/Makefile
+lib/includes/Makefile
+tools/Makefile
+tools/armadito-pdf/Makefile
 ])
+
+# conditional makefile for libarmadito.
+AM_COND_IF([COND_LIBARMADITO],
+	AC_CONFIG_FILES([
+	module/Makefile
+]))
+
 AC_OUTPUT
