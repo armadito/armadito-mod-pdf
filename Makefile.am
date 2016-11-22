@@ -1,5 +1,9 @@
-if COND_LIBARMADITO
-	MOD_DIR = module
+if COND_MODULE
+MOD_DIR = module
 endif
 
-SUBDIRS = lib tools $(MOD_DIR)
+if COND_TOOLS
+TOOLS_DIR = tools
+endif
+
+SUBDIRS = lib $(COND_TOOLS) $(MOD_DIR)
