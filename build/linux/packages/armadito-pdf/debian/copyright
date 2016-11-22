@@ -1,14 +1,14 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: armadito-pdf
-Source: <http://www.teclib-edition.com/teclib-products/armadito-antivirus>
+Source: http://www.teclib-edition.com/teclib-products/armadito-antivirus
 
 Files: *
-Copyright: 2016 2015 Teclib' <ufausther@teclib.com>
+Copyright: 2016 2015 Teclib'
 License: GPL-3.0+
 
 
 Files: debian/*
-Copyright: 2016 2015 Teclib' <ufausther@teclib.com>
+Copyright: 2016 2015 Teclib'
 License: GPL-3.0+
 
 

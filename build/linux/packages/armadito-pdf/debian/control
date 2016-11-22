@@ -5,12 +5,11 @@ Maintainer: Ulrich Fausther <ufausther@teclib.com>
 Build-Depends: debhelper (>=9),autotools-dev
 Standards-Version: 3.9.7
 Homepage: https://github.com/armadito/armadito-mod-pdf
-#Vcs-Git: git://anonscm.debian.org/collab-maint/armadito-mod-modulepdf.git
-#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/armadito-mod-modulepdf.git
 
 Package: armadito-pdf
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Armadito PDF command line analyzer.
- Armadito PDF command line analyzer is a tools which allows to
- parse and analyze PDF documents...
+Description: Armadito PDF analyzer.
+ Armadito PDF analyzer is a module for PDF documents analysis that include:
+ - a PDF parser
+ - an heuristic analyzer that computes the document confidence level.
