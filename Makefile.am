@@ -6,4 +6,4 @@ if COND_TOOLS
 TOOLS_DIR = tools
 endif
 
-SUBDIRS = lib $(COND_TOOLS) $(MOD_DIR)
+SUBDIRS = lib $(TOOLS_DIR) $(MOD_DIR)
