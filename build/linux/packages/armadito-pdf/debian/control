@@ -6,7 +6,9 @@ Build-Depends: debhelper (>=9),autotools-dev
 Standards-Version: 3.9.7
 Homepage: https://github.com/armadito/armadito-mod-pdf
 
+
 Package: armadito-pdf
+Section: utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Armadito PDF analyzer.
