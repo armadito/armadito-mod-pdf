@@ -22,3 +22,5 @@ install-exec-hook:
 
 install-data-hook:
 	-rm -f "$(DESTDIR)$(modulesdir)"/modulePDF.la "$(DESTDIR)$(modulesdir)"/modulePDF.a
+
+EXTRA_DIST=modulePDF.sym
