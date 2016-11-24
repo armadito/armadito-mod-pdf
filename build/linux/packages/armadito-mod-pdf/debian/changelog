@@ -1,0 +1,5 @@
+armadito-mod-pdf (0.12.4-0ubuntu1) xenial; urgency=medium
+
+  * New upstream release tested on ubuntu xenial.
+
+ -- Ulrich Fausther <ufausther@teclib.com>  Wed, 23 Nov 2016 16:07:05 +0100
