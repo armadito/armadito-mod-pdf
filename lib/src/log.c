@@ -21,6 +21,17 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "log.h"
 
+
+static enum log_level current_max_level = default_max_level;
+
+
+void set_current_log_level(enum log_level level){
+
+	current_max_level = level;
+
+	return;
+}
+
 char * lvl_tostring(enum log_level level){
 
 	switch (level){
@@ -42,7 +53,7 @@ void cli_log(enum log_level level, const char * fmt, ...){
 	
 	va_list ap;	
 
-	if (level > max_level)
+	if (level > current_max_level)
 		return;
 	
 	printf("%s ", lvl_tostring(level));
