@@ -1,3 +1,9 @@
+armadito-pdf (0.12.4-0ubuntu3) xenial; urgency=medium
+
+  * Add command line options (help, version, log-level)
+
+ -- Ulrich Fausther <ufausther@teclib.com>  Thu, 19 Jan 2017 17:53:44 +0100
+
 armadito-pdf (0.12.4-0ubuntu2) xenial; urgency=medium
 
   * Add configure optional args
