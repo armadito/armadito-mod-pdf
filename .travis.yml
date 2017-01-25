@@ -8,10 +8,11 @@ addons:
     - libglib2.0-dev
     - libmagic-dev
     - libxml2-dev
-    - libjson-c-dev
     - libmicrohttpd-dev
     - libcurl4-openssl-dev
-    - libclamav-dev
+    - libjansson-dev
+    - libjansson4
+    - autoconf-archive
   coverity_scan:
     project:
       name: armadito/armadito-mod-pdf
