@@ -1,5 +1,5 @@
-AC_INIT(armadito-mod-modulePDF, [0.9.0], ufausther@teclib.com)
-AM_INIT_AUTOMAKE
+AC_INIT(armadito-mod-modulePDF, [0.10.1], ufausther@teclib.com)
+AM_INIT_AUTOMAKE([foreign])
 
 # collect arguments
 # debug
