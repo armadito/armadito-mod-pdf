@@ -19,7 +19,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 ***/
 
-#include <libarmadito.h>
+#include <libarmadito/armadito.h>
 #include <string.h>
 
 #include <armaditopdf.h>
