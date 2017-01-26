@@ -1,6 +1,6 @@
 /***
 
-Copyright (C) 2015, 2016 Teclib'
+Copyright (C) 2015 - 2017 Teclib'
 
 This file is part of Armadito module PDF.
 
@@ -20,7 +20,6 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 
-    
 #include "armaditopdf.h"
 #include "osdeps.h"
 #include "log.h"
@@ -43,14 +42,14 @@ static struct option cli_option_def[] = {
 
 void Usage(){
 
-	fprintf(stderr, "usage: armadito-pdf [options] FILE|DIR\n");
+	fprintf(stderr, "usage: armadito-pdf [options] FILE\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Armadito PDF scanner\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  --help  -h                    print help and quit\n");
 	fprintf(stderr, "  --version -V                  print program version\n");
-	fprintf(stderr, "  --log-level=LEVEL | -l LEVEL  set log level [debug=X; warning=Y; error=Z]\n");
+	fprintf(stderr, "  --log-level=LEVEL | -l LEVEL  set log level [error, warn, info, debug, none]\n");
 	fprintf(stderr, "\n");
 
 	exit(-1);

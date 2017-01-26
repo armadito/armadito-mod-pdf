@@ -1,0 +1,15 @@
+Source: armadito-mod-pdf
+Section: utils
+Priority: optional
+Maintainer: Ulrich Fausther <ufausther@teclib.com>
+Build-Depends: debhelper (>=9),autotools-dev, libarmadito-dev (>= 0.12.0)
+Standards-Version: 3.9.7
+Homepage: https://github.com/armadito/armadito-mod-pdf
+
+
+Package: armadito-mod-pdf
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libarmadito (>= 0.12.0)
+Description: Armadito antivirus - PDF module
+ Provides Armadito PDF scan module.

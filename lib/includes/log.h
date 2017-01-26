@@ -25,7 +25,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdarg.h>
 
-#define max_level LOG_LEVEL_WARNING
+
+#define default_max_level LOG_LEVEL_WARNING
 #define print_report 1	// print the analysis report.
 
 enum log_level {
@@ -37,8 +38,7 @@ enum log_level {
 };
 
 void cli_log(enum log_level level, const char * fmt, ...);
-
-//#define err_log(fmt, ...) cli_log(LOG_LEVEL_ERROR,(fmt),__VA_ARGS__)
+void set_current_log_level(enum log_level level);
 
 #ifdef _WIN32
 

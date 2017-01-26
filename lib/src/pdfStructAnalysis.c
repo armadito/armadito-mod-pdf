@@ -559,7 +559,7 @@ int checkXRef(struct pdfDocument * pdf){
 			xref_orig = NULL;
 		}
 
-		if (num_entries != NULL){
+		if (num_entries_a != NULL){
 			free(num_entries_a);
 			num_entries_a = NULL;
 		}
