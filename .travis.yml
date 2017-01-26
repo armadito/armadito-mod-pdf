@@ -8,10 +8,11 @@ addons:
     - libglib2.0-dev
     - libmagic-dev
     - libxml2-dev
-    - libjson-c-dev
     - libmicrohttpd-dev
     - libcurl4-openssl-dev
-    - libclamav-dev
+    - libjansson-dev
+    - libjansson4
+    - autoconf-archive
   coverity_scan:
     project:
       name: armadito/armadito-mod-pdf
@@ -22,22 +23,28 @@ addons:
     build_command: make -j 4
     branch_pattern: coverity_scan
   sonarqube: true
-
+deploy:
+  skip_cleanup: true
+  provider: launchpad
+  slug: "~armadito/armadito-mod-pdf/+git/main"
+  oauth_token:
+    secure: d8X9y9hEPB0zgibcvVL2Q2qrDoM3o2/Wh28bZcD/A4TH5pgDK9oYbgtU5ywozK/CScpHEHmRTjZhwq9Mh4xVNni7XIKigpHbAKH0NhR6wKryQwR3VwUgRBKxp/UAnWFSv9RiPT7fG5tOQpHaD+8O8N06vLXZ0p4xV29jwnxPEvYEUt0fKmo4SWI18HQLpoFCuQLchgzvPs1X+iixWms5BmBlDIhnwx79geaMLF6sCc9f4TcvJ8yT9s4VbH/qYhsbCHB8lkRiBY1qQqw4sN67gQhJ9oY5J/AbGMJSdb4nimMhhUfkiME8iQVOx07YOaQJ6pMz5VYWpF7dOLlXdvEgc5caVs/gENmpb270aQHUSILn2A+3NI+LnSW3R3dkrtLU+HX9zVtMvnus/8T1f5KSecLvH+mRU4J6RTl9+MEDYA6sD59Ie2sBPqgljymgq8DJ8yoVqBzPzVCk95n5KTu21xobHgqXn4QfB/vGqQbE3U9XBFloALzsd4kMp+W37JtztVgaTlG+YNslCzWUP+f8pO6wHaRzJeVHC9/h24b5fk87TtvwTtVrxinNFXzj4i42A+6zlsW8BZXJ9I8jgaNhKGiWpHUy/iH9EADo2Y2rtYd09adAelEsIIJ4X+/N2+QfRjnDMGUV+8v3xUbLayQT3nb2G05X8YA19NlDoXZATYU=
+  oauth_token_secret:
+    secure: MnRk4gTNMwpSUodIwrEvdPg5mrufFjodZElpWomHg7gNBOfp/rsbzk4MEeu8sqxq1s0lUQUPzw4uiMy7tKy0x3Gn4XAhFMW9WDOtanDQV3qfPiFxlxHpfg2p+Tu5Ol6TnSYRI0l/vC3rN/pEJPOJoWJu6md6LEXX9U5Itub+rcmiMyygz11bMY46jY+vSZhLcT1LmgK6sojyCdIBFOjd+ACpvK+Lu/6Kj/QYhz3txOjMbsEgz+L2giSgs3j9zmpbg4zPFCL2Cq04muXVr3mOW1fmAXWop6DEs0rc9ovkqJwKaNcPWc1Inm5QDaAcR5ckeY/Oy4L/mHe2zv3/d7RpubrdudhFJzYogsHY2r7kGtQYNCfXaj5QHVRxCnvHhvMCiBI4lrqFZEMZii9eXSQJZJk32Cz20RiTvHeJwQsuukizfuHIzCNLwbb4aumR6m3uAL2U3QJE7j2ZfgkSF1boOvCQplCRiBL6kexNLHvTlVGHbt8a+Eptp0KE+7lKXk9o7CONWxLaCVGOe+2zTms7b5/4FYLD4gajoBRUmaTe0KZVlvvKaoQanj1+ay9SA7pIlBMHoTmnoHHZVu8l2lOERXd4VM1bE+zWH5MULy76cSIhuerwJg5rPUbizVpFsAVrk346gUKcGzWkibY2uSvUyVEoef2jiX62uJ9FUmVUgFo=
+  on:
+    tags: true
 env:
   global:
   - secure: ZqqOmdvcZ/tUhR87wlAhnDeFgkCywwYlAchKMIIGJPjGpsMEZU/m+kKi49YJEZrC6i7QO/WexCi3TVIFWaIGtWXCyri0rJIIDPdJtiJ3SNvDhwjcB+eNOsNVnv3Hg8OllZV3+GvoKNKNrwYtYraill4C3+8PeDLLpOI6wQmNJWUsLMRHlSXM6ZDS9bxILrNHFobvTdtuM9wkfwh0JfoIWMdYnzmqrRrhT+bEZaDHMHp7GTSiFBL2lvqlutMWMn8fvTLn35M8839WyFPcr/lnFZZZcSKJBqM8GySq1yNr9NNAoUUhhmP0Oope8iks59mkDQRyRbVpkOYQGkJChhGt2/LQE5W0WjpmWS+5cAqYFlqJKs2AFPNI9a94HI/XZjO0RwQqkpbNHc06wbPIYf0h1aPi75xYsC07NhdwvS40NYou82IjnpffdRDrqNcVP4yBASqaQlaDCrr35nPGm993vPCVa7i0NxrqWmtf5KFo/Nk6Lxh3nWFLABLZI8DEIogOCnVF2W+Q9LaSmbUcmsovV2XNdLNYoKETVlZp5F0h7mXjyYsRN8dexPZb8DBYNWCI5PbJS4gf98JjDRxKVuIbWqRg8W/KbMdU78d4aetznVeLkh7SnVyFtR4ImYEod1xFVdulh1F09VAfLBk/J6HTs84uqdW65w1TKHAtZyO/77Q=
   - secure: eFWWkuzR9vYPgXPz1f0JyZQFFdipAu5b5fOKXeDyzlb27DG0jQYUeRou6xdtXvH9jKgAtRxwa0IdtV+2cEW+deTr/bxvWlGGLHHnQSgtgvq/BgbDptuTsSVWfRhuNJogNGB5BaMd33lyX5nKrH6Jbz8+qp8DnE2l96kThSbByyamVG/7Q9sXAHEfCUI4UdRSuGijB18ezzzxloDuA3pZPaa6laDXxXSCVRyaY+qREL6qwhWK9LwNdqtSuqcFs5ppIYhz3c0KCMMKb86cZrtJTXolSK6Oe6sjXy+Pj+E1D895jZF2k1YDQ7YLFNhYyFClC85l2NvJBitr5l7FUHhQGsuLfFk3z2yMkJE9UbDOog98EjiRH/VRICReFrEN78D8k8JSziyIXB0FGHoIKEUXV3n9Og++AkFF4qdwxPC/VGGComZBAGC7VMEg67AIuG2vKoCgl7GHvPu/lW0cCZUE0wt+RZOXB6mJv6Fr9qmXWibarv/wA7gItDj1PP8pgxSWn69b4U8aNwoYHNYyBldqK7YRevqwAnaFfohMUmYPJnE80pWLDe2i/4T+Wl8XhuOubG9k3uncXZ6uB4mzVooITYiAzTzesqkU4ix62bm3C0g6h0XawQjzHbGpK0Je2AX7DMlCLyjef+R/4Cj6hP2rsK1IrJbh5McwoSTErydzQU8=
-
 before_install:
 - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END
   CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 - wget https://sonarqube.com/static/cpp/build-wrapper-linux-x86.zip
 - unzip build-wrapper-linux-x86.zip
 - export PATH=$PWD/build-wrapper-linux-x86:$PATH
-
 compiler:
 - gcc
-
 before_script:
 - git clone git://github.com/armadito/armadito-av -b DEV
 - cd armadito-av/
@@ -48,8 +55,7 @@ before_script:
 - make install
 - cd /home/travis/build/armadito/armadito-mod-pdf
 - "./autogen.sh"
-
 script:
 - "./configure PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig"
 - build-wrapper-linux-x86-64 --out-dir build-wrapper-out make clean all
-- sonar-scanner -e -X -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN
+- sonar-scanner -X -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN

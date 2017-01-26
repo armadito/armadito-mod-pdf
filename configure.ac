@@ -1,6 +1,6 @@
-AC_INIT(armadito-pdf, [0.12.4], ufausther@teclib.com)
-AM_INIT_AUTOMAKE
 
+AC_INIT(armadito-pdf, [0.12.4], ufausther@teclib.com)
+AM_INIT_AUTOMAKE([foreign])
 
 # collect arguments
 # debug
