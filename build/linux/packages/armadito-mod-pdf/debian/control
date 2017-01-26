@@ -2,7 +2,7 @@ Source: armadito-mod-pdf
 Section: utils
 Priority: optional
 Maintainer: Ulrich Fausther <ufausther@teclib.com>
-Build-Depends: debhelper (>=9),autotools-dev, libarmadito-dev (>= 0.12.0)
+Build-Depends: debhelper (>=9),autotools-dev, libarmadito-dev (>= 0.12.0), dh-autoreconf
 Standards-Version: 3.9.7
 Homepage: https://github.com/armadito/armadito-mod-pdf
 
