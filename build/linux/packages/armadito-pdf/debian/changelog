@@ -1,4 +1,4 @@
-armadito-pdf (0.12.4-0ubuntu3) xenial; urgency=medium
+armadito-pdf (0.12.4.1-0ubuntu3) xenial; urgency=medium
 
   * Add command line options (help, version, log-level)
 
