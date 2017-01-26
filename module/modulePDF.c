@@ -30,31 +30,31 @@ struct modulePDF_data {
 static enum a6o_mod_status modulePDF_init(struct a6o_module *module) {
 
 	// This module doesn't need initialization.
-	a6o_log(ARMADITO_LOG_MODULE, ARMADITO_LOG_LEVEL_INFO, "module PDF initialized successfully!");
-	return ARMADITO_MOD_OK;
+	a6o_log(A6O_LOG_MODULE, A6O_LOG_LEVEL_INFO, "module PDF initialized successfully!");
+	return A6O_MOD_OK;
 }
 
 static enum a6o_mod_status modulePDF_close(struct a6o_module *module) {
 
 	// This modules doesn't need close instruction.
-	return ARMADITO_MOD_OK;
+	return A6O_MOD_OK;
 }
 
 static enum a6o_update_status modulePDF_info(struct a6o_module *module, struct a6o_module_info *info){
-  
-	time_t ts = 0;		
+
+	time_t ts = 0;
 	struct tm timeptr = {0, 30, 8, 8, 5, 116}; // 01/03/2016 9:30
 
 	ts=mktime(&timeptr);
 	info->mod_update_ts = ts;
 
-	return ARMADITO_UPDATE_OK;
+	return A6O_UPDATE_OK;
 }
 
 
 static enum a6o_file_status modulePDF_scan(struct a6o_module *module, int fd, const char *path, const char *mime_type, char **pmod_report) {
 
-	enum a6o_file_status status = ARMADITO_CLEAN;
+	enum a6o_file_status status = A6O_FILE_CLEAN;
 	int ret = 0;
 
 
@@ -62,17 +62,17 @@ static enum a6o_file_status modulePDF_scan(struct a6o_module *module, int fd, co
 	ret = analyzePDF_ex(fd,path);
 
 	if (ret == -1) {
-		status = ARMADITO_IERROR;
+		status = A6O_FILE_IERROR;
 	}
 	else if (ret == -2) {
-		status = ARMADITO_UNDECIDED; // Not supported files (encrypted contents or bad header).
+		status = A6O_FILE_UNDECIDED; // Not supported files (encrypted contents or bad header).
 	}
 	else if (ret < MALICIOUS_COEF) {
-		status = ARMADITO_CLEAN;
+		status = A6O_FILE_CLEAN;
 	}
 	else if (ret >= MALICIOUS_COEF) {
-		status = ARMADITO_MALWARE;
-		
+		status = A6O_FILE_SUSPICIOUS;
+
 		*pmod_report = os_strdup("ModulePDF!SuspiciousPDF");
 	}
 
