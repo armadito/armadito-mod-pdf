@@ -1,4 +1,4 @@
-libarmadito-pdf (0.12.4.0) xenial; urgency=medium
+libarmadito-pdf (0.12.4.1) xenial; urgency=medium
 
   * New upstream release tested on ubuntu xenial.
 
