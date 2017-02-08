@@ -20,9 +20,9 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 
-#include "armaditopdf.h"
-#include "osdeps.h"
-#include "log.h"
+#include "libarmadito-pdf/armaditopdf.h"
+#include "libarmadito-pdf/osdeps.h"
+#include "libarmadito-pdf/log.h"
 #include "getopt.h"
 
 
