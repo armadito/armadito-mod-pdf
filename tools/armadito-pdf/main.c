@@ -25,6 +25,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include "libarmadito-pdf/log.h"
 #include "getopt.h"
 
+#define TOOL_VERSION "0.13.0"
+
 
 struct scan_options {
 	char *path_to_scan;
@@ -58,7 +60,7 @@ void Usage(){
 
 void Version(){
 
-	printf("armadito-pdf v%s (c) 2015 - 2017 by Teclib\n",a6o_pdf_ver);
+	printf("armadito-pdf v%s (using libarmadito-pdf v%s) \nCopyright (C) 2015 - 2017 by Teclib.\n",TOOL_VERSION,a6o_pdf_ver);
 	exit(1);
 }
 
