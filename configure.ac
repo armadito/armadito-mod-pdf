@@ -23,6 +23,7 @@ AC_ARG_ENABLE([tools],
 	[enable_tools="yes"],
 	[enable_tools="no"])
 
+PKG_PROG_PKG_CONFIG
 
 # check for analysis module sources
 AC_MSG_CHECKING(for armadito-pdf library sources)
@@ -59,7 +60,6 @@ if test "$enable_module" = "yes"; then
 	if test "$HAVE_LIBARMADITO" = "no"; then
 		AC_MSG_ERROR("cannot find ARMADITO library: skipping module build.")
 	fi
-
 fi
 
 # check for tools arg
@@ -67,27 +67,15 @@ AC_MSG_CHECKING(for cli tools)
 AC_MSG_RESULT($enable_tools)
 AM_CONDITIONAL([COND_TOOLS], [test "$enable_tools" = "yes"])
 
+# check for libarmadito-pdf if module is enabled.
+if test "$enable_tools" = "yes"; then
 
-#PKG_CHECK_MODULES(LIBARMADITO, libarmadito, [HAVE_LIBARMADITO=yes], [HAVE_LIBARMADITO=no])
-#AM_CONDITIONAL([COND_LIBARMADITO], [test "$HAVE_LIBARMADITO" = "yes"])
-
-
-#if test "$HAVE_LIBARMADITO" = "no"; then
-#   AC_MSG_ERROR("cannot find ARMADITO library: skipping module build.")
-#fi
-
-PKG_PROG_PKG_CONFIG
-
-# check for libarmadito
-#PKG_CHECK_MODULES(LIBARMADITO, libarmadito, [HAVE_LIBARMADITO=yes], [HAVE_LIBARMADITO=no])
-
-
-#AM_CONDITIONAL([COND_LIBARMADITO], [test "$HAVE_LIBARMADITO" = "yes"])
-
-
-#if test "$HAVE_LIBARMADITO" = "no"; then
-#   AC_MSG_WARN("cannot find ARMADITO library: skipping module build.")
-#fi
+	# check for libarmadito-pdf
+	PKG_CHECK_MODULES(LIBARMADITO_PDF, libarmadito-pdf, [HAVE_LIBARMADITO_PDF=yes], [HAVE_LIBARMADITO_PDF=no])
+	if test "$HAVE_LIBARMADITO_PDF" = "no"; then
+		AC_MSG_ERROR("cannot find ARMADITO-PDF library: skipping armadito-pdf tool build.")
+	fi
+fi
 
 
 # Output files
