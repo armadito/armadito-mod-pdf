@@ -724,6 +724,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			next_code = FIRST_CODE;
 			//last_code = code;
 			w_len = 0;
+			free(w);
 			w= NULL;
 
 			//w = entry;
@@ -926,16 +927,13 @@ char * getTuple(char * data, int len){
 	int i = 0;
 	int size = 5; // tuple size
 
+	if(data == NULL || len == 0){
+		return NULL;
+	}
+	
+
 	tuple = (char*)calloc(size+1,sizeof(char));
 	tuple[size]='\0';
-
-	if(data == NULL){
-		return NULL;
-	}
-
-	if(len == 0){
-		return NULL;
-	}
 
 	if(len >=5){
 

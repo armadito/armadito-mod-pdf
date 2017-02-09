@@ -212,6 +212,7 @@ int checkXRef(struct pdfDocument * pdf){
 		}
 		else{
 			err_log("checkXRef :: invalid file handle or file descriptor\n");
+			free(xref);
 			return -1;
 		}
 

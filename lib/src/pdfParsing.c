@@ -45,13 +45,14 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	int ret = 0;
 	char * version = NULL;
 
-	version = (char*)calloc(version_size+1, sizeof(char));
-	version[version_size] = '\0';
 	
 	if (pdf->fh == NULL && pdf->fd < 0) {
 		err_log("checkMagicNumber :: invalid parameters!\n");
 		return -1;
 	}
+
+	version = (char*)calloc(version_size+1, sizeof(char));
+	version[version_size] = '\0';
 	
 	if (pdf->fh != NULL) {
 
@@ -62,6 +63,7 @@ int checkMagicNumber(struct pdfDocument * pdf){
 		ret = fread(version,1,version_size,pdf->fh);
 		if (ret != version_size){
 			err_log("checkMagicNumber :: read file failed!\n");
+			free(version);
 			return -1;
 		}
 
@@ -80,6 +82,7 @@ int checkMagicNumber(struct pdfDocument * pdf){
 	
 	}else{
 		
+		free(version);
 		pdf->testStruct->bad_header = 1;
 		return -2;
 	}
@@ -224,10 +227,13 @@ char * hexaObfuscationDecode(char * dico){
 
 			free(tmp);
 			tmp = NULL;
-			tmp = decoded_dico;		
+			tmp = decoded_dico;
 
 		}else{			
 			err_log("hexaObfuscationDecode :: replaceInString returns NULL \n");
+			free(hexa);
+			free(hexa_decoded);
+			free(tmp);
 			return NULL;
 		}
 
@@ -241,6 +247,7 @@ char * hexaObfuscationDecode(char * dico){
 	
 	free(hexa);
 	free(hexa_decoded);
+	free(tmp);
 
 	if(decoded_dico != NULL && is_space_hexa == 0){		
 		dbg_log("hexaObfuscationDecode :: decoded_dico  = %s\n",decoded_dico);
@@ -720,6 +727,7 @@ int decodeObjectStream(struct pdfObject * obj){
 				err_log("decodeObjectStream :: FlateDecode failed!\n");
 				dbg_log("decodeObjectStream :: dico = %s\n",obj->dico);
 				free(stream);
+				free(filter);
 				obj->errors++;
 				return -1;
 			}
@@ -1351,6 +1359,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 			// invalid object no "endobj" pattern found... Malformed PDF.
 			err_log("getPDFObjects :: invalid object no \"endobj\" pattern found :: startobj_ptr = %d\n", startobj_ptr);
 			pdf->errors++;
+			free(ref);
 			return -2;
 		}
 		
@@ -1366,6 +1375,8 @@ int getPDFObjects(struct pdfDocument * pdf){
 		// Create and initialize pdf object
 		if ((obj = initPDFObject()) == NULL){
 			err_log("getPDFObjects :: pdf object creation failed!\n");
+			free(ref);
+			free(content);
 			return -1;
 		}
 
@@ -1455,6 +1466,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 	
 		if(!(trailer = initPDFTrailer())){			
 			err_log("getPDFTrailers ::  pdfTrailer structure initilizing failed\n");
+			free(content);
 			return -1;
 		}
 				
@@ -1464,6 +1476,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 		if(decoded_content != NULL){			
 			warn_log("getPDFTrailers :: Obfuscated trailer dictionary !!\n");
 			pdf->testStruct->obfuscated_object ++ ;
+			free(content);
 			trailer->content = decoded_content;
 		}else{
 			trailer->content = content;	
@@ -1539,6 +1552,7 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 	
 		if(!(trailer = initPDFTrailer())){			
 			err_log("Error :: getPDFTrailers_ex :: pdfTrailer structure initilizing failed\n");			
+			free(content);
 			return -1;
 		}
 		

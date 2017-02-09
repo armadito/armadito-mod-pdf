@@ -229,6 +229,7 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 		start = searchPattern(end,"</script",8,rest);
 
 		if(start == NULL){
+			free(script_balise);
 			return -1;
 		}
 
@@ -257,11 +258,15 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 		// Launch js content analysis
 		if (unknownPatternRepetition(js_content, len, pdf, obj) < 0){
 			err_log("getJSContentInXFA :: get pattern high repetition failed!\n");
+			free(script_balise);
+			free(js_content);
 			return -1;
 		}
 
 		if (findDangerousKeywords(js_content, pdf, obj) < 0){
 			err_log("getJSContentInXFA :: get dangerous keywords failed!\n");
+			free(script_balise);
+			free(js_content);
 			return -1;
 		}
 	
