@@ -1,7 +1,7 @@
-armadito-pdf (0.13.1.0) xenial; urgency=medium
+armadito-pdf (0.13.1.1) xenial; urgency=medium
 
   * Fix apt-get install bug: collision with libarmadito-pdf headers.
-	- add configure build condition --enable-lib
+  * add configure build condition --enable-lib
 
  -- Ulrich Fausther <ufausther@teclib.com>  Thu, 09 Feb 2017 19:11:27 +0100
 
