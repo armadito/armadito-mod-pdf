@@ -9,6 +9,11 @@ AC_ARG_ENABLE([debug],
 	,
 	enable_debug="yes")
 
+# armadito pdf library
+AC_ARG_ENABLE([lib],
+	AS_HELP_STRING([--enable-lib],[enable armadito-pdf library @<:@default is no@:>@]),
+	enable_lib="yes",
+	enable_lib="no")
 
 # module
 AC_ARG_ENABLE([module],
@@ -47,6 +52,11 @@ if test "$enable_debug" = "yes"; then
 fi
 
 
+# check for library arg
+AC_MSG_CHECKING(for armadito PDF library)
+AC_MSG_RESULT($enable_lib)
+AM_CONDITIONAL([COND_LIBRARY], [test "$enable_lib" = "yes"])
+
 # check for module arg
 AC_MSG_CHECKING(for armadito module)
 AC_MSG_RESULT($enable_module)
@@ -81,8 +91,13 @@ fi
 # Output files
 AC_CONFIG_FILES([
 Makefile
-lib/Makefile
 ])
+
+# conditional makefile for library.
+AM_COND_IF([COND_LIBRARY],
+	AC_CONFIG_FILES([
+	lib/Makefile
+]))
 
 # conditional makefile for tools.
 AM_COND_IF([COND_TOOLS],
