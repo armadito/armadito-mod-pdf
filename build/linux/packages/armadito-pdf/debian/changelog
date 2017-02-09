@@ -1,3 +1,10 @@
+armadito-pdf (0.13.0.0) xenial; urgency=medium
+
+  * Add dependency on libarmadito-pdf library.
+  * Version command display tool and library versions.
+
+ -- Ulrich Fausther <ufausther@teclib.com>  Thu, 09 Feb 2017 14:56:35 +0100
+
 armadito-pdf (0.12.4.2-0ubuntu3) xenial; urgency=medium
 
   * Add command line options (help, version, log-level)

@@ -3,12 +3,12 @@ Upstream-Name: armadito-pdf
 Source: http://www.teclib-edition.com/teclib-products/armadito-antivirus
 
 Files: *
-Copyright: 2016 2015 Teclib'
+Copyright: 2015 - 2017 Teclib'
 License: GPL-3.0+
 
 
 Files: debian/*
-Copyright: 2016 2015 Teclib'
+Copyright: 2015 - 2017 Teclib'
 License: GPL-3.0+
 
 
