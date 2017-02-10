@@ -18,7 +18,7 @@ addons:
       name: armadito/armadito-mod-pdf
       description: Build submitted via Travis CI
     notification_email: vhamon@teclib.com
-    build_command_prepend: "./configure PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig;
+    build_command_prepend: "./configure --enable-lib PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig;
       make clean"
     build_command: make -j 4
     branch_pattern: coverity_scan
