@@ -1727,13 +1727,16 @@ int removeComments(struct pdfDocument * pdf){
 		}
 
 		if(len_tmp == 0){
-			len = 0;			
+			len = 0;
 		}
 
-		white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
-		white_spaces[white_spaces_len]='\0';
-		if(len_tmp > 0)
-			memcpy(white_spaces,tmp_spaces,white_spaces_len);
+		if(white_spaces_len > 0){
+			white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
+			white_spaces[white_spaces_len]='\0';
+			if(len_tmp > 0 )
+				memcpy(white_spaces,tmp_spaces,white_spaces_len);	
+		}
+		
 
 
 		//------------------------
@@ -1797,11 +1800,15 @@ int removeComments(struct pdfDocument * pdf){
 							continue;
 						}else{
 							
+							if(i>0){
+
+								uncomment = (char*)calloc(i+1,sizeof(char));
+								uncomment[i]='\0';
+								memcpy(uncomment,line,i);
+								uncomment_len = i;
+
+							}
 							
-							uncomment = (char*)calloc(i+1,sizeof(char));
-							uncomment[i]='\0';
-							memcpy(uncomment,line,i);
-							uncomment_len = i;
 
 							// comment
 							if(inStream == 0){
@@ -1963,13 +1970,14 @@ int removeComments(struct pdfDocument * pdf){
 			ptr += tmp_len;
 
 			//ptr = new_content + (content_len - uncomment_len);
-			memcpy(ptr,line,line_size);			
+			if(line_size > 0)
+				memcpy(ptr,line,line_size);			
 
 			//ptr = new_content + content_len - 1;
 			ptr += line_size;
 
-			
-			memcpy(ptr,white_spaces,white_spaces_len);
+			if (white_spaces_len > 0)
+				memcpy(ptr,white_spaces,white_spaces_len);
 			//ptr[0]=white_space;
 
 		}

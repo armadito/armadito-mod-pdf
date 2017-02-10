@@ -216,7 +216,8 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		script_balise = (char*)calloc(len+1,sizeof(char));
 		script_balise[len]= '\0';
-		memcpy(script_balise,start,len);
+		if(len > 0)
+			memcpy(script_balise,start,len);
 		//dbg_log("getJSContentInXFA :: script_balise = %s\n",script_balise);
 
 		// save the script start ptr

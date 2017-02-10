@@ -768,8 +768,9 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			// entry = w + w[0]
 			entry_len = w_len+2;
 			entry = (char*)calloc(entry_len+1,sizeof(char));
-			entry[entry_len]= '\0';		
-			memcpy(entry,w,w_len);			
+			entry[entry_len]= '\0';
+			if(w_len > 0)
+				memcpy(entry,w,w_len);
 
 			// not sure about this line...(to fix)
 			//w_entry0[w_len]= w[0];
@@ -839,7 +840,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 				entry = (char*)calloc(entry_len+1,sizeof(char));
 				entry[entry_len]= '\0';				
 
-				memcpy(entry,w,w_len);
+				if(w_len > 0)
+					memcpy(entry,w,w_len);
 				tmp = entry;
 				tmp += w_len;
 				memcpy(tmp,w,1);				
@@ -860,7 +862,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		// Write entry in result output
 		
 		// TODO :: if size > stream_len
-		memcpy(out,entry,entry_len);
+		if(entry_len > 0)
+			memcpy(out,entry,entry_len);
 		
 		out  += entry_len;
 		size += entry_len;
@@ -870,8 +873,10 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		//free(w_entry0); w_entry0= NULL;	
 		w_entry0_len = w_len+1;
 		w_entry0 = (char*)calloc(w_entry0_len+1,sizeof(char));
-		w_entry0[w_entry0_len]= '\0';		
-		memcpy(w_entry0,w,w_len);
+		w_entry0[w_entry0_len]= '\0';
+		if(w_len > 0)
+			memcpy(entry,w,w_len);		
+		
 		tmp = w_entry0;
 		tmp += w_len;
 		memcpy(tmp,entry,1);
@@ -898,7 +903,8 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		w_len = entry_len;
 		w = (char*)calloc(w_len+1,sizeof(char));			
 		w[w_len]='\0';
-		memcpy(w,entry,entry_len);		
+		if(entry_len > 0)
+			memcpy(w,entry,entry_len);		
 		
 		next_code ++;
 		/* save last character and code for use in unknown code word case */
@@ -930,7 +936,7 @@ char * getTuple(char * data, int len){
 	if(data == NULL || len == 0){
 		return NULL;
 	}
-	
+
 
 	tuple = (char*)calloc(size+1,sizeof(char));
 	tuple[size]='\0';
@@ -1160,7 +1166,9 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 					free(tmp);
 					tmp = (char*)calloc(result_size+1,sizeof(char));
 					tmp[result_size] = '\0';
-					memcpy(tmp,result,result_size);
+
+					if(result_size > 0)
+						memcpy(tmp,result,result_size);
 
 					result_size += run;
 					free(result);
@@ -1189,7 +1197,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 						free(tmp);
 						tmp = (char*)calloc(result_size+1,sizeof(char));
 						tmp[result_size] = '\0';
-						memcpy(tmp,result,result_size);
+						if(result_size > 0)
+							memcpy(tmp,result,result_size);
 
 						result_size += run;
 						free(result);
@@ -1230,7 +1239,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 					free(tmp);
 					tmp = (char*)calloc(result_size+1,sizeof(char));
 					tmp[result_size] = '\0';
-					memcpy(tmp,result,result_size);
+					if(result_size > 0)
+						memcpy(tmp,result,result_size);
 
 					result_size += run;
 					free(result);
@@ -1257,7 +1267,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 						free(tmp);
 						tmp = (char*)calloc(result_size+1,sizeof(char));
 						tmp[result_size] = '\0';
-						memcpy(tmp,result,result_size);
+						if(result_size > 0)
+							memcpy(tmp,result,result_size);
 
 						result_size += run;
 						free(result);
