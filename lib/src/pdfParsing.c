@@ -76,7 +76,8 @@ int checkMagicNumber(struct pdfDocument * pdf){
 
 	dbg_log("checkMagicNumber :: pdf header = %s\n",version);
 	
-	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
+	// PDF version from 1.1 to 1.7
+	if( strncmp(version,"%PDF-1.",7) == 0 && version[7] >= '1' && version[7] <= '7' ){
 	
 		pdf->version = version;
 	
@@ -199,7 +200,7 @@ char * hexaObfuscationDecode(char * dico){
 	hexa_decoded = (char*)calloc(2,sizeof(char));
 	hexa_decoded[1] = '\0';
 
-	//memcpy(decoded_dico,dico,len);
+	// temporary decoded dictionary
 	tmp = (char*)calloc(len+1,sizeof(char));
 	tmp[len]= '\0';
 	memcpy(tmp,dico,len);
@@ -247,13 +248,16 @@ char * hexaObfuscationDecode(char * dico){
 	
 	free(hexa);
 	free(hexa_decoded);
-	free(tmp);
+
 
 	if(decoded_dico != NULL && is_space_hexa == 0){		
 		dbg_log("hexaObfuscationDecode :: decoded_dico  = %s\n",decoded_dico);
 		return decoded_dico;
 	}
-	
+
+	// if not returned, then free decoded_dico.
+	free(tmp);
+
 	return NULL ; 
 
 }
@@ -272,19 +276,21 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	char  * dico = NULL;
 	char * decoded_dico = NULL;
-	char * content =  obj->content;
+	char * content;
 	char * dico_start = NULL;
 	char * end = NULL;
 	int inQuotes = 0;
 	int inString = 0;
 	int sub = 0;
-	int flag = 0;	
+	int flag = 0;
 	int len = 0;
 
 	if (obj == NULL || pdf == NULL){
 		err_log("getObjectDictionary :: invalid parameter\n");
 		return NULL;
-	}	
+	}
+
+	content = obj->content;
 	
 	// Search the beginning of the
 	dico_start = searchPattern(content,"<<",2,obj->content_size);
@@ -379,11 +385,6 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 		return decoded_dico;
 	}
 
-	if (decoded_dico != NULL){
-		free(decoded_dico);
-		decoded_dico = NULL;
-	}
-		
 
 	return dico;
 	
@@ -1364,7 +1365,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		}
 		
 		// 6 => endobj
-		endobj_ptr += 6;		
+		endobj_ptr += 6;
 	
 		len = (int)(endobj_ptr - startobj_ptr);		
 		content = (char*)calloc(len+1,sizeof(char));
@@ -1373,7 +1374,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		memcpy (content, startobj_ptr,len);
 		
 		// Create and initialize pdf object
-		if ((obj = initPDFObject()) == NULL){
+		if (!(obj = initPDFObject())){
 			err_log("getPDFObjects :: pdf object creation failed!\n");
 			free(ref);
 			free(content);
@@ -1398,6 +1399,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 
 			if (extractObjectFromObjStream(pdf, obj) < -1){
 				err_log("getPDFObjects :: extract object from object stream failed!\n");
+				freePDFObjectStruct(obj);
 				return -1;
 			}
 		}		
