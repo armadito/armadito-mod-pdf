@@ -33,9 +33,7 @@ int checkTrailer(struct pdfDocument * pdf){
 
 
 	char * start = NULL;
-	//char * end = NULL;
 	char * xref_obj_ref = NULL;
-	//struct pdfObject * xref_obj = NULL;
 	struct pdfTrailer * trailer = NULL;
 	int len = 0;
 	int xref_offset;
@@ -70,8 +68,7 @@ int checkTrailer(struct pdfDocument * pdf){
 				start ++;
 			}
 
-			len =  (int)(start - trailer->content);
-			len = strlen(trailer->content) - len;
+			len = strlen(trailer->content) - (int)(start - trailer->content);
 
 			xref_offset = getNumber(start,len);
 
@@ -86,9 +83,6 @@ int checkTrailer(struct pdfDocument * pdf){
 			start = pdf->content + xref_offset;
 
 
-			len = (int)(start - pdf->content);
-			len = pdf->size - len;
-
 			// if the offset is higher than th PDF size
 			if(xref_offset > pdf->size){
 				warn_log("Warning :: checkTrailer :: Wrong xref object offset %d\n",xref_offset);				
@@ -96,12 +90,9 @@ int checkTrailer(struct pdfDocument * pdf){
 				continue;
 			}
 
-			//dbg_log("xref_obj_ref = %s\n",xref_obj_ref);
-
 
 		}
 
-		free(xref_obj_ref);
 		trailer = trailer->next;
 
 
