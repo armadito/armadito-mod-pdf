@@ -18,7 +18,7 @@ addons:
       name: armadito/armadito-mod-pdf
       description: Build submitted via Travis CI
     notification_email: vhamon@teclib.com
-    build_command_prepend: "./configure PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig;
+    build_command_prepend: "./configure --enable-lib PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig;
       make clean"
     build_command: make -j 4
     branch_pattern: coverity_scan
@@ -58,6 +58,6 @@ before_script:
 - cd /home/travis/build/armadito/armadito-mod-pdf
 - "./autogen.sh"
 script:
-- "./configure PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig"
+- "./configure --enable-lib PKG_CONFIG_PATH=/home/travis/build/armadito-core/lib/pkgconfig"
 - build-wrapper-linux-x86-64 --out-dir build-wrapper-out make clean all
 - sonar-scanner -X -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN
