@@ -594,7 +594,7 @@ void printDico(struct LZWdico * dico){
 }
 
 
-unsigned short readData(char ** data, int * partial_code, int * partial_bits, int code_len ){
+unsigned short readData(char ** data, unsigned int * partial_code, unsigned int * partial_bits, unsigned int code_len ){
 
 	unsigned short code = 0;
 	unsigned char unpack = 0;
@@ -643,9 +643,9 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 	int stream_len = 0;
 	int i = 0, size = 0;	
-	int code_len  = 9;
-	int partial_code = -1;
-	int partial_bits = 0;
+	unsigned int code_len  = 9;
+	unsigned int partial_code = -1;
+	unsigned int partial_bits = 0;
 	int next_code = FIRST_CODE; //#define FIRST_CODE 258
 	int first = 1;
 	int out_len = 0;

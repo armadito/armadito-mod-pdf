@@ -58,7 +58,7 @@ struct LZWdico * initDico_(int code, char * entry, int len);
 int addInDico(struct LZWdico * dico, int code, char * entry);
 void freeDico(struct LZWdico * dico);
 char * getEntryInDico(struct LZWdico * dico, int code);
-unsigned short readData(char ** data, int * partial_code, int * partial_bits, int code_len);
+unsigned short readData(char ** data, unsigned int * partial_code, unsigned int * partial_bits, unsigned int code_len);
 void printDico(struct LZWdico * dico);
 
 // CCITTFaxDecode functions.
