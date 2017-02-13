@@ -127,8 +127,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
-		free(js_obj_ref);
-		js_obj_ref = NULL;
+		free(js_obj_ref);		
 
 
 	}else{
@@ -176,7 +175,7 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: getJSContentInXFA :: Check the keyword javascript
+TODO :: getJSContentInXFA :: Check the keyword javascript
 */
 int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
 	
@@ -216,7 +215,8 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		script_balise = (char*)calloc(len+1,sizeof(char));
 		script_balise[len]= '\0';
-		memcpy(script_balise,start,len);
+		if(len > 0)
+			memcpy(script_balise,start,len);
 		//dbg_log("getJSContentInXFA :: script_balise = %s\n",script_balise);
 
 		// save the script start ptr
@@ -276,8 +276,6 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		free(script_balise);
 		free(js_content);
-		script_balise = NULL;
-		js_content  = NULL;
 
 	}
 
@@ -476,7 +474,6 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		}
 
 		free(xfa_obj_ref);
-		xfa_obj_ref = NULL;
 
 	}
 	
@@ -813,8 +810,8 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: analyzeURI :: Path traveral detection.
-// TODO :: analyzeURI :: Malicious uri detection.
+TODO :: analyzeURI :: Path traveral detection.
+TODO :: analyzeURI :: Malicious uri detection.
 */
 int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
@@ -884,7 +881,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		if (uri != NULL) {
 			analyzeURI(uri, pdf, obj);
 			free(uri);
-			uri = NULL;
 		}
 		
 
@@ -902,7 +898,7 @@ returns: (int)
 - 1 if dangerous content is found
 - 0 if no active content.
 - an error code (<0) on error.
-// TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
+TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
 */
 int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
 
@@ -961,7 +957,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 	// count white spaces
 	for(i = 0; i<size; i++){
-		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == '\n' || stream[i] == ' ' ){
+		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == ' ' ){
 			count ++;
 		}
 	}	
@@ -981,7 +977,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		
 		len2 = len;
-		while(end[0] != '\n' && end[0] != '\r' && end[0] != '\n' && end[0] != ' ' && len2 < (size-count)){
+		while(end[0] != '\n' && end[0] != '\r' && end[0] != ' ' && len2 < (size-count)){
 			end ++;
 			len2 ++;
 		}
@@ -993,7 +989,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		// skip white spaces
 		start = end;
-		while(start[0] == '\n' || start[0] == '\r' || start[0] == '\n' || start[0] == ' ' ){
+		while(start[0] == '\n' || start[0] == '\r' || start[0] == ' ' ){
 			start ++;
 		}
 
@@ -1049,9 +1045,6 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	
 	ptr = whithout_space;
 	ptr_len = strlen(whithout_space);
-
-	ptr_bis = whithout_space;
-	ptr2_len = strlen(whithout_space);
 
 
 	// get pattern

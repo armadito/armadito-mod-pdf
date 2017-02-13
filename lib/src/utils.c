@@ -156,7 +156,6 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	}
 	
 	free(tmp);
-	tmp = NULL;
 	
 	return NULL;
 }
@@ -245,7 +244,6 @@ void printObjectInFile(struct pdfObject * obj){
 
 
 	fclose(debug);
-	debug = NULL;
 
 	return;
 }
@@ -397,7 +395,6 @@ int getNumber(char* ptr, int size){
 
 	num = atoi(num_a);
 	free(num_a);
-	num_a = NULL;
 
 	if (num < 0)
 		return -1;
@@ -492,7 +489,6 @@ char * getIndirectRef(char * ptr, int size){
 	}
 
 	end += strlen(gen_num);
-	len -=  strlen(gen_num);
 
 
 	// Move ptr for white space
@@ -622,8 +618,6 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 		
 		free(tmp);
 		free(tmp2);
-		tmp = NULL;
-		tmp2 = NULL;
 		return NULL;
 	}
 	
@@ -634,8 +628,6 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 		free(tmp);
 		free(tmp2);
-		tmp = NULL;
-		tmp2 = NULL;
 		return NULL;
 	}
 
@@ -648,8 +640,6 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 
 	free(tmp);
 	free(tmp2);
-	tmp = NULL;
-	tmp2 = NULL;
 
 	return content;
 }
@@ -711,8 +701,8 @@ char * getPattern(char * ptr, int size, int len){
 
 	for(i=0; i< size ; i++){
 
-		/*
 		// Skip white spaces
+		/*
 		while(ptr[0] == '\n' || ptr[0] == '\r' || ptr[0] == ' '){
 			ptr ++;
 			white_spaces ++;
@@ -788,7 +778,6 @@ char * getUnicodeInString(char * stream, int size){
 		len = (int)(start - stream);
 		len = size - len;
 
-		start ++;
 
 	}
 
@@ -805,7 +794,7 @@ parameters:
 returns: (char*)
 - the new string with the pattern replaced.
 - NULL if not found or on error.
-// TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
+TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
 */
 char * replaceInString(char * src, char * toReplace , char * pat){
 
@@ -875,7 +864,6 @@ char * getHexa(char * dico, int size){
 	int len = 0;
 
 	len = size ;
-	start = dico;
 	end = dico;
 
 	if (dico == NULL || size <= 0){
@@ -946,7 +934,6 @@ void debugPrint(char * stream, int len){
 
 
 	fclose(debug);
-	debug = NULL;
 
 
 	return;
@@ -965,18 +952,14 @@ char * toBinary(char * stream, int size){
 	char bit_s = 0;
 	int off = 0;
 
-
-
 	len = 8*size;
 
 	binary = (char*)calloc(len+1,sizeof(char));
 	binary[len] = '\0';
 
 
-	len = 0;
 	for(i = 0; i < size; i++){
 
-		//printf("stream[i] = %c\n",stream[i]);
 
 		for(j = 0; j < 8; j++){
 
@@ -984,19 +967,13 @@ char * toBinary(char * stream, int size){
 			bit = bit >> (7-j);
 			//printf("%d ",bit);
 
-			//bit_s = bit + ()
 			bit_s = bit - '\0' + 48;
-			//off = i*10+j;
 
 			binary[off] = bit_s;
 			off ++;
 		}
-		//byte = strtol(stream[i],NULL,2) = ;
-		
-		//printf("\n\n");
 
 	}
-
 
 	//printf("binary = %s\n",binary);
 
