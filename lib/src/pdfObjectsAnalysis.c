@@ -957,7 +957,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 	// count white spaces
 	for(i = 0; i<size; i++){
-		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == '\n' || stream[i] == ' ' ){
+		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == ' ' ){
 			count ++;
 		}
 	}	
@@ -977,7 +977,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		
 		len2 = len;
-		while(end[0] != '\n' && end[0] != '\r' && end[0] != '\n' && end[0] != ' ' && len2 < (size-count)){
+		while(end[0] != '\n' && end[0] != '\r' && end[0] != ' ' && len2 < (size-count)){
 			end ++;
 			len2 ++;
 		}
@@ -989,7 +989,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		// skip white spaces
 		start = end;
-		while(start[0] == '\n' || start[0] == '\r' || start[0] == '\n' || start[0] == ' ' ){
+		while(start[0] == '\n' || start[0] == '\r' || start[0] == ' ' ){
 			start ++;
 		}
 
