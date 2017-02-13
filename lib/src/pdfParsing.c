@@ -1476,7 +1476,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 		if (addTrailerInList(pdf, trailer) < 0){
 			err_log("getPDFTrailers :: add trailer failed!\n");
 			return -1;
-		};
+		}
 		
 		/* debug print*/
 		//dbg_log("trailer content = %s\n",trailer->content);

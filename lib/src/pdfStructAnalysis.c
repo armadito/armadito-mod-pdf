@@ -385,7 +385,7 @@ int checkXRef(struct pdfDocument * pdf){
 				}else{
 
 					
-					if(obj_num > 0 && free_obj == 'n' && off != obj->offset ){
+					if(obj_num > 0 && free_obj == 'n' && obj != NULL && off != obj->offset ){
 						
 						
 						//warn_log("checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);

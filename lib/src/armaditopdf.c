@@ -265,6 +265,10 @@ int analyzePDF_ex(int fd, char * filename){
 	// Initialize pdfDocument struct
 	if (!(pdf = initPDFDocument())){
 		err_log("analyzePDF_ex :: pdfDocument initialization failed!\n");
+
+		if(fh != NULL)
+			fclose(fh);
+
 		return -1;
 	}
 
