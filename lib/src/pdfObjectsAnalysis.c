@@ -175,7 +175,7 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: getJSContentInXFA :: Check the keyword javascript
+TODO :: getJSContentInXFA :: Check the keyword javascript
 */
 int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
 	
@@ -810,8 +810,8 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: analyzeURI :: Path traveral detection.
-// TODO :: analyzeURI :: Malicious uri detection.
+TODO :: analyzeURI :: Path traveral detection.
+TODO :: analyzeURI :: Malicious uri detection.
 */
 int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
@@ -898,7 +898,7 @@ returns: (int)
 - 1 if dangerous content is found
 - 0 if no active content.
 - an error code (<0) on error.
-// TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
+TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
 */
 int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
 

@@ -701,8 +701,8 @@ char * getPattern(char * ptr, int size, int len){
 
 	for(i=0; i< size ; i++){
 
-		/*
 		// Skip white spaces
+		/*
 		while(ptr[0] == '\n' || ptr[0] == '\r' || ptr[0] == ' '){
 			ptr ++;
 			white_spaces ++;
@@ -794,7 +794,7 @@ parameters:
 returns: (char*)
 - the new string with the pattern replaced.
 - NULL if not found or on error.
-// TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
+TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
 */
 char * replaceInString(char * src, char * toReplace , char * pat){
 

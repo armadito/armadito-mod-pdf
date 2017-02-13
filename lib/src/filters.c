@@ -266,7 +266,7 @@ parameters:
 returns: (char *)
 - the decoded stream on success.
 - NULL on error.
-// TODO :: FlateDecode :: check if the stream is conform (Ex: '\r')
+TODO :: FlateDecode :: check if the stream is conform (Ex: '\r')
 */
 char * FlateDecode(char * stream, struct pdfObject* obj){
 

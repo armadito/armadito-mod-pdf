@@ -582,7 +582,8 @@ returns: (int)
 - 1 if an non empty page is found on success.
 - 0 if the document is empty.
 - an error code (<0) on error.
-// TODO :: checkEmptyDocument :: Improve this function by creating a function getPagesKids which could be called recursively when the Kids objects reffers also to a /Pages object.
+
+TODO :: checkEmptyDocument :: Improve this function by creating a function getPagesKids which could be called recursively when the Kids objects reffers also to a /Pages object.
 */
 int checkEmptyDocument(struct pdfDocument * pdf){
 
@@ -873,7 +874,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: documentStructureAnalysis :: check trailers.
+
+TODO :: documentStructureAnalysis :: check trailers.
 */
 int documentStructureAnalysis(struct pdfDocument * pdf){
 

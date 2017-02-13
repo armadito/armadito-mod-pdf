@@ -39,8 +39,8 @@ parameters:
 - struct pdfDocument * pdf
 returns:
 - none.
-// TODO :: printAnalysisReport :: filter report informations by log level.
 */
+// TODO :: printAnalysisReport :: filter report informations by log level.
 void printAnalysisReport(struct pdfDocument * pdf){
 
 

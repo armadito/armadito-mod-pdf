@@ -36,8 +36,8 @@ returns: (int)
 - 0 on success.
 - an error code (<0) on error.
 
-// TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
-// TODO :: checkMagicNumber :: Thread XDP files.
+TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
+TODO :: checkMagicNumber :: Thread XDP files.
 */
 int checkMagicNumber(struct pdfDocument * pdf){
 	
@@ -101,7 +101,7 @@ returns: (int)
 - the size of the document on success.
 - an error code (<=0) on error.
 
-// TODO :: getPDFContent :: set max_size limit.
+TODO :: getPDFContent :: set max_size limit.
 */
 int getPDFContent(struct pdfDocument * pdf){
 
@@ -658,7 +658,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
+
+TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
 */
 int decodeObjectStream(struct pdfObject * obj){
 
@@ -1255,7 +1256,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
+
+TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
 */
 int getPDFObjects(struct pdfDocument * pdf){
 
@@ -1603,7 +1605,7 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: removeComments :: split this function (implement function get_line, etc.)
+TODO :: removeComments :: split this function (implement function get_line, etc.)
 */
 int removeComments(struct pdfDocument * pdf){
 
