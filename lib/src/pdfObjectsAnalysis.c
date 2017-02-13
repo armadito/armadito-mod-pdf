@@ -127,8 +127,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
-		free(js_obj_ref);
-		js_obj_ref = NULL;
+		free(js_obj_ref);		
 
 
 	}else{
@@ -277,8 +276,6 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		free(script_balise);
 		free(js_content);
-		script_balise = NULL;
-		js_content  = NULL;
 
 	}
 
@@ -477,7 +474,6 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		}
 
 		free(xfa_obj_ref);
-		xfa_obj_ref = NULL;
 
 	}
 	
@@ -885,7 +881,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		if (uri != NULL) {
 			analyzeURI(uri, pdf, obj);
 			free(uri);
-			uri = NULL;
 		}
 		
 
@@ -1050,9 +1045,6 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	
 	ptr = whithout_space;
 	ptr_len = strlen(whithout_space);
-
-	ptr_bis = whithout_space;
-	ptr2_len = strlen(whithout_space);
 
 
 	// get pattern

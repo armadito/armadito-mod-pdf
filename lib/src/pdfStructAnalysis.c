@@ -134,8 +134,8 @@ int checkXRef(struct pdfDocument * pdf){
 	char * obj_num_a = NULL;
 	char * first_obj_num_a = NULL;
 	char * ref = NULL;
-	char free_obj = 'n';
-	char * encrypt = NULL;
+
+	char free_obj;
 
 	struct pdfObject * obj = NULL;
 	struct pdfTrailer * trailer = NULL;
@@ -222,7 +222,6 @@ int checkXRef(struct pdfDocument * pdf){
 			len = pdf->size -len ;
 
 			free(xref);
-			xref = NULL;
 
 			// Get xref table content from pdf document content
 			xref = getDelimitedStringContent( start, "xref" , "trailer" , len);
@@ -342,9 +341,7 @@ int checkXRef(struct pdfDocument * pdf){
 				}
 
 				free(gen_s);
-				gen_s = NULL;
-
-				gen = getNumber(xref, len);
+				//gen = getNumber(xref, len);
 
 				// skip 10 bytes corresponding to obj gen number.
 				xref += 5;
@@ -453,7 +450,6 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
-				xref = NULL;
 				continue;
 			}
 			
@@ -473,7 +469,6 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
-				xref = NULL;
 				continue;
 			}
 			
@@ -513,7 +508,7 @@ int checkXRef(struct pdfDocument * pdf){
 					//dbg_log("checkXRef :: XRef obj Dico =  %s\n",obj->dico);
 
 					// Check if the document is encrypted 
-					if( (encrypt = searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) ) != NULL  ){
+					if( searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) != NULL  ){
 						pdf->testStruct->encrypted ++;
 					}
 
@@ -530,7 +525,6 @@ int checkXRef(struct pdfDocument * pdf){
 			free(ref);
 			ref = NULL;
 			free(xref);
-			xref = NULL;
 
 		}
 
@@ -743,20 +737,19 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								*/
 								if (pageContent_obj_ref != NULL) {
 									free(pageContent_obj_ref);
-									pageContent_obj_ref = NULL;
 								}
 								if (kid_obj_ref != NULL) {
 									free(kid_obj_ref);
-									kid_obj_ref = NULL;
 								}
 								if (kids != NULL) {
 									free(kids);
-									kids = NULL;
 								}
 								ret = 1;
 								dbg_log("checkEmptyDocument :: non empty page found\n");
 
 								return 1;
+
+								
 							}else{
 
 								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								

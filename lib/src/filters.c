@@ -309,7 +309,6 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 				//warn_log("Flatedecode :: Z_BUF_ERROR :: len = %d\n", len);
 				while (res == Z_BUF_ERROR){
 					free(dest);
-					dest = NULL;					
 					len += 100000; // increase length
 					dest = calloc(len, sizeof(char));
 					res = uncompress((unsigned char*)dest, &len, (unsigned char*)stream, src_len);
@@ -338,7 +337,6 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 clean:
 
 	free(dest);
-	dest = NULL;
 
 	return out;
 }
@@ -409,7 +407,6 @@ char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
 	obj->decoded_stream_size = j;
 
 	free(tmp);
-	tmp = NULL;
 
 	return out;
 
@@ -505,10 +502,6 @@ int addInDico(struct LZWdico * dico , int code, char * entry){
 void freeDico(struct LZWdico * dico){
 
 	struct LZWdico * tmp = NULL;
-
-	if(dico == NULL){
-		return;
-	}
 
 	while(dico != NULL){
 
@@ -706,7 +699,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 		if(w_entry0!=NULL){
 			free(w_entry0);
 			w_entry0 = NULL;
-			w_entry0_len = 0;
 		}
 
 		if(entry!=NULL){
@@ -896,7 +888,6 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			free(w);			
 			w = NULL;
 			w_len = 0;
-
 		}
 
 		//w = entry;
@@ -1055,7 +1046,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 		}
 		
 		free(tuple);
-		tuple = NULL;
 	}
 
 	obj->decoded_stream_size = j;
@@ -1063,8 +1053,6 @@ char * ASCII85Decode(char * stream, struct pdfObject * obj){
 
 
 	free(tuple_a);
-	tuple_a = NULL;
-
 
 	return out;
 
@@ -1089,14 +1077,12 @@ int getRunLengthCodeInTable(char ** table, char * bits, int table_size){
 int getMakeUpCodeInTable(char ** table, char *bits, int table_size){
 
 	int i =0;
-	int code = -1;
 
 	for( i = 0; i < table_size ; i ++){
 
 		if( strncmp(table[i],bits,strlen(bits)) == 0 && strncmp(table[i],bits,strlen(table[i])) == 0 ){
-
-			code = WHITE_BLACK_MAKE_UP_CODES_VALUES[i];
-			return code;
+			
+			return WHITE_BLACK_MAKE_UP_CODES_VALUES[i];
 		}
 	}
 
@@ -1172,7 +1158,6 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					result_size += run;
 					free(result);
-					result = NULL;
 					result = (char*)calloc(result_size+1,sizeof(char));
 					result[result_size] = '\0';
 
@@ -1202,7 +1187,6 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 						result_size += run;
 						free(result);
-						result = NULL;
 						result = (char*)calloc(result_size+1,sizeof(char));
 						result[result_size] = '\0';
 
@@ -1244,7 +1228,6 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					result_size += run;
 					free(result);
-					result = NULL;
 					result = (char*)calloc(result_size+1,sizeof(char));
 					result[result_size] = '\0';
 
@@ -1303,8 +1286,6 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 			}
 			
 			free(select);
-			select = NULL;
-
 
 
 		}//end for

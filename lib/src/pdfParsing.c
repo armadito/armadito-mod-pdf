@@ -227,7 +227,6 @@ char * hexaObfuscationDecode(char * dico){
 		if(decoded_dico != NULL){
 
 			free(tmp);
-			tmp = NULL;
 			tmp = decoded_dico;
 
 		}else{			
@@ -466,7 +465,7 @@ char * getObjectType(struct pdfObject * obj){
 	}
 
 	free(pattern);
-	pattern = NULL;
+
 
 	// If no type found
 	if(flag == 0){
@@ -792,7 +791,6 @@ int decodeObjectStream(struct pdfObject * obj){
 #else
 			// to fix.
 			warn_log("decodeObjectStream :: Filter LZWDecode not implemented (to fix) :: %s\n", obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -805,7 +803,6 @@ int decodeObjectStream(struct pdfObject * obj){
 
 			// to implement.
 			warn_log("decodeObjectStream :: Filter RunLengthDecode not implemented :: %s\n",obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -832,7 +829,6 @@ int decodeObjectStream(struct pdfObject * obj){
 		}else{
 						
 			warn_log("decodeObjectStream :: Filter %s in object %s not implemented :: %s\n",filter,obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -841,7 +837,6 @@ int decodeObjectStream(struct pdfObject * obj){
 		}
 		
 		free(filter);
-		filter = NULL;
 		
 		
 	}
@@ -854,7 +849,6 @@ int decodeObjectStream(struct pdfObject * obj){
 	else if (stream != NULL) {
 		
 		free(stream);
-		stream = NULL;		
 		
 	}
 	
@@ -1007,7 +1001,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		return -1;
 	}
 	
-	end = start;
 	start +=2;
 
 
@@ -1015,8 +1008,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	if(start[0] == ' '){
 		start ++ ;
 	}
-
-	end = start;
 
 	len = strlen(obj->dico) - (int)(start - obj->dico);
 
@@ -1034,7 +1025,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	}
 
 	
-	end = start;
 	start +=6; // 6 => /First
 
 
@@ -1043,8 +1033,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		start++;
 	}
 
-	end = start;
-	len = 0;
 	len = strlen(obj->dico) - (int)(start - obj->dico);
 
 	if ((first = getNumber(start, len)) <= 0){
@@ -1112,7 +1100,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		off_a = NULL;
 
 		free(obj_num_a);
-		obj_num_a = NULL;
 		// calc the length of the object according to the offset of the next object.
 	}
 
@@ -1135,7 +1122,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			ret = -1;
 			if (comp_obj != NULL){
 				freePDFObjectStruct(comp_obj);
-				comp_obj = NULL;
 			}
 			goto clean;			
 		}
@@ -1206,7 +1192,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			pdf->errors++;
 			if (comp_obj != NULL){
 				freePDFObjectStruct(comp_obj);
-				comp_obj = NULL;
 			}
 			goto clean;
 		}
@@ -1245,17 +1230,14 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 clean:
 	if (obj_offsets != NULL){
 		free(obj_offsets);
-		obj_offsets = NULL;
 	}
 
 	if (off_a != NULL){
 		free(off_a);
-		off_a = NULL;
 	}
 
 	if (obj_num_a != NULL){
 		free(obj_num_a);
-		obj_num_a = NULL;
 	}
 
 	if (ret != 0){
@@ -1433,7 +1415,6 @@ int getPDFTrailers(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	char * decoded_content = NULL;
-	char * encrypt = NULL;
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
@@ -1485,7 +1466,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 		}
 
 		// check if the file is encrypted
-		if( (encrypt = searchPattern(trailer->content,"/Encrypt",8,len)) != NULL){
+		if( searchPattern(trailer->content,"/Encrypt",8,len) != NULL){
 			warn_log("getPDFTrailers :: This PDF Document is encrypted !\n");
 			pdf->testStruct->encrypted = 1;
 		}
@@ -1906,8 +1887,7 @@ int removeComments(struct pdfDocument * pdf){
 			
 						
 
-			free(new_content);
-			new_content = NULL;
+			
 
 			if(white_spaces_len > 0)
 				content_len += (uncomment_len + white_spaces_len);
@@ -1917,6 +1897,7 @@ int removeComments(struct pdfDocument * pdf){
 			//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
 
 			//content_len ++; // due to white space
+			free(new_content);
 			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
 			new_content[content_len]='\0';
 
@@ -1949,8 +1930,7 @@ int removeComments(struct pdfDocument * pdf){
 			}
 			
 
-			free(new_content);
-			new_content = NULL;
+			
 
 			if(white_spaces_len > 0)
 				content_len += (line_size + white_spaces_len);
@@ -1958,6 +1938,7 @@ int removeComments(struct pdfDocument * pdf){
 				content_len += line_size;			
 
 			//content_len ++; // due to white space
+			free(new_content);
 			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
 			new_content[content_len]='\0';
 
@@ -1997,7 +1978,6 @@ int removeComments(struct pdfDocument * pdf){
 		free(white_spaces);
 		//white_spaces == NULL;
 		tmp = NULL;
-		line = NULL;
 		uncomment = NULL;
 		comment = NULL;
 
