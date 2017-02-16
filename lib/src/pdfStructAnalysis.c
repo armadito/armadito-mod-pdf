@@ -546,11 +546,6 @@ int checkXRef(struct pdfDocument * pdf){
 			off_s = NULL;
 		}
 
-		if (ref != NULL){
-			free(ref);
-			ref = NULL;
-		}
-
 		if (xref_orig != NULL){
 			free(xref_orig);
 			xref_orig = NULL;
@@ -564,14 +559,7 @@ int checkXRef(struct pdfDocument * pdf){
 		if (first_obj_num_a != NULL){
 			free(first_obj_num_a);
 			first_obj_num_a = NULL;
-		}
-
-		if (obj_num_a != NULL){
-			free(obj_num_a);
-			obj_num_a = NULL;
-		}
-		
-		
+		}		
 
 
 		trailer = trailer->next;
