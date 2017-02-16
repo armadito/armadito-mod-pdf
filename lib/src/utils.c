@@ -991,6 +991,7 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 	int len = 0;
 	int off = 0;
 	char * byte = NULL;
+	char * ptr = NULL;
 	char res = 0;
 	int mod = 0;
 
@@ -1001,6 +1002,8 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 		warn_log("binarytoChar :: len not a multiple of 8 :: padding with zero :: size %d :: len = %d :: mod8 = %d\n",size,len,mod);
 		//TODO Padd with 0
 	}
+
+	ptr = binary;
 
 	byte = (char*)calloc(9,sizeof(char));
 	byte[8]='\0';
@@ -1013,13 +1016,13 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 
 		for(j=0;j<8;j++){		
 			//printf("%c",binary[j]);
-			byte[j]=binary[j];
+			byte[j]=ptr[j];
 		}
 		res = strtol(byte,NULL,2);
 		//printf("%s ==> %c\n\n",byte,res);
 		string[off] = res;
 		off ++;
-		binary+=8;
+		ptr+=8;
 
 	}
 
