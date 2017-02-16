@@ -344,7 +344,7 @@ int checkXRef(struct pdfDocument * pdf){
 					goto clean;
 				}
 
-				if (gen_s != NULL || strlen(gen_s) != 5){
+				if (strlen(gen_s) != 5){
 					err_log("checkXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
 					ret = bad_xref_format;
 					free(gen_s);

@@ -1177,7 +1177,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					if((run = getRunLengthCodeInTable( WHITE_RUN_LENGTH_TERMINATING_CODES,select,63)) != -1){
 
-						color = (color == 1) ? 0:1; // switch color bit
+						//color = ((color == 1) ? 0:1); // switch color bit
+						color = 0; // white to black
 						code_len = i;
 						i = max_bits;
 
@@ -1215,7 +1216,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 				}
 				
 
-			}else{	// black
+			}else{	// black => color = 0
 
 				if( (run = getMakeUpCodeInTable( BLACK_MAKE_UP_CODES,select,27)) != -1 ){
 
@@ -1245,7 +1246,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					if((run = getRunLengthCodeInTable( BLACK_RUN_LENGTH_TERMINATING_CODES,select,63)) != -1){
 
-						color = (color == 1) ? 0:1; // switch color bit
+						//color = (color == 1) ? 0:1; // switch color bit
+						color = 1; // black to white.
 						code_len = i;
 						i = max_bits;
 
