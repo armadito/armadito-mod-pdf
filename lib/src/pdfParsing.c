@@ -1374,6 +1374,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		// get objects informations
 		if (getObjectInfos(obj, pdf) < 0){
 			err_log("getPDFObjects :: get Object infos failed!\n");
+			freePDFObjectStruct(obj);
 			return -1;
 		}
 		
@@ -1391,6 +1392,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		// Add in object list.
 		if (addObjectInList(obj, pdf) < 0){
 			err_log("getPDFObjects :: Add object in list failed!\n");
+			freePDFObjectStruct(obj);
 			return -1;
 		}
 
@@ -1597,7 +1599,7 @@ int parsePDF(struct pdfDocument * pdf){
 		return -1;
 	}
 
-	// remove PostScript comments for a better parsing. (to fix :: improve comment removing).
+	// TOFIX: remove PostScript comments for a better parsing. (to fix :: improve comment removing).
 	/*
 	if (removeComments(pdf) < 0) {
 		err_log("parsePDF :: removing comments failed!\n");
@@ -1643,5 +1645,3 @@ int parsePDF(struct pdfDocument * pdf){
 	return 0;
 
 }
-
-

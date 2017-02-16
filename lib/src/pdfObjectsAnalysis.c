@@ -106,6 +106,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			js = js_obj->stream;
 		}
 
+		free(js_obj_ref);
 
 		if (js != NULL){
 			dbg_log("getJavaScript :: Found JS content in object %s\n", js_obj->reference);
@@ -127,7 +128,6 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
-		free(js_obj_ref);		
 
 
 	}else{
@@ -145,13 +145,17 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			// Launch js content analysis
 			if (unknownPatternRepetition(js, strlen(js), pdf, obj) < 0){
 				err_log("getJavaScript :: get pattern high repetition failed!\n");
+				free(js);
 				return -1;
 			}
 			
 			if (findDangerousKeywords(js, pdf, obj) < 0){
 				err_log("getJavaScript :: get dangerous keywords failed!\n");
+				free(js);
 				return -1;
 			}
+
+			free(js);
 
 		}
 		else{
@@ -345,6 +349,11 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 	if(start[0] == '['){
 
 		obj_list =  getDelimitedStringContent(start,"[", "]", len); 
+
+		if(obj_list == NULL){
+			err_log("getXFA :: Can't get object list in dictionary\n");
+			return -1;
+		}
 		
 		end = obj_list;
 		len2 = strlen(obj_list);
@@ -413,6 +422,8 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 
 		}
 
+		free(obj_list);
+
 	}else{
 				
 		len2 = (int)(start - obj->dico);
@@ -430,6 +441,7 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
 		if(xfa_obj == NULL){
 			err_log("getXFA :: Object %s not found\n",xfa_obj_ref);
+			free(xfa_obj_ref);
 			return -1;
 		}
 
@@ -755,7 +767,8 @@ int getInfoObject(struct pdfDocument * pdf){
 		info_obj = getPDFObjectByRef(pdf, info_ref);
 
 		if(info_obj == NULL){
-			warn_log("getInfoObject :: Info object not found %s\n", info_ref);			
+			warn_log("getInfoObject :: Info object not found %s\n", info_ref);
+			free(info_ref);
 			return 0;
 		}
 
@@ -1071,6 +1084,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 				
 				warn_log("unknownPatternRepetition :: Found pattern repetition in object %s :: pattern = %s\n",obj->reference,pattern);							
 				pdf->testObjAnalysis->pattern_high_repetition ++;
+				free(whithout_space);
 				free(pattern);
 				free(tmp);
 				return rep;

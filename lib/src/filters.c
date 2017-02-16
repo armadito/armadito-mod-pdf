@@ -783,6 +783,9 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 			// first occurrence
 			if(first == 1){
 
+				if(w!= NULL)
+					free(w);
+
 				w = (char*)calloc(2,sizeof(char));
 				w[1] = '\0';
 				w[0] = (char)((int)'\0' + code);
