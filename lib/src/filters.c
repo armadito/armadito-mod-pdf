@@ -278,7 +278,7 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	int res = 0;
 	
 
-	if (obj == NULL || stream == NULL || src_len == 0){
+	if (obj == NULL || stream == NULL || obj->tmp_stream_size == 0){
 		err_log("FlateDecode :: invalid parameter\n");
 		return NULL;
 	}
@@ -656,7 +656,7 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	struct LZWdico* dico = NULL;
 
 
-	if (stream == NULL || obj == NULL || stream_len <= 0){
+	if (stream == NULL || obj == NULL || obj->tmp_stream_size <= 0){
 		err_log("LZWDecode :: invalid parameters\n");
 		return NULL;
 	}
