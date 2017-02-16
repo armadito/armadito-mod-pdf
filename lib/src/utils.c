@@ -991,7 +991,7 @@ char * binarytoChar(char * binary, int size, int * returned_size){
 	int len = 0;
 	int off = 0;
 	char * byte = NULL;
-	char * ptr = NULL;
+	char * ptr;
 	char res = 0;
 	int mod = 0;
 
