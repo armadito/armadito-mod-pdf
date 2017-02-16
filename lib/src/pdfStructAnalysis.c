@@ -724,8 +724,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 							start += strlen(pageContent_obj_ref) - 2;
 
-							len2 = (int)(end - pageContents);
-							len2 = strlen(pageContents) - len2;
+							len2 = strlen(pageContents) - (int)(end - pageContents);
 
 
 							if((pageContent_obj = getPDFObjectByRef(pdf,pageContent_obj_ref)) == NULL){
@@ -753,7 +752,6 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 									free(kids);
 								}
 								free(pageContents);
-								ret = 1;
 								dbg_log("checkEmptyDocument :: non empty page found\n");
 
 								return 1;
@@ -765,10 +763,10 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							}
 
 							free(pageContent_obj_ref);
-							free(pageContents);
-
 
 						}
+
+						free(pageContents);
 
 
 					}else{
@@ -789,14 +787,14 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							continue;
 						}
 
-						free(pageContent_obj_ref);
-						
+
 						// get the stream
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							
 							//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
 							free(kids);
 							free(kid_obj_ref);
+							free(pageContent_obj_ref);
 							return 1;
 
 						}else{
@@ -811,6 +809,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								len2 = strlen(content_array);
 								dbg_log("checkEmptyDoc :: content = %s\n", start);
 								dbg_log("checkEmptyDoc :: content_len = %d\n",len2);
+
+								free(pageContent_obj_ref);
 
 								while((pageContent_obj_ref = getIndirectRefInString(start,len2) ) != NULL){
 
@@ -839,6 +839,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 										free(kid_obj_ref);
 										free(content_array);
 										free(pageContent_obj_ref);
+										free(kids);
 										return 1;
 
 										// TODO :: 
@@ -859,9 +860,12 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 							}else{
 																
-								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								
+								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
+								free(pageContent_obj_ref);
 
 							}
+
+
 
 						}
 
