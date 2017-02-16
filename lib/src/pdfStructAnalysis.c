@@ -293,6 +293,7 @@ int checkXRef(struct pdfDocument * pdf){
 				err_log("checkXref :: bad xref format!\n");
 				free(xref_orig);
 				free(num_entries_a);
+				free(first_obj_num_a);
 				return bad_xref_format;
 			}
 
@@ -714,6 +715,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							if(start == NULL){
 								err_log("checkEmptyDocument :: can't get page content object reference\n");
 								free(pageContents);
+								free(kids);
 								return -1;
 							}
 
@@ -747,6 +749,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								if (kids != NULL) {
 									free(kids);
 								}
+								free(pageContents);
 								ret = 1;
 								dbg_log("checkEmptyDocument :: non empty page found\n");
 
@@ -786,6 +789,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							
 							//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+							free(kid_obj_ref);
+							free(pageContent_obj_ref);
 							return 1;
 
 						}else{
@@ -826,6 +831,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 										
 										//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
 										free(kid_obj_ref);
+										free(content_array);
 										return 1;
 
 										// TODO :: 

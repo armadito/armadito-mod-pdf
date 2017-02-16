@@ -373,7 +373,8 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			// get xfa object 
 			xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
 			if(xfa_obj == NULL){				
-				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);				
+				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);
+				free(xfa_obj_ref);
 				continue;
 			}
 
@@ -382,7 +383,8 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 				if (decodeObjectStream(xfa_obj) < 0){
 					err_log("getXFA :: decode object stream failed!\n");
 					// if decoding object stream failed then continue.
-					pdf->errors++;					
+					pdf->errors++;
+					free(xfa_obj_ref);
 					continue;
 				}
 			}
@@ -420,9 +422,12 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			}
 
 
+			free(xfa_obj_ref);
+
 		}
 
 		free(obj_list);
+
 
 	}else{
 				
@@ -742,7 +747,7 @@ int getInfoObject(struct pdfDocument * pdf){
 
 
 		if(trailer->content == NULL){
-			err_log("getInfoObject :: Empty trailer content\n");			
+			err_log("getInfoObject :: Empty trailer content\n");
 			trailer = trailer->next;
 			continue;
 		}
@@ -780,10 +785,8 @@ int getInfoObject(struct pdfDocument * pdf){
 			res = unknownPatternRepetition(info, strlen(info), pdf, info_obj);
 			if (res < 0){
 				err_log("getJavaScript :: get pattern high repetition failed!\n");
-				continue;
-			}
 
-			if (res > 0){
+			}else if (res > 0){
 				warn_log("getInfoObject :: found potentially malicious /Info object %s\n", info_ref);
 				pdf->testObjAnalysis->dangerous_keyword_high++; // TODO set another variable for this test :: MALICIOUS_INFO_OBJ
 			}
@@ -791,10 +794,8 @@ int getInfoObject(struct pdfDocument * pdf){
 			res = findDangerousKeywords(info, pdf, info_obj);
 			if(res < 0){
 				err_log("getJavaScript :: get dangerous keywords failed!\n");
-				continue;
-			}
 
-			if(res > 0){
+			}else if(res > 0){
 				warn_log("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);				
 				pdf->testObjAnalysis->dangerous_keyword_high ++;
 			}
