@@ -106,7 +106,7 @@ TODO :: getPDFContent :: set max_size limit.
 int getPDFContent(struct pdfDocument * pdf){
 
 	char * content = NULL;
-	int doc_size = 0;
+	unsigned int doc_size = 0;
 	int read_bytes = 0;
 
 
