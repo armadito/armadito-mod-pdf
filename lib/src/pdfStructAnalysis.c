@@ -80,7 +80,7 @@ int checkTrailer(struct pdfDocument * pdf){
 			}
 
 			// go to xref object offset
-			start = pdf->content + xref_offset;
+			//start = pdf->content + xref_offset;
 
 
 			// if the offset is higher than th PDF size
@@ -224,8 +224,8 @@ int checkXRef(struct pdfDocument * pdf){
 			free(xref);
 
 			// Get xref table content from pdf document content
-			xref = getDelimitedStringContent( start, "xref" , "trailer" , len);
-			xref_orig = xref;
+			xref_orig = getDelimitedStringContent( start, "xref" , "trailer" , len);
+			xref = xref_orig;
 
 
 			if(xref == NULL){
@@ -252,6 +252,7 @@ int checkXRef(struct pdfDocument * pdf){
 				err_log("checkXRef :: can't get first object number\n");
 				//ret = unexpected_error;
 				// goto_clean;
+				free(xref_orig);
 				return bad_xref_format;				
 			}
 
@@ -272,6 +273,8 @@ int checkXRef(struct pdfDocument * pdf){
 			num_entries_a = getNumber_s(xref,len);
 			if (num_entries_a == NULL){
 				err_log("checkXRef :: can't get number of entries\n");
+				free(xref_orig);
+				free(first_obj_num_a);
 				return bad_xref_format;
 			}
 
@@ -289,6 +292,9 @@ int checkXRef(struct pdfDocument * pdf){
 			// hint after the number of entries it should be '\r' or '\n' not a space.
 			if (*xref != '\r' && *xref != '\n'){
 				err_log("checkXref :: bad xref format!\n");
+				free(xref_orig);
+				free(num_entries_a);
+				free(first_obj_num_a);
 				return bad_xref_format;
 			}
 
@@ -334,9 +340,16 @@ int checkXRef(struct pdfDocument * pdf){
 
 				// Get generation number.
 				gen_s = getNumber_s(xref, len);
-				if (gen_s == NULL || strlen(gen_s) != 5){
-					err_log("chackXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+				if(gen_s == NULL){
+					err_log("checkXref :: bad generation number format in xref table!\n");
 					ret = bad_xref_format;
+					goto clean;
+				}
+
+				if (strlen(gen_s) != 5){
+					err_log("checkXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+					ret = bad_xref_format;
+					free(gen_s);
 					goto clean;
 				}
 
@@ -535,11 +548,6 @@ int checkXRef(struct pdfDocument * pdf){
 			off_s = NULL;
 		}
 
-		if (ref != NULL){
-			free(ref);
-			ref = NULL;
-		}
-
 		if (xref_orig != NULL){
 			free(xref_orig);
 			xref_orig = NULL;
@@ -553,14 +561,7 @@ int checkXRef(struct pdfDocument * pdf){
 		if (first_obj_num_a != NULL){
 			free(first_obj_num_a);
 			first_obj_num_a = NULL;
-		}
-
-		if (obj_num_a != NULL){
-			free(obj_num_a);
-			obj_num_a = NULL;
-		}
-		
-		
+		}		
 
 
 		trailer = trailer->next;
@@ -652,7 +653,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 				end = searchPattern(end,kid_obj_ref,strlen(kid_obj_ref)-3,len);
 				if(end == NULL){
-					err_log("checkEmptyDocument :: end == NULL\n" );					
+					err_log("checkEmptyDocument :: end == NULL\n" );
+					free(kids);
 					return -1;
 				}
 
@@ -712,18 +714,22 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
 
 							if(start == NULL){
-								err_log("checkEmptyDocument :: end == NULL\n" );								
+								err_log("checkEmptyDocument :: can't get page content object reference\n");
+								free(pageContents);
+								free(kids);
+								free(kid_obj_ref);
+								free(pageContent_obj_ref);
 								return -1;
 							}
 
 							start += strlen(pageContent_obj_ref) - 2;
 
-							len2 = (int)(end - pageContents);
-							len2 = strlen(pageContents) - len2;
+							len2 = strlen(pageContents) - (int)(end - pageContents);
 
 
 							if((pageContent_obj = getPDFObjectByRef(pdf,pageContent_obj_ref)) == NULL){
 								warn_log("Warning :: checkEmptyDocument :: Object %s not found \n", pageContent_obj_ref);
+								free(pageContent_obj_ref);
 								continue;
 							}
 
@@ -745,7 +751,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								if (kids != NULL) {
 									free(kids);
 								}
-								ret = 1;
+								free(pageContents);
 								dbg_log("checkEmptyDocument :: non empty page found\n");
 
 								return 1;
@@ -756,8 +762,11 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								
 							}
 
+							free(pageContent_obj_ref);
 
 						}
+
+						free(pageContents);
 
 
 					}else{
@@ -777,11 +786,15 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							free(pageContent_obj_ref);
 							continue;
 						}
-						
+
+
 						// get the stream
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							
 							//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+							free(kids);
+							free(kid_obj_ref);
+							free(pageContent_obj_ref);
 							return 1;
 
 						}else{
@@ -796,6 +809,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								len2 = strlen(content_array);
 								dbg_log("checkEmptyDoc :: content = %s\n", start);
 								dbg_log("checkEmptyDoc :: content_len = %d\n",len2);
+
+								free(pageContent_obj_ref);
 
 								while((pageContent_obj_ref = getIndirectRefInString(start,len2) ) != NULL){
 
@@ -821,6 +836,10 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 									if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 										
 										//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+										free(kid_obj_ref);
+										free(content_array);
+										free(pageContent_obj_ref);
+										free(kids);
 										return 1;
 
 										// TODO :: 
@@ -833,17 +852,22 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 										warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);										
 									}
 
+									free(pageContent_obj_ref);
+
 								}
+
+								free(content_array);
 
 							}else{
 																
-								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								
+								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
+								free(pageContent_obj_ref);
 
 							}
 
-						}
 
-						free(pageContent_obj_ref);
+
+						}
 
 					}
 

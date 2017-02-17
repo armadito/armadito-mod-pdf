@@ -277,15 +277,14 @@ char * FlateDecode(char * stream, struct pdfObject* obj){
 	unsigned long len = 150000;
 	int res = 0;
 	
-	src_len = obj->tmp_stream_size;
 
-
-	//dbg_log("FlateDecode :: src_len = %d\n", src_len);
-
-	if (obj == NULL || stream == NULL || src_len == 0){
+	if (obj == NULL || stream == NULL || obj->tmp_stream_size == 0){
 		err_log("FlateDecode :: invalid parameter\n");
 		return NULL;
-	}	
+	}
+
+	//dbg_log("FlateDecode :: src_len = %d\n", src_len);
+	src_len = obj->tmp_stream_size;
 
 	dest = calloc(len, sizeof(char));
 
@@ -657,16 +656,15 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 	struct LZWdico* dico = NULL;
 
 
-
-	stream_len = obj->tmp_stream_size;
-	out_len = 2 * stream_len;
-
-	if (stream == NULL || obj == NULL || stream_len <= 0){
+	if (stream == NULL || obj == NULL || obj->tmp_stream_size <= 0){
 		err_log("LZWDecode :: invalid parameters\n");
 		return NULL;
 	}
 
-	ptr_data = stream;	
+
+	stream_len = obj->tmp_stream_size;
+	out_len = 2 * stream_len;
+	ptr_data = stream;
 
 
 	out_init_ptr = (char*)calloc(out_len+1,sizeof(char));
@@ -782,6 +780,9 @@ char * LZWDecode(char* stream, struct pdfObject * obj){
 
 			// first occurrence
 			if(first == 1){
+
+				if(w!= NULL)
+					free(w);
 
 				w = (char*)calloc(2,sizeof(char));
 				w[1] = '\0';
@@ -1106,15 +1107,12 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 	char black = '0';
 
 
-	len = obj->tmp_stream_size;
-	
 	if(stream == NULL){
-		#ifdef DEBUG
-			printf("Error :: CCITTFaxDecode :: NULL parameters while decoding stream in object %s\n",obj->reference);
-		#endif
+		err_log("Error :: CCITTFaxDecode :: NULL parameters while decoding stream in object %s\n",obj->reference);
 		return NULL;
 	}
 
+	len = obj->tmp_stream_size;
 
 	binary_mode = toBinary(stream,len);
 	bitstream = binary_mode;
@@ -1174,7 +1172,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					if((run = getRunLengthCodeInTable( WHITE_RUN_LENGTH_TERMINATING_CODES,select,63)) != -1){
 
-						color = (color == 1) ? 0:1; // switch color bit
+						//color = ((color == 1) ? 0:1); // switch color bit
+						color = 0; // white to black
 						code_len = i;
 						i = max_bits;
 
@@ -1212,7 +1211,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 				}
 				
 
-			}else{	// black
+			}else{	// black => color = 0
 
 				if( (run = getMakeUpCodeInTable( BLACK_MAKE_UP_CODES,select,27)) != -1 ){
 
@@ -1242,7 +1241,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 
 					if((run = getRunLengthCodeInTable( BLACK_RUN_LENGTH_TERMINATING_CODES,select,63)) != -1){
 
-						color = (color == 1) ? 0:1; // switch color bit
+						//color = (color == 1) ? 0:1; // switch color bit
+						color = 1; // black to white.
 						code_len = i;
 						i = max_bits;
 
