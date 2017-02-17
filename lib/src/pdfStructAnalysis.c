@@ -33,9 +33,7 @@ int checkTrailer(struct pdfDocument * pdf){
 
 
 	char * start = NULL;
-	//char * end = NULL;
 	char * xref_obj_ref = NULL;
-	//struct pdfObject * xref_obj = NULL;
 	struct pdfTrailer * trailer = NULL;
 	int len = 0;
 	int xref_offset;
@@ -70,8 +68,7 @@ int checkTrailer(struct pdfDocument * pdf){
 				start ++;
 			}
 
-			len =  (int)(start - trailer->content);
-			len = strlen(trailer->content) - len;
+			len = strlen(trailer->content) - (int)(start - trailer->content);
 
 			xref_offset = getNumber(start,len);
 
@@ -83,11 +80,8 @@ int checkTrailer(struct pdfDocument * pdf){
 			}
 
 			// go to xref object offset
-			start = pdf->content + xref_offset;
+			//start = pdf->content + xref_offset;
 
-
-			len = (int)(start - pdf->content);
-			len = pdf->size - len;
 
 			// if the offset is higher than th PDF size
 			if(xref_offset > pdf->size){
@@ -96,12 +90,9 @@ int checkTrailer(struct pdfDocument * pdf){
 				continue;
 			}
 
-			//dbg_log("xref_obj_ref = %s\n",xref_obj_ref);
-
 
 		}
 
-		free(xref_obj_ref);
 		trailer = trailer->next;
 
 
@@ -143,8 +134,8 @@ int checkXRef(struct pdfDocument * pdf){
 	char * obj_num_a = NULL;
 	char * first_obj_num_a = NULL;
 	char * ref = NULL;
-	char free_obj = 'n';
-	char * encrypt = NULL;
+
+	char free_obj;
 
 	struct pdfObject * obj = NULL;
 	struct pdfTrailer * trailer = NULL;
@@ -231,11 +222,10 @@ int checkXRef(struct pdfDocument * pdf){
 			len = pdf->size -len ;
 
 			free(xref);
-			xref = NULL;
 
 			// Get xref table content from pdf document content
-			xref = getDelimitedStringContent( start, "xref" , "trailer" , len);
-			xref_orig = xref;
+			xref_orig = getDelimitedStringContent( start, "xref" , "trailer" , len);
+			xref = xref_orig;
 
 
 			if(xref == NULL){
@@ -262,6 +252,7 @@ int checkXRef(struct pdfDocument * pdf){
 				err_log("checkXRef :: can't get first object number\n");
 				//ret = unexpected_error;
 				// goto_clean;
+				free(xref_orig);
 				return bad_xref_format;				
 			}
 
@@ -282,6 +273,8 @@ int checkXRef(struct pdfDocument * pdf){
 			num_entries_a = getNumber_s(xref,len);
 			if (num_entries_a == NULL){
 				err_log("checkXRef :: can't get number of entries\n");
+				free(xref_orig);
+				free(first_obj_num_a);
 				return bad_xref_format;
 			}
 
@@ -299,6 +292,9 @@ int checkXRef(struct pdfDocument * pdf){
 			// hint after the number of entries it should be '\r' or '\n' not a space.
 			if (*xref != '\r' && *xref != '\n'){
 				err_log("checkXref :: bad xref format!\n");
+				free(xref_orig);
+				free(num_entries_a);
+				free(first_obj_num_a);
 				return bad_xref_format;
 			}
 
@@ -344,16 +340,21 @@ int checkXRef(struct pdfDocument * pdf){
 
 				// Get generation number.
 				gen_s = getNumber_s(xref, len);
-				if (gen_s == NULL || strlen(gen_s) != 5){
-					err_log("chackXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+				if(gen_s == NULL){
+					err_log("checkXref :: bad generation number format in xref table!\n");
 					ret = bad_xref_format;
 					goto clean;
 				}
 
-				free(gen_s);
-				gen_s = NULL;
+				if (strlen(gen_s) != 5){
+					err_log("checkXref :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+					ret = bad_xref_format;
+					free(gen_s);
+					goto clean;
+				}
 
-				gen = getNumber(xref, len);
+				free(gen_s);
+				//gen = getNumber(xref, len);
 
 				// skip 10 bytes corresponding to obj gen number.
 				xref += 5;
@@ -397,7 +398,7 @@ int checkXRef(struct pdfDocument * pdf){
 				}else{
 
 					
-					if(obj_num > 0 && free_obj == 'n' && off != obj->offset ){
+					if(obj_num > 0 && free_obj == 'n' && obj != NULL && off != obj->offset ){
 						
 						
 						//warn_log("checkXRef :: Bad offset for object %s :: %d differs from %d\n",ref,off,obj->offset);
@@ -462,7 +463,6 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
-				xref = NULL;
 				continue;
 			}
 			
@@ -482,7 +482,6 @@ int checkXRef(struct pdfDocument * pdf){
 				pdf->testStruct->bad_xref_offset ++;
 				trailer = trailer->next;
 				free(xref);
-				xref = NULL;
 				continue;
 			}
 			
@@ -522,7 +521,7 @@ int checkXRef(struct pdfDocument * pdf){
 					//dbg_log("checkXRef :: XRef obj Dico =  %s\n",obj->dico);
 
 					// Check if the document is encrypted 
-					if( (encrypt = searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) ) != NULL  ){
+					if( searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) != NULL  ){
 						pdf->testStruct->encrypted ++;
 					}
 
@@ -539,7 +538,6 @@ int checkXRef(struct pdfDocument * pdf){
 			free(ref);
 			ref = NULL;
 			free(xref);
-			xref = NULL;
 
 		}
 
@@ -548,11 +546,6 @@ int checkXRef(struct pdfDocument * pdf){
 		if (off_s != NULL){
 			free(off_s);
 			off_s = NULL;
-		}
-
-		if (ref != NULL){
-			free(ref);
-			ref = NULL;
 		}
 
 		if (xref_orig != NULL){
@@ -568,14 +561,7 @@ int checkXRef(struct pdfDocument * pdf){
 		if (first_obj_num_a != NULL){
 			free(first_obj_num_a);
 			first_obj_num_a = NULL;
-		}
-
-		if (obj_num_a != NULL){
-			free(obj_num_a);
-			obj_num_a = NULL;
-		}
-		
-		
+		}		
 
 
 		trailer = trailer->next;
@@ -597,7 +583,8 @@ returns: (int)
 - 1 if an non empty page is found on success.
 - 0 if the document is empty.
 - an error code (<0) on error.
-// TODO :: checkEmptyDocument :: Improve this function by creating a function getPagesKids which could be called recursively when the Kids objects reffers also to a /Pages object.
+
+TODO :: checkEmptyDocument :: Improve this function by creating a function getPagesKids which could be called recursively when the Kids objects reffers also to a /Pages object.
 */
 int checkEmptyDocument(struct pdfDocument * pdf){
 
@@ -666,7 +653,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 
 				end = searchPattern(end,kid_obj_ref,strlen(kid_obj_ref)-3,len);
 				if(end == NULL){
-					err_log("checkEmptyDocument :: end == NULL\n" );					
+					err_log("checkEmptyDocument :: end == NULL\n" );
+					free(kids);
 					return -1;
 				}
 
@@ -726,18 +714,22 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
 
 							if(start == NULL){
-								err_log("checkEmptyDocument :: end == NULL\n" );								
+								err_log("checkEmptyDocument :: can't get page content object reference\n");
+								free(pageContents);
+								free(kids);
+								free(kid_obj_ref);
+								free(pageContent_obj_ref);
 								return -1;
 							}
 
 							start += strlen(pageContent_obj_ref) - 2;
 
-							len2 = (int)(end - pageContents);
-							len2 = strlen(pageContents) - len2;
+							len2 = strlen(pageContents) - (int)(end - pageContents);
 
 
 							if((pageContent_obj = getPDFObjectByRef(pdf,pageContent_obj_ref)) == NULL){
 								warn_log("Warning :: checkEmptyDocument :: Object %s not found \n", pageContent_obj_ref);
+								free(pageContent_obj_ref);
 								continue;
 							}
 
@@ -752,27 +744,29 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								*/
 								if (pageContent_obj_ref != NULL) {
 									free(pageContent_obj_ref);
-									pageContent_obj_ref = NULL;
 								}
 								if (kid_obj_ref != NULL) {
 									free(kid_obj_ref);
-									kid_obj_ref = NULL;
 								}
 								if (kids != NULL) {
 									free(kids);
-									kids = NULL;
 								}
-								ret = 1;
+								free(pageContents);
 								dbg_log("checkEmptyDocument :: non empty page found\n");
 
 								return 1;
+
+								
 							}else{
 
 								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								
 							}
 
+							free(pageContent_obj_ref);
 
 						}
+
+						free(pageContents);
 
 
 					}else{
@@ -792,11 +786,15 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 							free(pageContent_obj_ref);
 							continue;
 						}
-						
+
+
 						// get the stream
 						if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 							
 							//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+							free(kids);
+							free(kid_obj_ref);
+							free(pageContent_obj_ref);
 							return 1;
 
 						}else{
@@ -811,6 +809,8 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 								len2 = strlen(content_array);
 								dbg_log("checkEmptyDoc :: content = %s\n", start);
 								dbg_log("checkEmptyDoc :: content_len = %d\n",len2);
+
+								free(pageContent_obj_ref);
 
 								while((pageContent_obj_ref = getIndirectRefInString(start,len2) ) != NULL){
 
@@ -836,6 +836,10 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 									if(pageContent_obj->stream != NULL && pageContent_obj->stream_size > 0){
 										
 										//dbg_log("checkEmptyDocument :: Page %s is not empty\n",kid_obj_ref);
+										free(kid_obj_ref);
+										free(content_array);
+										free(pageContent_obj_ref);
+										free(kids);
 										return 1;
 
 										// TODO :: 
@@ -848,17 +852,22 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 										warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);										
 									}
 
+									free(pageContent_obj_ref);
+
 								}
+
+								free(content_array);
 
 							}else{
 																
-								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);								
+								warn_log("checkEmptyDocument :: Empty page content %s\n",pageContent_obj_ref);
+								free(pageContent_obj_ref);
 
 							}
 
-						}
 
-						free(pageContent_obj_ref);
+
+						}
 
 					}
 
@@ -889,7 +898,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: documentStructureAnalysis :: check trailers.
+
+TODO :: documentStructureAnalysis :: check trailers.
 */
 int documentStructureAnalysis(struct pdfDocument * pdf){
 

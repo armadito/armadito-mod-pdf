@@ -39,8 +39,8 @@ parameters:
 - struct pdfDocument * pdf
 returns:
 - none.
-// TODO :: printAnalysisReport :: filter report informations by log level.
 */
+// TODO :: printAnalysisReport :: filter report informations by log level.
 void printAnalysisReport(struct pdfDocument * pdf){
 
 
@@ -265,6 +265,10 @@ int analyzePDF_ex(int fd, char * filename){
 	// Initialize pdfDocument struct
 	if (!(pdf = initPDFDocument())){
 		err_log("analyzePDF_ex :: pdfDocument initialization failed!\n");
+
+		if(fh != NULL)
+			fclose(fh);
+
 		return -1;
 	}
 

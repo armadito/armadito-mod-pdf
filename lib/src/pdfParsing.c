@@ -36,8 +36,8 @@ returns: (int)
 - 0 on success.
 - an error code (<0) on error.
 
-// TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
-// TODO :: checkMagicNumber :: Thread XDP files.
+TODO :: checkMagicNumber :: search the header in the 1024 first bytes.
+TODO :: checkMagicNumber :: Thread XDP files.
 */
 int checkMagicNumber(struct pdfDocument * pdf){
 	
@@ -76,7 +76,8 @@ int checkMagicNumber(struct pdfDocument * pdf){
 
 	dbg_log("checkMagicNumber :: pdf header = %s\n",version);
 	
-	if( strncmp(version,"%PDF-1.1",8) == 0 || strncmp(version,"%PDF-1.2",8) == 0 || strncmp(version,"%PDF-1.3",8) == 0 || strncmp(version,"%PDF-1.4",8) == 0 || strncmp(version,"%PDF-1.5",8) == 0 || strncmp(version,"%PDF-1.6",8) == 0 || strncmp(version,"%PDF-1.7",8) == 0 ){
+	// PDF version from 1.1 to 1.7
+	if( strncmp(version,"%PDF-1.",7) == 0 && version[7] >= '1' && version[7] <= '7' ){
 	
 		pdf->version = version;
 	
@@ -100,7 +101,7 @@ returns: (int)
 - the size of the document on success.
 - an error code (<=0) on error.
 
-// TODO :: getPDFContent :: set max_size limit.
+TODO :: getPDFContent :: set max_size limit.
 */
 int getPDFContent(struct pdfDocument * pdf){
 
@@ -139,10 +140,10 @@ int getPDFContent(struct pdfDocument * pdf){
 	content[doc_size]= '\0';
 	
 	
-	if (pdf->fh != NULL) {
+	if (pdf->fh != NULL && doc_size > 0) {
 		read_bytes = fread(content, 1, doc_size, pdf->fh);
 	}
-	else {		
+	else if(doc_size > 0) {
 		read_bytes = os_read(pdf->fd, content, doc_size);
 	}
 
@@ -199,7 +200,7 @@ char * hexaObfuscationDecode(char * dico){
 	hexa_decoded = (char*)calloc(2,sizeof(char));
 	hexa_decoded[1] = '\0';
 
-	//memcpy(decoded_dico,dico,len);
+	// temporary decoded dictionary
 	tmp = (char*)calloc(len+1,sizeof(char));
 	tmp[len]= '\0';
 	memcpy(tmp,dico,len);
@@ -226,7 +227,6 @@ char * hexaObfuscationDecode(char * dico){
 		if(decoded_dico != NULL){
 
 			free(tmp);
-			tmp = NULL;
 			tmp = decoded_dico;
 
 		}else{			
@@ -247,13 +247,16 @@ char * hexaObfuscationDecode(char * dico){
 	
 	free(hexa);
 	free(hexa_decoded);
-	free(tmp);
+
 
 	if(decoded_dico != NULL && is_space_hexa == 0){		
 		dbg_log("hexaObfuscationDecode :: decoded_dico  = %s\n",decoded_dico);
 		return decoded_dico;
 	}
-	
+
+	// if not returned, then free decoded_dico.
+	free(tmp);
+
 	return NULL ; 
 
 }
@@ -272,19 +275,21 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	char  * dico = NULL;
 	char * decoded_dico = NULL;
-	char * content =  obj->content;
+	char * content;
 	char * dico_start = NULL;
 	char * end = NULL;
 	int inQuotes = 0;
 	int inString = 0;
 	int sub = 0;
-	int flag = 0;	
+	int flag = 0;
 	int len = 0;
 
 	if (obj == NULL || pdf == NULL){
 		err_log("getObjectDictionary :: invalid parameter\n");
 		return NULL;
-	}	
+	}
+
+	content = obj->content;
 	
 	// Search the beginning of the
 	dico_start = searchPattern(content,"<<",2,obj->content_size);
@@ -379,11 +384,6 @@ char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf){
 		return decoded_dico;
 	}
 
-	if (decoded_dico != NULL){
-		free(decoded_dico);
-		decoded_dico = NULL;
-	}
-		
 
 	return dico;
 	
@@ -465,7 +465,7 @@ char * getObjectType(struct pdfObject * obj){
 	}
 
 	free(pattern);
-	pattern = NULL;
+
 
 	// If no type found
 	if(flag == 0){
@@ -658,7 +658,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
+
+TODO :: decodeObjectStream :: check if the stream is encrypted. (/Encrypt in the dico)
 */
 int decodeObjectStream(struct pdfObject * obj){
 
@@ -791,7 +792,6 @@ int decodeObjectStream(struct pdfObject * obj){
 #else
 			// to fix.
 			warn_log("decodeObjectStream :: Filter LZWDecode not implemented (to fix) :: %s\n", obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -804,7 +804,6 @@ int decodeObjectStream(struct pdfObject * obj){
 
 			// to implement.
 			warn_log("decodeObjectStream :: Filter RunLengthDecode not implemented :: %s\n",obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -831,7 +830,6 @@ int decodeObjectStream(struct pdfObject * obj){
 		}else{
 						
 			warn_log("decodeObjectStream :: Filter %s in object %s not implemented :: %s\n",filter,obj->reference);
-			filter_applied = 0;
 			free(stream);
 			free(filter);
 			obj->errors++;
@@ -840,7 +838,6 @@ int decodeObjectStream(struct pdfObject * obj){
 		}
 		
 		free(filter);
-		filter = NULL;
 		
 		
 	}
@@ -853,7 +850,6 @@ int decodeObjectStream(struct pdfObject * obj){
 	else if (stream != NULL) {
 		
 		free(stream);
-		stream = NULL;		
 		
 	}
 	
@@ -1006,7 +1002,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		return -1;
 	}
 	
-	end = start;
 	start +=2;
 
 
@@ -1014,8 +1009,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	if(start[0] == ' '){
 		start ++ ;
 	}
-
-	end = start;
 
 	len = strlen(obj->dico) - (int)(start - obj->dico);
 
@@ -1033,7 +1026,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 	}
 
 	
-	end = start;
 	start +=6; // 6 => /First
 
 
@@ -1042,8 +1034,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		start++;
 	}
 
-	end = start;
-	len = 0;
 	len = strlen(obj->dico) - (int)(start - obj->dico);
 
 	if ((first = getNumber(start, len)) <= 0){
@@ -1111,7 +1101,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 		off_a = NULL;
 
 		free(obj_num_a);
-		obj_num_a = NULL;
 		// calc the length of the object according to the offset of the next object.
 	}
 
@@ -1134,7 +1123,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			ret = -1;
 			if (comp_obj != NULL){
 				freePDFObjectStruct(comp_obj);
-				comp_obj = NULL;
 			}
 			goto clean;			
 		}
@@ -1205,7 +1193,6 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 			pdf->errors++;
 			if (comp_obj != NULL){
 				freePDFObjectStruct(comp_obj);
-				comp_obj = NULL;
 			}
 			goto clean;
 		}
@@ -1244,17 +1231,14 @@ int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj){
 clean:
 	if (obj_offsets != NULL){
 		free(obj_offsets);
-		obj_offsets = NULL;
 	}
 
 	if (off_a != NULL){
 		free(off_a);
-		off_a = NULL;
 	}
 
 	if (obj_num_a != NULL){
 		free(obj_num_a);
-		obj_num_a = NULL;
 	}
 
 	if (ret != 0){
@@ -1272,7 +1256,8 @@ parameters:
 returns: (int)
 - 0 on success.
 - an error code (<0) on error.
-// TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
+
+TODO :: getPDFObjects :: use function searchPattern instead of strstr to get objects
 */
 int getPDFObjects(struct pdfDocument * pdf){
 
@@ -1364,7 +1349,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		}
 		
 		// 6 => endobj
-		endobj_ptr += 6;		
+		endobj_ptr += 6;
 	
 		len = (int)(endobj_ptr - startobj_ptr);		
 		content = (char*)calloc(len+1,sizeof(char));
@@ -1373,7 +1358,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		memcpy (content, startobj_ptr,len);
 		
 		// Create and initialize pdf object
-		if ((obj = initPDFObject()) == NULL){
+		if (!(obj = initPDFObject())){
 			err_log("getPDFObjects :: pdf object creation failed!\n");
 			free(ref);
 			free(content);
@@ -1389,6 +1374,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		// get objects informations
 		if (getObjectInfos(obj, pdf) < 0){
 			err_log("getPDFObjects :: get Object infos failed!\n");
+			freePDFObjectStruct(obj);
 			return -1;
 		}
 		
@@ -1398,6 +1384,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 
 			if (extractObjectFromObjStream(pdf, obj) < -1){
 				err_log("getPDFObjects :: extract object from object stream failed!\n");
+				freePDFObjectStruct(obj);
 				return -1;
 			}
 		}		
@@ -1405,6 +1392,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 		// Add in object list.
 		if (addObjectInList(obj, pdf) < 0){
 			err_log("getPDFObjects :: Add object in list failed!\n");
+			freePDFObjectStruct(obj);
 			return -1;
 		}
 
@@ -1431,7 +1419,6 @@ int getPDFTrailers(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	char * decoded_content = NULL;
-	char * encrypt = NULL;
 	char * start = NULL; 
 	char * end = NULL;
 	int len = 0;
@@ -1483,7 +1470,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 		}
 
 		// check if the file is encrypted
-		if( (encrypt = searchPattern(trailer->content,"/Encrypt",8,len)) != NULL){
+		if( searchPattern(trailer->content,"/Encrypt",8,len) != NULL){
 			warn_log("getPDFTrailers :: This PDF Document is encrypted !\n");
 			pdf->testStruct->encrypted = 1;
 		}
@@ -1491,7 +1478,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 		if (addTrailerInList(pdf, trailer) < 0){
 			err_log("getPDFTrailers :: add trailer failed!\n");
 			return -1;
-		};
+		}
 		
 		/* debug print*/
 		//dbg_log("trailer content = %s\n",trailer->content);
@@ -1578,442 +1565,7 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 }
 
 
-// This function remove the comment in the src stream
-// Returns NULL if there is no comment in this line
-char *removeCommentLine(char * src, int size, int * ret_len){
 
-	char * start= NULL;
-	char * out = NULL;
-	int len = 0;
-
-
-	// No comment in this line
-	if((start = searchPattern(src,"%",1,size)) == NULL){
-		return NULL;
-	}
-
-	if(start[1] == '%'){
-		return NULL;
-	}
-
-
-	len = (int)(start - src);
-	/*if(len == 0){
-
-	}*/
-
-	* ret_len = len;
-
-	out = (char*)calloc(len+1,sizeof(char));
-	out[len]='\0';
-
-	memcpy(out,src,len);
-
-	return out;
-}
-
-
-/*
-removeComments() :: remove all PostScript comments in the pdf document
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-returns: (int)
-- 0 on success.
-- an error code (<0) on error.
-// TODO :: removeComments :: split this function (implement function get_line, etc.)
-*/
-int removeComments(struct pdfDocument * pdf){
-
-
-	char * new_content = NULL;
-	char * tmp = NULL;
-	char * uncomment = NULL;
-	char * start = NULL;
-	char * end = NULL;
-	char * line = NULL;
-	char * comment = NULL;
-	char * white_spaces = NULL;
-	char * ptr = NULL;
-	char * tmp_spaces = NULL;
-	int content_len = 0;
-	int tmp_len = 0;	
-	int len = 0;
-	int line_size = 0;
-	int line_num = 0;
-	int uncomment_len =0;
-	int white_spaces_len = 0;
-	int inStream = 0;
-	int inString = 0;
-	int inQuotes = 0;
-	int after_header = 0; // line juste after header tag
-	int after_eof = 0; // case when there is bytes after %%EOF. // due to file: CVE_2010-2883_PDF_851D895614645756999BD9F6E002C127.pdf
-	int len_tmp = 0;
-	int i = 0;
-
-	//char white_space = 0;
-
-	char * mal_comments[] = {"endobj","obj","endstrem","stream","trailer", "startxref", "xref"};
-	int mal_comments_num = 7;
-
-
-	if (pdf == NULL){
-		err_log("removeComments :: invalid parameter!\n");
-		return -1;
-	}
-
-	if (pdf->size > LARGE_FILE_SIZE){
-		warn_log("removeComments :: skipping removeComment because of the file size (%d bytes)\n", pdf->size);
-		return 0;
-	}
-
-	if (pdf->content == NULL || pdf->size <= 0){
-		err_log("removeComments :: null pdf content!\n");
-		return -1;
-	}
-
-
-	// variable initialization.
-	len = pdf->size;
-	start = pdf->content;
-	end = start;
-
-	
-	//for each line
-	while(len > 0){
-		
-		len_tmp = len;
-		start = end;
-
-		// scan line
-		while( (len_tmp > 0) && (end[0] != '\r') && (end[0] != '\n') && (end[0] != '\f')){
-			end ++;
-			len_tmp --;
-		}
-
-		// If the end of file is reached
-		if(len_tmp == 0){
-			len = 0;
-		}
-
-		//white_space = end[0];
-		
-		// line
-		line_size = (int)(end-start);
-		line = (char*)calloc(line_size+1,sizeof(char));
-		line[line_size] = '\0';
-
-		memcpy(line,start,line_size);
-		line_num++;
-		//dbg_log("removeComments :: line num = %d\n", line_num);
-
-		/* debug print */
-		//printf("New line = %s :: line_size = %d :: white_space %d\n", line,line_size,white_space);
-		//dbg_log("removeComments :: line = %s\n",line);
-
-		if (strcmp(line, "trailer") == 0){
-			dbg_log("removeComments :: line = %s\n", line);
-		}
-
-		// calc whites spaces
-		white_spaces_len = 0;
-
-		tmp_spaces = end;
-		while((len_tmp > 0) && ((end[0] == '\r') || (end[0] == '\n') || (end[0] == '\f'))){
-			end ++;
-			white_spaces_len ++;
-			len_tmp --;
-		}
-
-		if(len_tmp == 0){
-			len = 0;			
-		}
-
-		white_spaces = (char*)calloc(white_spaces_len +1,sizeof(char));
-		white_spaces[white_spaces_len]='\0';
-		if(len_tmp > 0)
-			memcpy(white_spaces,tmp_spaces,white_spaces_len);
-
-
-		//------------------------
-		// Remove comment in line
-		//------------------------
-
-		uncomment_len = 0;
-
-		// line after the header flag
-		//after_header = (after_header == 1)?2:0;
-		if(after_header == 1)
-			after_header = 2;
-		else
-			after_header  =0;
-			
-		ptr = line;
-
-		// Scan the line
-		for(i= 0; i< line_size ; i++){
-
-
-			// String delimiter
-			if(inStream == 0 && ptr[i] == '(' && inQuotes == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\')) ){
-				inString ++;
-			}
-
-			// String delimiter 2
-			if(inStream == 0 && ptr[i] == ')' && inQuotes == 0 && inString > 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
-				inString --;
-			}
-
-			// Quotes delimiter
-			if(inStream == 0 && ptr[i] == '"' && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
-				inQuotes = (inQuotes == 0)?1:0;
-			}				
-
-			// If % is not in string
-			if(ptr[i] == '%' && inString == 0 && ((i == 0) || (i > 0 && ptr[i-1] != '\\'))){
-				// remove conmment
-				
-				// %%EOF
-				// %PDF-version
-				if(line_size -i >= 5 && memcmp(ptr+i,"%%EOF",5) == 0){
-					dbg_log("removeComments :: pdf end of file :: EOF marker !!\n");
-					after_eof = 1;
-					i = line_size;
-					continue;
-				}else{
-
-					if(line_size - i >= 8 && memcmp(ptr,"%PDF-1.",7) == 0){
-						after_header = 1;
-						i = line_size;
-						dbg_log("removeComments :: PDF Header found !!\n");
-						continue;
-					}else{
-
-						// header line immediatly followed by %[bin]
-						if(after_header == 2  &&  ((i==0) || ((line_size - i) >= 5 && (unsigned char)ptr[i+1]>=128  && (unsigned char)ptr[i+2]>=128 && (unsigned char)ptr[i+3]>=128 && (unsigned char)ptr[i+4]>=128)) ){  
-							after_header = 1;
-							i = line_size;
-							continue;
-						}else{
-							
-							
-							uncomment = (char*)calloc(i+1,sizeof(char));
-							uncomment[i]='\0';
-							memcpy(uncomment,line,i);
-							uncomment_len = i;
-
-							// comment
-							if(inStream == 0){
-								comment = (char*)calloc((line_size - i)+1,sizeof(char));
-								comment[line_size -i] = '\0';
-								memcpy(comment,ptr+i,line_size -i );
-								//dbg_log("removeComments :: comment = %s :: %d :: %d\n",comment,line_size,i);
-							}
-
-							i = line_size;
-							continue;
-
-						}
-
-					}
-
-				}
-				
-			}
-
-		} // end for(i > line_len)
-
-
-		inString = 0;
-
-		
-		//--------------------------------------------------------------
-
-		
-		// remove comments in line
-		//uncomment = removeCommentLine(line,line_size,&uncomment_len);
-		//printf("uncomment = %s :: len = %d \n", uncomment,uncomment_len);
-
-		// 
-		if(uncomment == NULL){
-			uncomment = (char*)calloc(line_size+1,sizeof(char));
-			uncomment[line_size]='\0';
-			//uncomment = line;
-			memcpy(uncomment,line,line_size);
-			uncomment_len = line_size;
-			
-		}else{
-
-			if(inStream == 0 && after_eof == 0){
-				
-				
-				dbg_log("removeComments :: Comment found :: %s\n",uncomment);
-				dbg_log("removeComments :: line :: %s\n", line);
-				dbg_log("removeComments :: line num = %d :: after_oef = %d\n", line_num,after_eof);
-				
-				pdf->testStruct->comments ++;
-
-				// Check for a malicious comment :: comments puts to defeat parser (with keywords like "endobj", "obj", "stream", "endstream" )
-				for(i = 0; i< mal_comments_num ; i++){
-
-					if(searchPattern(comment,mal_comments[i],strlen(mal_comments[i]),strlen(comment)) != NULL ){						
-						warn_log("removeComments :: potentially malicious comment :: (%s) found in pdf Document\n", comment);						
-						pdf->testStruct->malicious_comments ++;
-						break;
-					}
-
-				}
-
-			}
-				
-		}
-
-		//printf("uncomment = %s :: uncomment_len = %d \n", uncomment,uncomment_len);
-
-
-		//look if I'm in a stream content before adding the uncommented line
-		if(uncomment_len >=9 && searchPattern(uncomment,"endstream",9,uncomment_len) != NULL){			
-			inStream = 0;
-			
-
-		}else{
-			if( uncomment_len >=6 && searchPattern(uncomment,"stream",6,uncomment_len) != NULL){
-				//printf("removeComments :: In Stream = 1\n");
-				inStream = 1;
-			}
-		}
-
-
-
-		if(inStream == 0 && after_eof == 0){
-
-			//write uncommented line
-			if(content_len > 0){
-
-				tmp = (char*)calloc(content_len+1,sizeof(char));
-				tmp_len = content_len;
-				tmp[content_len]='\0';
-				memcpy(tmp,new_content,content_len);
-			}
-			
-						
-
-			free(new_content);
-			new_content = NULL;
-
-			if(white_spaces_len > 0)
-				content_len += (uncomment_len + white_spaces_len);
-			else
-				content_len += uncomment_len;
-			//content_len += (uncomment_len + white_spaces_len);
-			//printf("content_len = %d :: uncomment_len = %d\n",content_len,uncomment_len );
-
-			//content_len ++; // due to white space
-			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
-			new_content[content_len]='\0';
-
-			ptr=new_content;
-
-			if(tmp != NULL)
-				memcpy(ptr,tmp,content_len-uncomment_len-1);			
-
-			ptr += tmp_len;
-
-			//ptr = new_content + (content_len - uncomment_len);
-			memcpy(ptr,uncomment,uncomment_len);			
-
-			//ptr = new_content + content_len - 1;
-			ptr += uncomment_len;
-
-			if(white_spaces_len > 0)
-				memcpy(ptr,white_spaces,white_spaces_len);
-			
-
-
-		}else{
-			
-			//write uncommented line			
-			if(content_len > 0){
-				tmp = (char*)calloc(content_len+1,sizeof(char));
-				tmp_len = content_len;
-				tmp[content_len]='\0';
-				memcpy(tmp,new_content,content_len);
-			}
-			
-
-			free(new_content);
-			new_content = NULL;
-
-			if(white_spaces_len > 0)
-				content_len += (line_size + white_spaces_len);
-			else
-				content_len += line_size;			
-
-			//content_len ++; // due to white space
-			new_content = (char*)calloc(content_len+1,sizeof(char)); // + 2 due to white space
-			new_content[content_len]='\0';
-
-
-			ptr=new_content;
-
-			if(tmp != NULL)
-				memcpy(ptr,tmp,tmp_len);
-
-			ptr += tmp_len;
-
-			//ptr = new_content + (content_len - uncomment_len);
-			memcpy(ptr,line,line_size);			
-
-			//ptr = new_content + content_len - 1;
-			ptr += line_size;
-
-			
-			memcpy(ptr,white_spaces,white_spaces_len);
-			//ptr[0]=white_space;
-
-		}
-
-
-		//end ++;
-		//printf("\n");
-		len = (int)(end - pdf->content);
-		len = pdf->size - len;
-
-
-				
-		free(tmp);
-		free(line);
-		free(uncomment);
-		free(comment);
-		free(white_spaces);
-		//white_spaces == NULL;
-		tmp = NULL;
-		line = NULL;
-		uncomment = NULL;
-		comment = NULL;
-
-		//printf("\n\n");
-		
-
-	} // end while(len > 0)
-
-	
-	dbg_log("removeComments :: Old size :: %d\n",pdf->size);
-	dbg_log("removeComments :: New size :: %d\n", content_len);
-
-	//printf("new content = \n");
-	//printStream(new_content,content_len);
-
-
-	free(pdf->content);
-	pdf->content = NULL;
-
-
-	// Set the uncommented content
-	pdf->content = new_content;
-	pdf->size = content_len;
-
-	return 0;
-}
 
 
 /*
@@ -2047,7 +1599,7 @@ int parsePDF(struct pdfDocument * pdf){
 		return -1;
 	}
 
-	// remove PostScript comments for a better parsing. (to fix :: improve comment removing).
+	// TOFIX: remove PostScript comments for a better parsing. (to fix :: improve comment removing).
 	/*
 	if (removeComments(pdf) < 0) {
 		err_log("parsePDF :: removing comments failed!\n");
@@ -2093,5 +1645,3 @@ int parsePDF(struct pdfDocument * pdf){
 	return 0;
 
 }
-
-

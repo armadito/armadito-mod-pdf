@@ -106,6 +106,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			js = js_obj->stream;
 		}
 
+		free(js_obj_ref);
 
 		if (js != NULL){
 			dbg_log("getJavaScript :: Found JS content in object %s\n", js_obj->reference);
@@ -127,8 +128,6 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
-		free(js_obj_ref);
-		js_obj_ref = NULL;
 
 
 	}else{
@@ -146,13 +145,17 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 			// Launch js content analysis
 			if (unknownPatternRepetition(js, strlen(js), pdf, obj) < 0){
 				err_log("getJavaScript :: get pattern high repetition failed!\n");
+				free(js);
 				return -1;
 			}
 			
 			if (findDangerousKeywords(js, pdf, obj) < 0){
 				err_log("getJavaScript :: get dangerous keywords failed!\n");
+				free(js);
 				return -1;
 			}
+
+			free(js);
 
 		}
 		else{
@@ -176,7 +179,7 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: getJSContentInXFA :: Check the keyword javascript
+TODO :: getJSContentInXFA :: Check the keyword javascript
 */
 int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
 	
@@ -216,7 +219,8 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		script_balise = (char*)calloc(len+1,sizeof(char));
 		script_balise[len]= '\0';
-		memcpy(script_balise,start,len);
+		if(len > 0)
+			memcpy(script_balise,start,len);
 		//dbg_log("getJSContentInXFA :: script_balise = %s\n",script_balise);
 
 		// save the script start ptr
@@ -276,8 +280,6 @@ int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pd
 
 		free(script_balise);
 		free(js_content);
-		script_balise = NULL;
-		js_content  = NULL;
 
 	}
 
@@ -347,6 +349,11 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 	if(start[0] == '['){
 
 		obj_list =  getDelimitedStringContent(start,"[", "]", len); 
+
+		if(obj_list == NULL){
+			err_log("getXFA :: Can't get object list in dictionary\n");
+			return -1;
+		}
 		
 		end = obj_list;
 		len2 = strlen(obj_list);
@@ -366,7 +373,8 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			// get xfa object 
 			xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
 			if(xfa_obj == NULL){				
-				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);				
+				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);
+				free(xfa_obj_ref);
 				continue;
 			}
 
@@ -375,7 +383,8 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 				if (decodeObjectStream(xfa_obj) < 0){
 					err_log("getXFA :: decode object stream failed!\n");
 					// if decoding object stream failed then continue.
-					pdf->errors++;					
+					pdf->errors++;
+					free(xfa_obj_ref);
 					continue;
 				}
 			}
@@ -413,7 +422,12 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 			}
 
 
+			free(xfa_obj_ref);
+
 		}
+
+		free(obj_list);
+
 
 	}else{
 				
@@ -432,6 +446,7 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
 		if(xfa_obj == NULL){
 			err_log("getXFA :: Object %s not found\n",xfa_obj_ref);
+			free(xfa_obj_ref);
 			return -1;
 		}
 
@@ -476,7 +491,6 @@ int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
 		}
 
 		free(xfa_obj_ref);
-		xfa_obj_ref = NULL;
 
 	}
 	
@@ -733,7 +747,7 @@ int getInfoObject(struct pdfDocument * pdf){
 
 
 		if(trailer->content == NULL){
-			err_log("getInfoObject :: Empty trailer content\n");			
+			err_log("getInfoObject :: Empty trailer content\n");
 			trailer = trailer->next;
 			continue;
 		}
@@ -758,7 +772,8 @@ int getInfoObject(struct pdfDocument * pdf){
 		info_obj = getPDFObjectByRef(pdf, info_ref);
 
 		if(info_obj == NULL){
-			warn_log("getInfoObject :: Info object not found %s\n", info_ref);			
+			warn_log("getInfoObject :: Info object not found %s\n", info_ref);
+			free(info_ref);
 			return 0;
 		}
 
@@ -770,10 +785,8 @@ int getInfoObject(struct pdfDocument * pdf){
 			res = unknownPatternRepetition(info, strlen(info), pdf, info_obj);
 			if (res < 0){
 				err_log("getJavaScript :: get pattern high repetition failed!\n");
-				continue;
-			}
 
-			if (res > 0){
+			}else if (res > 0){
 				warn_log("getInfoObject :: found potentially malicious /Info object %s\n", info_ref);
 				pdf->testObjAnalysis->dangerous_keyword_high++; // TODO set another variable for this test :: MALICIOUS_INFO_OBJ
 			}
@@ -781,10 +794,8 @@ int getInfoObject(struct pdfDocument * pdf){
 			res = findDangerousKeywords(info, pdf, info_obj);
 			if(res < 0){
 				err_log("getJavaScript :: get dangerous keywords failed!\n");
-				continue;
-			}
 
-			if(res > 0){
+			}else if(res > 0){
 				warn_log("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);				
 				pdf->testObjAnalysis->dangerous_keyword_high ++;
 			}
@@ -813,8 +824,8 @@ returns: (int)
 - 1 if found
 - 0 if not found
 - an error code (<0) on error.
-// TODO :: analyzeURI :: Path traveral detection.
-// TODO :: analyzeURI :: Malicious uri detection.
+TODO :: analyzeURI :: Path traveral detection.
+TODO :: analyzeURI :: Malicious uri detection.
 */
 int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
@@ -884,7 +895,6 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		if (uri != NULL) {
 			analyzeURI(uri, pdf, obj);
 			free(uri);
-			uri = NULL;
 		}
 		
 
@@ -902,7 +912,7 @@ returns: (int)
 - 1 if dangerous content is found
 - 0 if no active content.
 - an error code (<0) on error.
-// TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
+TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
 */
 int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
 
@@ -961,7 +971,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 	// count white spaces
 	for(i = 0; i<size; i++){
-		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == '\n' || stream[i] == ' ' ){
+		if(stream[i] == '\n' || stream[i] == '\r' || stream[i] == ' ' ){
 			count ++;
 		}
 	}	
@@ -981,7 +991,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		
 		len2 = len;
-		while(end[0] != '\n' && end[0] != '\r' && end[0] != '\n' && end[0] != ' ' && len2 < (size-count)){
+		while(end[0] != '\n' && end[0] != '\r' && end[0] != ' ' && len2 < (size-count)){
 			end ++;
 			len2 ++;
 		}
@@ -993,7 +1003,7 @@ char * removeWhiteSpace(char * stream, int size){
 
 		// skip white spaces
 		start = end;
-		while(start[0] == '\n' || start[0] == '\r' || start[0] == '\n' || start[0] == ' ' ){
+		while(start[0] == '\n' || start[0] == '\r' || start[0] == ' ' ){
 			start ++;
 		}
 
@@ -1050,9 +1060,6 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 	ptr = whithout_space;
 	ptr_len = strlen(whithout_space);
 
-	ptr_bis = whithout_space;
-	ptr2_len = strlen(whithout_space);
-
 
 	// get pattern
 	while( ptr_len > pattern_size && (pattern = getPattern(ptr,pattern_size,ptr_len)) != NULL ){
@@ -1078,6 +1085,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 				
 				warn_log("unknownPatternRepetition :: Found pattern repetition in object %s :: pattern = %s\n",obj->reference,pattern);							
 				pdf->testObjAnalysis->pattern_high_repetition ++;
+				free(whithout_space);
 				free(pattern);
 				free(tmp);
 				return rep;
