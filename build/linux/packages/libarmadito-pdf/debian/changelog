@@ -1,3 +1,11 @@
+libarmadito-pdf (0.12.6.0) xenial; urgency=medium
+
+  * Add getVersion() function
+  * Fix resource leaks.
+  * Minor changes.
+
+ -- Ulrich Fausther <ufausther@teclib.com>  Mon, 20 Feb 2017 13:55:25 +0100
+
 libarmadito-pdf (0.12.5.0) xenial; urgency=medium
 
   * Fix resource leaks.

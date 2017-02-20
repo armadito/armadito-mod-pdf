@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS=subdir-objects no-dependencies
 
 lib_LTLIBRARIES = libarmadito-pdf.la
-libarmadito_pdf_la_LDFLAGS = -version-number 0:12:4
+libarmadito_pdf_la_LDFLAGS = -version-number 0:12:6
 
 AM_CPPFLAGS= -I$(top_srcdir)/lib/includes
 
