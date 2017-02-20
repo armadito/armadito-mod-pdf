@@ -60,7 +60,7 @@ void Usage(){
 
 void Version(){
 
-	printf("armadito-pdf v%s (using libarmadito-pdf v%s) \nCopyright (C) 2015 - 2017 by Teclib.\n",TOOL_VERSION,a6o_pdf_ver);
+	printf("armadito-pdf v%s (using libarmadito-pdf v%s) \nCopyright (C) 2015 - 2017 by Teclib.\n",TOOL_VERSION,getVersion());
 	exit(1);
 }
 
