@@ -30,7 +30,9 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-
+char * getVersion(){
+	return a6o_pdf_ver;
+}
 
 
 /*

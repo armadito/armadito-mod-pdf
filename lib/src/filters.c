@@ -1308,7 +1308,8 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 	}
 
 	len = 0;
-	out = binarytoChar(result,result_size,&len);
+	if(result != NULL)
+		out = binarytoChar(result,result_size,&len);
 
 	obj->tmp_stream_size = len;
 	obj->decoded_stream_size = len;
