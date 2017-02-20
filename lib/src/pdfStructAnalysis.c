@@ -655,6 +655,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 				if(end == NULL){
 					err_log("checkEmptyDocument :: end == NULL\n" );
 					free(kids);
+					free(kid_obj_ref);
 					return -1;
 				}
 
@@ -819,6 +820,7 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 									start = searchPattern(start,pageContent_obj_ref,strlen(pageContent_obj_ref)-3,len2);
 									if (start == NULL){
 										err_log("checkEmptyDocument :: can't retrieve object reference in dico\n");
+										free(pageContent_obj_ref);
 										break;
 									}
 									start += strlen(pageContent_obj_ref) - 2;

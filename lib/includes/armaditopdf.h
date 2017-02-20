@@ -26,7 +26,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "pdfStructs.h"
 
-#define a6o_pdf_ver "0.12.4"
+#define a6o_pdf_ver "0.12.6"
 
 
 // Tests Coefficients
@@ -69,12 +69,13 @@ enum err_code {
 
 
 /* Functions */
-void Helper();
+char * getVersion();
 int analyzePDF(char * filename);
 int analyzePDF_fd(int fd, char * filename);
 int analyzePDF_ex(int fd, char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
 void printAnalysisReport(struct pdfDocument * pdf);
+
 
 
 #endif
