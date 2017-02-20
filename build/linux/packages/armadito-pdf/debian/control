@@ -2,7 +2,7 @@ Source: armadito-pdf
 Section: utils
 Priority: optional
 Maintainer: Ulrich Fausther <ufausther@teclib.com>
-Build-Depends: debhelper (>=9),autotools-dev, dh-autoreconf, libarmadito-pdf-dev (>= 0.12.4), pkg-config
+Build-Depends: debhelper (>=9),autotools-dev, dh-autoreconf, libarmadito-pdf-dev (>= 0.12.6), pkg-config
 Standards-Version: 3.9.7
 Homepage: https://github.com/armadito/armadito-mod-pdf
 
@@ -10,7 +10,7 @@ Homepage: https://github.com/armadito/armadito-mod-pdf
 Package: armadito-pdf
 Section: utils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libarmadito-pdf-dev (>= 0.12.4), pkg-config
+Depends: ${shlibs:Depends}, ${misc:Depends}, libarmadito-pdf-dev (>= 0.12.6), pkg-config
 Description: Armadito PDF analyzer.
  Armadito PDF analyzer is a module for PDF documents analysis that include:
  - a PDF parser

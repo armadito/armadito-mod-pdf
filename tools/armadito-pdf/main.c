@@ -25,7 +25,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include "libarmadito-pdf/log.h"
 #include "getopt.h"
 
-#define TOOL_VERSION "0.13.1"
+#define TOOL_VERSION "0.13.2"
 
 
 struct scan_options {
