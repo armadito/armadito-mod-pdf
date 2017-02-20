@@ -1099,7 +1099,7 @@ char * CCITTFaxDecode(char* stream, struct pdfObject * obj){
 	char * select = NULL;
 	char * binary_mode= NULL;
 	char * tmp = NULL; // tmp buffer
-	char * result = NULL;
+	char * result;
 	int i = 0, j= 0, len = 0, max_bits = 13, code_len = 0, result_size = 0;
 	int color = 1; // white = 1 ; black = 0
 	int run = 0;
