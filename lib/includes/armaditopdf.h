@@ -69,12 +69,13 @@ enum err_code {
 
 
 /* Functions */
-void Helper();
+char * getVersion();
 int analyzePDF(char * filename);
 int analyzePDF_fd(int fd, char * filename);
 int analyzePDF_ex(int fd, char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
 void printAnalysisReport(struct pdfDocument * pdf);
+
 
 
 #endif
