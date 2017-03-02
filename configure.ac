@@ -64,11 +64,16 @@ AM_CONDITIONAL([COND_MODULE], [test "$enable_module" = "yes"])
 
 # check for libarmadito if module is enabled.
 if test "$enable_module" = "yes"; then
-
 	# check for libarmadito
 	PKG_CHECK_MODULES(LIBARMADITO, libarmadito, [HAVE_LIBARMADITO=yes], [HAVE_LIBARMADITO=no])
+	# check for libarmadito/armadito.h in source tree
 	if test "$HAVE_LIBARMADITO" = "no"; then
-		AC_MSG_ERROR("cannot find ARMADITO library: skipping module build.")
+	   OLD_CPPFLAGS="$CPPFLAGS"
+	   CPPFLAGS=-I$srcdir/../../armadito-core/libmodule/include
+	   AC_CHECK_HEADER([libarmadito/armadito.h], [], [AC_MSG_ERROR([cannot find Armadito module library])], [])
+	   CPPFLAGS="$OLD_CPPFLAGS"
+	   LIBARMADITO_CFLAGS='-I$(top_srcdir)/../../armadito-core/libmodule/include'
+	   AC_SUBST([LIBARMADITO_CFLAGS])
 	fi
 fi
 
