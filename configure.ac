@@ -39,9 +39,6 @@ AC_MSG_RESULT(yes)
 AC_PROG_CC([gcc])
 AC_PROG_LIBTOOL
 
-# start with clean CFLAGS
-CFLAGS=
-
 # check for debug arg
 AC_MSG_CHECKING(for debug)
 AC_MSG_RESULT($enable_debug)
