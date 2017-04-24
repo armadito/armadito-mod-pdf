@@ -74,3 +74,20 @@ Fri, 19 Aug 2016 :: 0.12.4 :: (ufausther)
 
 + fix warning in function getTrailers :: test file = clam.pdf
 + getEmbeddedFile :: looking for FileSpec object is not necessary for embedded file detection.
+
+
+Thu, 9 Feb 2017 :: 0.12.5 :: (ufausther)
+------------------------------------------
+
++ Fix some memory leaks.
++ Fix default log level to warn.
++ Minors changes
++ pdfParsing: improve code.
+
+
+Mon, 20 Feb 2017 :: 0.12.6 :: (ufausther)
+------------------------------------------
+
++ Minors changes
++ Fix resource leaks
++ Get library version with getVersion() function.
