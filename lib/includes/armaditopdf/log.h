@@ -19,8 +19,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 ***/
 
-#ifndef _log_h_
-#define _log_h_
+#ifndef _LOG_H_
+#define _LOG_H_
 
 #include <stdio.h>
 #include <stdarg.h>

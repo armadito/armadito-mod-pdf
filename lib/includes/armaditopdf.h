@@ -21,10 +21,14 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#ifndef _armadito_pdf_h_
-#define _armadito_pdf_h_
+#ifndef _ARMADITO_PDF_H_
+#define _ARMADITO_PDF_H_
 
-#include "pdfStructs.h"
+#include "armaditopdf/structs.h"
+#include "armaditopdf/errors.h"
+#include "armaditopdf/log.h"
+#include "armaditopdf/osdeps.h"
+
 
 #define a6o_pdf_ver "0.12.6"
 
@@ -76,6 +80,8 @@ int analyzePDF_ex(int fd, char * filename);
 int calcSuspiciousCoefficient(struct pdfDocument * pdf);
 void printAnalysisReport(struct pdfDocument * pdf);
 
+// C API functions
+// ...
 
 
 #endif

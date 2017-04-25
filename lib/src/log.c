@@ -19,7 +19,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 ***/
 
-#include "log.h"
+#include "armaditopdf/log.h"
 
 
 static enum log_level current_max_level = default_max_level;

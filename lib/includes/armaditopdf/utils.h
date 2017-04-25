@@ -21,11 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#ifndef _utils_h_
-#define _utils_h_
+#ifndef _UTILS_H_
+#define _UTILS_H_
 
 
-#include "pdfStructs.h"
+#include <armaditopdf/structs.h>
 
 /* Utils functions prototypes */
 

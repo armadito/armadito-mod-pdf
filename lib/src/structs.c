@@ -20,8 +20,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 
-#include "pdfStructs.h"
-#include "log.h"
+#include <armaditopdf/structs.h>
+#include <armaditopdf/log.h>
 
 
 /*

@@ -22,12 +22,12 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "pdfAnalysis.h"
-#include "pdfParsing.h"
-#include "utils.h"
-#include "log.h"
-#include "osdeps.h"
-#include "time.h"
+#include <armaditopdf/analysis.h>
+#include <armaditopdf/parsing.h>
+#include <armaditopdf/utils.h>
+#include <armaditopdf/log.h>
+#include <armaditopdf/osdeps.h>
+#include <time.h>
 
 
 

@@ -21,11 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "armaditopdf.h"
-#include "pdfAnalysis.h"
-#include "utils.h"
-#include "osdeps.h"
-#include "log.h"
+#include <armaditopdf.h>
+#include <armaditopdf/analysis.h>
+#include <armaditopdf/utils.h>
+#include <armaditopdf/osdeps.h>
+#include <armaditopdf/log.h>
 
 
 // Check the trailer content

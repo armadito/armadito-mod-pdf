@@ -21,11 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#ifndef _pdf_Analysis_h_
-#define _pdf_Analysis_h_
+#ifndef _PDF_ANALYSIS_H_
+#define _PDF_ANALYSIS_H_
 
 
-#include "pdfStructs.h"
+#include <armaditopdf/structs.h>
 
 
 /***** pdf Structure analysis functions prototypes *****/

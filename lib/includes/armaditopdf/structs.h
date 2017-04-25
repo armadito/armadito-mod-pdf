@@ -21,8 +21,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#ifndef _pdf_Structs_h_
-#define _pdf_Structs_h_
+#ifndef _PDF_STRUCTS_H_
+#define _PDF_STRUCTS_H_
 
 
 #include <stdio.h>
@@ -113,7 +113,7 @@ struct testsPDFObjAnalysis{
 
 
 // PDF Document structure
-struct pdfDocument{
+typedef struct pdfDocument{
 	
 	FILE * fh;	// File handle of the document
 	int fd;
@@ -130,7 +130,7 @@ struct pdfDocument{
 	double scan_time; // time elapsed in second for parse or scan.
 	int errors; // treatment errors
 
-};
+}PDF;
 
 
 

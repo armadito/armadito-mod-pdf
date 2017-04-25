@@ -21,9 +21,10 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "osdeps.h"
+#include <armaditopdf/osdeps.h>
+#include <armaditopdf/log.h>
 #include <string.h>
-#include "log.h"
+
 
 
 #ifdef _WIN32

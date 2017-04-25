@@ -21,11 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#ifndef _pdf_Parsing_h_
-#define _pdf_Parsing_h_
+#ifndef _PDF_PARSING_H_
+#define _PDF_PARSING_H_
 
 
-#include "pdfStructs.h"
+#include <armaditopdf/structs.h>
 
 
 #define LARGE_FILE_SIZE 1500000

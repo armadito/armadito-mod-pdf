@@ -22,12 +22,12 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#include "filters.h"
-#include "miniz.c"
+#include <armaditopdf/filters.h>
+#include <armaditopdf/miniz.c>
 #include <errno.h>
-#include "utils.h"
-#include "osdeps.h"
-#include "log.h"
+#include <armaditopdf/utils.h>
+#include <armaditopdf/osdeps.h>
+#include <armaditopdf/log.h>
 
 
 char * WHITE_RUN_LENGTH_TERMINATING_CODES[] = {

@@ -20,11 +20,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 
-#include "pdfParsing.h"
-#include "utils.h"
-#include "osdeps.h"
-#include "log.h"
-#include "filters.h"
+#include <armaditopdf/parsing.h>
+#include <armaditopdf/utils.h>
+#include <armaditopdf/osdeps.h>
+#include <armaditopdf/log.h>
+#include <armaditopdf/filters.h>
 
 
 
@@ -775,7 +775,7 @@ int decodeObjectStream(struct pdfObject * obj){
 
 		}else if ((strncmp(filter, "/LZWDecode", 10) == 0 && strncmp(filter, "/LZWDecode", strlen(filter)) == 0) || (strncmp(filter, "/LZW", 4) == 0 && strncmp(filter, "/LZW", strlen(filter)) == 0)){
 
-#if 0
+#if 1
 			dbg_log("decodeObjectStream :: Decode LZWDecode :: %s \n", obj->reference);
 
 			if ((tmp = LZWDecode(stream, obj)) == NULL){

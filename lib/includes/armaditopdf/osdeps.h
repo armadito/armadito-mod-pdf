@@ -19,8 +19,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 ***/
 
-#ifndef _os_deps_h_
-#define _os_deps_h_
+#ifndef _OS_DEPS_H_
+#define _OS_DEPS_H_
 
 #include <stdio.h>
 

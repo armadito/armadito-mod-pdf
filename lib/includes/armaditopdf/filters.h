@@ -21,11 +21,11 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
     
-#ifndef _filters_h_
-#define _filters_h_
+#ifndef _FILTERS_H_
+#define _FILTERS_H_
 
 
-#include "pdfStructs.h"
+#include <armaditopdf/structs.h>
 
 
 // LZWDecode
