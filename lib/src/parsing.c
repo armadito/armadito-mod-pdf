@@ -25,8 +25,75 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <armaditopdf/osdeps.h>
 #include <armaditopdf/log.h>
 #include <armaditopdf/filters.h>
+#include <armaditopdf/errors.h>
 
 
+char * pdf_get_version_from_data(char * data, unsigned int data_size){
+
+	int minor_off = 7; // minor version offset.
+	char * version;
+	int ver_size = 9;
+
+	if(data == NULL || data_size == 0)
+		return NULL;
+
+	if(!strcmp(data,"%PDF-1.") == 0 && data[minor_off] >= '1' && data[minor_off] <= '7' ){
+
+		version = (char*)malloc(ver_size*sizeof(char));
+		strncpy(version,data,ver_size);
+
+		dbg_log("pdf_get_header :: PDF version = %s\n", version);
+
+		return version;
+	}
+
+	err_log("pdf_get_header :: bad pdf version number\n");
+
+	return version;
+}
+
+
+char * pdf_get_version_from_fd(int fd, int * retcode){
+
+	char * data = NULL, *version = NULL;
+	unsigned int doc_size, read_bytes;
+
+	doc_size =  os_lseek(fd,0,SEEK_END);
+	os_lseek(fd,0,SEEK_SET);
+
+	if(doc_size == 0){
+		*retcode = ERROR_ZERO_LENGTH_FILE;
+		return NULL;
+	}
+
+	doc_size = (doc_size > 1024) ? 1024 : doc_size;
+
+	data = (char*)calloc(doc_size+1, sizeof(char));
+	if(data == NULL){
+		*retcode = ERROR_INSUFFICENT_MEMORY;
+		return NULL;
+	}
+	data[doc_size] = '\0';
+
+	read_bytes = os_read(fd, data, doc_size);
+	os_lseek(fd,0,SEEK_SET);
+
+	if(read_bytes != doc_size){
+		free(data);
+		*retcode = ERROR_FILE_READ;
+		return NULL;
+	}
+
+	version = pdf_get_version_from_data(data, doc_size);
+	if(version == NULL){
+		* retcode = ERROR_INVALID_FORMAT;
+	}
+
+	free(data);
+
+	return version;
+
+}
 
 /*
 checkMagicNumber() :: check the presence of a PDF header and fill the pdf struct version field.
@@ -125,7 +192,7 @@ int getPDFContent(struct pdfDocument * pdf){
 	}
 	else {
 
-		doc_size =  os_lseek(pdf->fd,0,SEEK_END);		
+		doc_size =  os_lseek(pdf->fd,0,SEEK_END);
 		//doc_size = _tell(pdf->fd);
 		os_lseek(pdf->fd,0,SEEK_SET); // rewind		
 

@@ -330,3 +330,51 @@ clean:
 
 
 }
+
+
+
+int pdf_initialize(void){
+
+	// TODO: Set debug log level.
+	// TODO: Load configuration.
+	return ERROR_SUCCESS;
+}
+
+
+struct pdfDocument * pdf_load_fd(int fd, char * filename, int * retcode){
+
+	char * version;
+	struct pdfDocument * pdf = NULL;
+
+	if(retcode)
+		*retcode = EXIT_SUCCESS;
+
+	if(fd < 0){
+		dbg_log("invalid file descriptor (%d)!\n",fd);
+		*retcode = ERROR_ON_LOAD | ERROR_INVALID_FD;
+		return NULL;
+	}
+
+	version = pdf_get_version_from_fd(fd, &retcode);
+	if(version == NULL){
+		*retcode |= ERROR_ON_LOAD;
+		return NULL;
+	}
+
+	pdf = init_pdf_document(fd, NULL, filename, version);
+
+	if(pdf == NULL){
+		*retcode = ERROR_ON_LOAD | ERROR_INSUFFICENT_MEMORY;
+	}
+
+	return pdf;
+}
+
+
+void pdf_unload(struct pdfDocument * pdf){
+
+	free_pdf_document(pdf);
+
+	return;
+
+}

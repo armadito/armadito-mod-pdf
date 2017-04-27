@@ -113,7 +113,7 @@ struct testsPDFObjAnalysis{
 
 
 // PDF Document structure
-typedef struct pdfDocument{
+struct pdfDocument{
 	
 	FILE * fh;	// File handle of the document
 	int fd;
@@ -130,13 +130,14 @@ typedef struct pdfDocument{
 	double scan_time; // time elapsed in second for parse or scan.
 	int errors; // treatment errors
 
-}PDF;
+};
 
 
 
 /* pdf structures functions prototypes */
 
 struct pdfDocument* initPDFDocument();
+struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version);
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
 struct testsPDFStruct * initTestsPDFStruct();
@@ -145,6 +146,8 @@ struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
 void freePDFDocumentStruct(struct pdfDocument * pdf);
 void freePDFObjectStruct(struct pdfObject * obj);
 void freePDFTrailerStruct(struct pdfTrailer * trailer);
+
+void free_pdf_document(struct pdfDocument * pdf);
 
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
 int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer);

@@ -81,7 +81,12 @@ int calcSuspiciousCoefficient(struct pdfDocument * pdf);
 void printAnalysisReport(struct pdfDocument * pdf);
 
 // C API functions
-// ...
+int pdf_initialize();
+struct pdfDocument * pdf_load_fd(int fd, char * filename, int * retcode);
+struct pdfDocument * pdf_load_file(char * filename, int * retcode);
+struct pdfDocument * pdf_load_data(char * data, unsigned int data_size,  int * retcode);
+void pdf_unload(struct pdfDocument * pdf);
+void pdf_finalize();
 
 
 #endif

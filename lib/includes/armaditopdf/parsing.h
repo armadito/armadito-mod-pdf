@@ -51,4 +51,7 @@ char * hexaObfuscationDecode(char * dico);
 char *removeCommentLine(char * src, int size, int * ret_len);
 
 
+char * pdf_get_version_from_data(char * data, unsigned int data_size);
+char * pdf_get_version_from_fd(int fd, int * retcode);
+
 #endif

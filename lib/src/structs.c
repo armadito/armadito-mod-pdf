@@ -22,6 +22,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <armaditopdf/structs.h>
 #include <armaditopdf/log.h>
+#include <armaditopdf/osdeps.h>
+
 
 
 /*
@@ -277,6 +279,64 @@ struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
 }
 
 
+struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version){
+
+	struct pdfDocument * pdf;
+
+	pdf = (struct pdfDocument *)calloc(1,sizeof(struct pdfDocument));
+	if( pdf == NULL){
+		return NULL;
+	}
+
+	pdf->fd = fd;
+	pdf->fh = fh;
+	pdf->fname =  os_strdup(filename);
+	pdf->version = version;
+
+	return pdf;
+
+}
+
+void free_pdf_document(struct pdfDocument * pdf ){
+
+	if(pdf == NULL)
+		return ;
+
+	if (pdf->fname != NULL){
+		free(pdf->fname);
+		pdf->fname = NULL;
+	}
+
+	if (pdf->version != NULL){
+		free(pdf->version);
+		pdf->version = NULL;
+	}
+
+	if (pdf->content != NULL){
+		free(pdf->content);
+		pdf->content = NULL;
+	}
+
+	if (pdf->testStruct != NULL){
+		free(pdf->testStruct);
+		pdf->testStruct = NULL;
+	}
+
+	if (pdf->testObjAnalysis != NULL){
+		free(pdf->testObjAnalysis);
+		pdf->testObjAnalysis = NULL;
+	}
+
+	freePDFObjectStruct(pdf->objects);
+	freePDFTrailerStruct(pdf->trailers);
+
+	free(pdf);
+	pdf = NULL;
+	
+
+	return ;
+}
+
 /*
 initPDFDocument() :: Initialize pdfDocument structure.
 parameters:
@@ -308,6 +368,7 @@ struct pdfDocument* initPDFDocument(){
 		goto clean;		
 	}
 
+
 	// Initialize entries
 	pdf->fh = NULL;
 	pdf->fd = -1;
@@ -322,6 +383,7 @@ struct pdfDocument* initPDFDocument(){
 	pdf->errors = 0;
 	pdf->scan_time=0;
 
+
 clean:
 	if (err != 0){
 		if (pdf != NULL){
@@ -329,6 +391,7 @@ clean:
 			pdf = NULL;
 		}
 	}
+
 
 	return pdf;
 
