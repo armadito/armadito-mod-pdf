@@ -427,6 +427,165 @@ char * get_dico_from_data(char *data, unsigned int data_size){
 	return dico;
 }
 
+
+/* Get PDF trailers according to PDF (version 1.1 to 1.4) specifications */
+int pdf_get_trailers_v1_to_v4(struct pdfDocument * pdf){
+
+	char * content = NULL;
+	char * start, *end;
+	int len;
+	struct pdfTrailer * trailer = NULL;
+	int retcode = ERROR_TRAILER_NOT_FOUND;
+
+
+	if(pdf == NULL || pdf->content == NULL || pdf->size <= 0){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	end = pdf->content;
+	len = pdf->size;
+
+	while((start = searchPattern(end,"trailer",7,len))){
+
+		len = pdf->size - (unsigned int)(start - end);
+		end = searchPattern(start,"%%EOF",5,len);
+		if (end == NULL){
+			warn_log("pdf_get_trailer :: missing eof marker!\n");
+			retcode = ERROR_BAD_TRAILER_FORMAT;
+			end = start + 7; // search another trailer.
+			len = pdf->size - (unsigned int)( end - pdf->content);
+			continue;
+		}
+
+		end += 5; 	// skipping %%EOF string.
+
+		len = (unsigned int)(end - start);
+		content = (char*)calloc(len+1,sizeof(char));
+		if(content == NULL){
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		content[len] = '\0';
+		memcpy(content,start,len);
+
+		trailer = init_pdf_trailer(content,len);
+		if( trailer == NULL){
+			free(content);
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		// Get trailer dictionary.
+		trailer->dico = get_dico_from_data(trailer->content, trailer->size);
+		if( trailer->dico == NULL){
+			free_pdf_trailer(trailer);
+			err_log("pdf_get_trailer :: Bad trailer format!\n");
+			return ERROR_BAD_TRAILER_FORMAT;
+		}
+
+		printf("trailre_dico = %s\n", trailer->dico);
+
+		retcode = add_pdf_trailer(pdf, trailer);
+		if(retcode != EXIT_SUCCESS){
+			err_log("pdf_get_trailer :: add pdf trailer failed!\n");
+			free_pdf_trailer(trailer);
+			return retcode;
+		}
+
+		len = pdf->size - (unsigned int)( end - pdf->content);
+
+	}
+
+	if(pdf->trailers == NULL)
+		return retcode;
+
+	return EXIT_SUCCESS;
+}
+
+
+/* Get PDF trailers according to PDF (version from to 1.5) specifications */
+int pdf_get_trailers_from_v5(struct pdfDocument * pdf){
+
+	char * content = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	int len = 0;
+	struct pdfTrailer * trailer;
+	int retcode = ERROR_TRAILER_NOT_FOUND;
+
+
+	if(pdf == NULL || pdf->content == NULL || pdf->size <= 0){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	end = pdf->content;
+	len = pdf->size;
+
+	while( (start = searchPattern(end,"startxref",9,len) ) != NULL ){
+
+		len = pdf->size - (unsigned int)(start - end);
+		end = searchPattern(start,"%%EOF",5,len);
+		if (end == NULL){
+			warn_log("pdf_get_trailer :: missing eof marker!\n");
+			retcode = ERROR_BAD_TRAILER_FORMAT;
+			end = start + 9; // search another trailer.
+			len = pdf->size - (unsigned int)( end - pdf->content);
+			continue;
+		}
+
+		end += 5;
+		len = (unsigned int)(end - start);
+		content = (char*)calloc(len+1,sizeof(char));
+		if(content == NULL){
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		content[len] = '\0';
+		memcpy(content,start,len);
+
+		trailer = init_pdf_trailer(content,len);
+		if( trailer == NULL){
+			free(content);
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		retcode = add_pdf_trailer(pdf, trailer);
+		if(retcode != EXIT_SUCCESS){
+			free_pdf_trailer(trailer);
+			return retcode;
+		}
+
+		len = pdf->size - (unsigned int)( end - pdf->content);
+
+	}
+
+	if(pdf->trailers == NULL)
+		return retcode;
+
+	return EXIT_SUCCESS;
+}
+
+
+int pdf_get_trailers(struct pdfDocument * pdf){
+
+	int retcode = EXIT_SUCCESS;
+	char minor_ver;
+
+	if(pdf == NULL || pdf->version == NULL){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	minor_ver = pdf->version[7];
+
+	retcode = pdf_get_trailers_v1_to_v4(pdf);
+
+	if(retcode != EXIT_SUCCESS && minor_ver >= '5' && minor_ver <= '7')
+		retcode = pdf_get_trailers_from_v5(pdf);
+
+	return retcode;
+}
+
+
+
 /*
 getObjectDictionary() :: Get the object dictionary
 parameters:
@@ -1572,7 +1731,7 @@ int getPDFObjects(struct pdfDocument * pdf){
 }
 
 
-/*
+/* DEPRECATED
 getPDFTrailers() :: Get pdf trailer according to PDF documentation (before version 1.5)
 parameters:
 - struct pdfDocument * pdf (pdf document pointer)
@@ -1640,7 +1799,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 			pdf->testStruct->encrypted = 1;
 		}
 
-		if (addTrailerInList(pdf, trailer) < 0){
+		if (add_pdf_trailer(pdf, trailer) < 0){
 			err_log("getPDFTrailers :: add trailer failed!\n");
 			return -1;
 		}
@@ -1659,7 +1818,7 @@ int getPDFTrailers(struct pdfDocument * pdf){
 }
 
 
-/*
+/* DEPRECATED
 getPDFTrailers_ex() :: Get pdf trailer according to PDF documentation (starting from version 1.5)
 parameters:
 - struct pdfDocument * pdf (pdf document pointer)
@@ -1711,7 +1870,7 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 		// TODO improve
 		trailer->content = content;
 
-		addTrailerInList(pdf,trailer);
+		add_pdf_trailer(pdf,trailer);
 		
 		/* debug print*/
 		//dbg_log("getPDFTrailers_ex :: trailer content = %s\n",content);
