@@ -95,7 +95,7 @@ char * pdf_get_version_from_fd(int fd, int * retcode){
 
 }
 
-/*
+/* DEPRECATED
 checkMagicNumber() :: check the presence of a PDF header and fill the pdf struct version field.
 parameters:
 - struct pdfDocument * pdf (pdf document pointer)
@@ -164,7 +164,7 @@ int pdf_get_content(struct pdfDocument * pdf){
 
 	char * content = NULL;
 	int doc_size, read_bytes;
-	
+
 
 	if(pdf == NULL){
 		return ERROR_INVALID_PARAMETERS;
@@ -328,6 +328,104 @@ char * hexaObfuscationDecode(char * dico){
 
 }
 
+
+char * get_dico_from_data(char *data, unsigned int data_size){
+
+	char * dico = NULL;
+	char * start = NULL;		// dico start pointer
+	char * end = NULL;			// dico end pointer
+	int inQuotes = 0;
+	int inString = 0;
+	int sub = 0;
+	int flag = 0;
+	int len = 0;
+
+
+	if (data == NULL || data_size == 0){
+		err_log("get_dico_from_data :: invalid parameter\n");
+		return NULL;
+	}
+
+	start = searchPattern(data,"<<",2,data_size);
+	if(start == NULL){
+		return NULL;
+	}
+
+	// search other occurencies of "<<" to detect sub dictionaries
+	// check if you find the same number of occurencies of stream ">>"
+	len = data_size - (int)(start - data);
+	end = start;
+
+	while(len >= 2 && flag == 0){
+
+		// String delimiter
+		if(inQuotes == 0 && end[0] == '(' && ((end == start) || (end > start && (end-1)[0] != '\\')) ){
+			inString ++;
+			len--;
+			end ++;
+			continue;
+		}
+
+		// String delimiter 2
+		if(inQuotes == 0 && inString > 0 && end[0] == ')' && ((end == start) || (end > start && (end-1)[0] != '\\')) ){
+			inString --;
+			len --;
+			end++;
+			continue;
+		}
+
+		// Quotes delimiter
+		if(end[0] == '"' && ((end == start) || (end > start && (end-1)[0] != '\\')) ){
+			inQuotes = (inQuotes == 0)?1:0;
+			len --;
+			end++;
+			continue;
+		}
+
+		// Dico delimiter
+		if(inString == 0 && end[0] == '<' && end[1] == '<' && ((end == start) || (end > start && (end-1)[0] != '\\')) ){
+			sub ++;
+			end+=2;
+			len -=2;
+			continue;
+		}
+
+		// Dico delimiter
+		if(inString == 0 && end[0] == '>' && end[1] == '>' && ((end == start) || (end > start && (end-1)[0] != '\\')) ){
+			sub --;
+			end+=2;
+			len -=2;
+
+			if(sub == 0){
+				flag ++;
+			}
+
+			continue;
+		}
+
+		len --;
+		end ++;
+
+	}
+
+
+	// if dico found
+	if(flag != 0){
+
+		len = (unsigned int)(end - start);
+		dico = (char*)calloc(len+1,sizeof(char));
+		if(dico == NULL){
+			err_log("get_dico_from_data :: memory allocation faild!\n");
+			return NULL;
+		}
+
+		dico[len]='\0';
+		memcpy(dico,start,len);
+	}
+
+
+	return dico;
+}
 
 /*
 getObjectDictionary() :: Get the object dictionary

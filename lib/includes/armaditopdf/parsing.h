@@ -54,5 +54,7 @@ char * pdf_get_version_from_data(char * data, unsigned int data_size);
 char * pdf_get_version_from_fd(int fd, int * retcode);
 int pdf_get_content(struct pdfDocument * pdf);
 
+char * get_dico_from_data(char *data, unsigned int data_size);
+
 
 #endif
