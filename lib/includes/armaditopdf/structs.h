@@ -58,6 +58,7 @@ struct pdfTrailer{
 
 	int offset;	// offset in the document
 	char * content; // content of the trailer
+	int size;
 	char * dico;
 	struct pdfTrailer* next;	// next trailer in the document
 	
