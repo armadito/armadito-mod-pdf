@@ -35,7 +35,6 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 int parsePDF(struct pdfDocument * pdf);
 int checkMagicNumber(struct pdfDocument * pdf);
-int getPDFContent(struct pdfDocument * pdf);
 int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
 int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf);
 int getPDFObjects(struct pdfDocument * pdf);
@@ -53,5 +52,7 @@ char *removeCommentLine(char * src, int size, int * ret_len);
 
 char * pdf_get_version_from_data(char * data, unsigned int data_size);
 char * pdf_get_version_from_fd(int fd, int * retcode);
+int pdf_get_content(struct pdfDocument * pdf);
+
 
 #endif

@@ -160,68 +160,68 @@ int checkMagicNumber(struct pdfDocument * pdf){
 }
 
 
-/*
-getPDFContent() :: Get the content of the PDF document
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-returns: (int)
-- the size of the document on success.
-- an error code (<=0) on error.
-
-TODO :: getPDFContent :: set max_size limit.
-*/
-int getPDFContent(struct pdfDocument * pdf){
+int pdf_get_content(struct pdfDocument * pdf){
 
 	char * content = NULL;
-	int doc_size = 0;
-	int read_bytes = 0;
+	int doc_size, read_bytes;
+	
 
+	if(pdf == NULL){
+		return ERROR_INVALID_PARAMETERS;
+	}
 
 	if (pdf->fh == NULL && pdf->fd < 0) {
-		err_log("getPDFContent :: invalid parameters!\n");
-		return -1;
+		err_log("get_get_ontent :: invalid file handle or file descriptor!\n");
+		return ERROR_INVALID_FD;
 	}
 
 	if (pdf->fh != NULL) {
 
-		// Get the size in byte
 		fseek(pdf->fh,0,SEEK_END);
 		doc_size = ftell(pdf->fh);
-		fseek(pdf->fh,0,SEEK_SET); // rewind
+		fseek(pdf->fh,0,SEEK_SET);
 
+		if(doc_size == 0)
+			return ERROR_ZERO_LENGTH_FILE;
+
+		content = (char*)calloc(doc_size+1, sizeof(char));
+		if(content == NULL)
+			return ERROR_INSUFFICENT_MEMORY;
+
+		content[doc_size]= '\0';
+		read_bytes = fread(content, 1, doc_size, pdf->fh);
+
+		if(read_bytes != doc_size){
+			free(content);
+			return ERROR_FILE_READ;
+		}
 	}
-	else {
+	else if(pdf->fd > 0) {
 
 		doc_size =  os_lseek(pdf->fd,0,SEEK_END);
-		//doc_size = _tell(pdf->fd);
-		os_lseek(pdf->fd,0,SEEK_SET); // rewind		
+		os_lseek(pdf->fd,0,SEEK_SET);
 
-	}
-	
-	dbg_log("getPDFContent :: Document Size  = %d\n",doc_size);
-	
-	if ((content = (char*)calloc(doc_size + 1, sizeof(char))) == NULL) {
-		err_log("getPDFContent :: content allocation failed!\n");
-		return -1;
-	}	
-	content[doc_size]= '\0';
-	
-	
-	if (pdf->fh != NULL && doc_size > 0) {
-		read_bytes = fread(content, 1, doc_size, pdf->fh);
-	}
-	else if(doc_size > 0) {
+		if(doc_size == 0)
+			return ERROR_ZERO_LENGTH_FILE;
+
+		content = (char*)calloc(doc_size+1, sizeof(char));
+		if(content == NULL)
+			return ERROR_INSUFFICENT_MEMORY;
+
+		content[doc_size]= '\0';
 		read_bytes = os_read(pdf->fd, content, doc_size);
+		os_lseek(pdf->fd,0,SEEK_SET);
+
+		if(read_bytes != doc_size){
+			free(content);
+			return ERROR_FILE_READ;
+		}
 	}
 
-	if (read_bytes != doc_size){
-		warn_log("getPDFContent :: read_byte (%d)  != doc_size (%d)\n",read_bytes,doc_size);
-	}
-	
 	pdf->content = content;	
 	pdf->size = read_bytes;
-	
-	return read_bytes;
+
+	return EXIT_SUCCESS;
 	
 }
 
@@ -1635,7 +1635,7 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 
 
 
-/*
+/* DEPRECATED
 parsePDF() :: parse the PDF document (extract objects, trailers and xref).
 parameters:
 - struct pdfDocument * pdf (pdf document pointer)
@@ -1661,7 +1661,7 @@ int parsePDF(struct pdfDocument * pdf){
 
 
 	// Get the content of the document
-	if (getPDFContent(pdf) <= 0) {
+	if (pdf_get_content(pdf) <= 0) {
 		err_log("parsePDF :: get PDF content failed!\n");
 		return -1;
 	}
