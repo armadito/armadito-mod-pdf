@@ -141,17 +141,19 @@ struct pdfDocument* initPDFDocument();
 struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version);
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
+struct pdfTrailer * init_pdf_trailer(int content, unsigned int size);
+
 struct testsPDFStruct * initTestsPDFStruct();
 struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
 
 void freePDFDocumentStruct(struct pdfDocument * pdf);
 void freePDFObjectStruct(struct pdfObject * obj);
 void freePDFTrailerStruct(struct pdfTrailer * trailer);
-
+void free_pdf_trailer(struct pdfTrailer * trailer);
 void free_pdf_document(struct pdfDocument * pdf);
 
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
-int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer);
+int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer);
 
 
 #endif

@@ -23,6 +23,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <armaditopdf/structs.h>
 #include <armaditopdf/log.h>
 #include <armaditopdf/osdeps.h>
+#include <armaditopdf/errors.h>
 
 
 
@@ -72,13 +73,9 @@ parameters:
 returns:
 - none
 */
-void freePDFTrailerStruct(struct pdfTrailer * trailer){
+void free_pdf_trailer(struct pdfTrailer * trailer){
 
 	struct pdfTrailer * tmp = NULL;
-
-	if(trailer == NULL){
-		return ;
-	}
 
 	while(trailer!= NULL){
 		
@@ -124,7 +121,7 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 	
 	// Free trailer
 	if (pdf->trailers != NULL){
-		freePDFTrailerStruct(pdf->trailers);
+		free_pdf_trailer(pdf->trailers);
 	}
 	
 	if (pdf->fh != NULL){
@@ -297,6 +294,7 @@ struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char 
 
 }
 
+
 void free_pdf_document(struct pdfDocument * pdf ){
 
 	if(pdf == NULL)
@@ -328,7 +326,7 @@ void free_pdf_document(struct pdfDocument * pdf ){
 	}
 
 	freePDFObjectStruct(pdf->objects);
-	freePDFTrailerStruct(pdf->trailers);
+	free_pdf_trailer(pdf->trailers);
 
 	free(pdf);
 	pdf = NULL;
@@ -337,7 +335,24 @@ void free_pdf_document(struct pdfDocument * pdf ){
 	return ;
 }
 
-/*
+
+struct pdfTrailer * init_pdf_trailer(int content, unsigned int size){
+
+	struct pdfTrailer * trailer;
+
+	trailer = (struct pdfTrailer *)calloc(1,sizeof(struct pdfTrailer));
+	if(trailer == NULL){
+		return NULL;
+	}
+
+	trailer->content = content;
+	trailer->size = size;
+
+	return trailer;
+}
+
+
+/* DEPRECATED
 initPDFDocument() :: Initialize pdfDocument structure.
 parameters:
 - none
@@ -437,7 +452,7 @@ struct pdfObject* initPDFObject(){
 }
 
 
-/*
+/* DEPRECATED
 initPDFTrailer() :: Initialize pdf trailer structure
 parameters:
 - none
@@ -465,36 +480,20 @@ struct pdfTrailer* initPDFTrailer(){
 }
 
 
-/*
-addTrailerInList() ::  add a trailer in the list of trailers
-parameters:
-- struct pdfDocument * pdf
-- struct pdfTrailer * trailer
-returns: (int)
-- 0 on success
-- -1 on error.
-*/
-int addTrailerInList(struct pdfDocument * pdf, struct pdfTrailer * trailer){
+int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 
 	struct pdfTrailer * tmp =  NULL;
 
-	if(pdf == NULL || trailer == NULL){		
-		err_log("addTrailerInList :: invalid parameters\n");
-		return -1;
+	if(pdf == NULL || trailer == NULL){
+		err_log("add_pdf_trailer :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
-	
-	if(pdf->trailers == NULL){
-		pdf->trailers = trailer;
-	}else{
-		
-		tmp = pdf->trailers;
-		while(tmp->next != NULL){
-			tmp = tmp->next;	
-		}
-		tmp->next = trailer;
-		
-	}
+	tmp = pdf->trailers;
+	while(tmp)
+		tmp=tmp->next;
 
-	return 0;
+	tmp = trailer;
+
+	return EXIT_SUCCESS;
 }
