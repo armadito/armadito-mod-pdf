@@ -336,7 +336,7 @@ void free_pdf_document(struct pdfDocument * pdf ){
 }
 
 
-struct pdfTrailer * init_pdf_trailer(int content, unsigned int size){
+struct pdfTrailer * init_pdf_trailer(char * content, unsigned int size){
 
 	struct pdfTrailer * trailer;
 

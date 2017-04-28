@@ -141,7 +141,7 @@ struct pdfDocument* initPDFDocument();
 struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version);
 struct pdfObject* initPDFObject();
 struct pdfTrailer* initPDFTrailer();
-struct pdfTrailer * init_pdf_trailer(int content, unsigned int size);
+struct pdfTrailer * init_pdf_trailer(char * content, unsigned int size);
 
 struct testsPDFStruct * initTestsPDFStruct();
 struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
