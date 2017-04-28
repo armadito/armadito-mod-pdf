@@ -31,7 +31,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 char * pdf_get_version_from_data(char * data, unsigned int data_size){
 
 	int minor_off = 7; // minor version offset.
-	char * version;
+	char * version = NULL;
 	int ver_size = 9;
 
 	if(data == NULL || data_size == 0)
