@@ -489,11 +489,18 @@ int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 		return ERROR_INVALID_PARAMETERS;
 	}
 
-	tmp = pdf->trailers;
-	while(tmp)
-		tmp=tmp->next;
 
-	tmp = trailer;
+	if(pdf->trailers == NULL){
+		pdf->trailers = trailer;
+	}else{
+
+		tmp = pdf->trailers;
+		while(tmp->next != NULL){
+			tmp = tmp->next;
+		}
+		tmp->next = trailer;
+
+	}
 
 	return EXIT_SUCCESS;
 }
