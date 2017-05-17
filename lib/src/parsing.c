@@ -288,7 +288,7 @@ char * hexaObfuscationDecode(char * dico){
 			is_space_hexa = 0;
 		}
 				
-		os_sscanf(hexa,"%x",&hexa_decoded[0]);			
+		os_sscanf(hexa,"#%x",&hexa_decoded[0]);
 
 		decoded_dico = replaceInString(tmp,hexa,hexa_decoded);
 		if(decoded_dico != NULL){
@@ -1730,6 +1730,157 @@ int getPDFObjects(struct pdfDocument * pdf){
 	return 0;
 }
 
+
+// TODO: add obj_ptr_size for params verifs
+char * get_ref_stepback_from_ptr(char * obj_ptr, int ptr_size, int ptr_limit){
+
+	char * tmp;
+	char * ref;
+	unsigned int ref_size = 0;
+
+	if(obj_ptr == NULL || ptr_limit < 4){ // 4 = min_ref_size - "obj"
+		return NULL;
+	}
+
+	tmp = obj_ptr;
+
+	if(strncmp(tmp,"obj",3)!=0 ){
+		return NULL;
+	}
+
+	tmp --;
+	ref_size++;
+	ptr_limit --;
+
+	// check space
+	if(tmp[0] != ' ')
+		return NULL;
+
+	// check generation number -TODO: check if it's a digit.
+	do{
+		tmp --;
+		ptr_limit --;
+		ref_size++;
+	}while(ptr_limit > 0 && tmp[0] >= 48 && tmp[0] <= 57);
+
+	// check space
+	if(tmp[0] != ' ')
+		return NULL;
+
+	// check object number
+	do{
+		tmp --;
+		ptr_limit --;
+		ref_size++;
+	}while(ptr_limit > 0 && tmp[0] >= 48 && tmp[0] <= 57);
+
+	// skip '\n' or '\r'
+	if(tmp[0] != '\n' && tmp[0]!= '\r')
+		return NULL;
+
+	tmp ++;
+	ptr_limit ++;
+	ref_size--;
+
+
+	if(ptr_limit == 0 || ref_size == 0)
+		return NULL;
+
+	ref_size += 3;
+
+	ref = (char*)calloc(ref_size+1,sizeof(char));
+	if(ref == NULL){
+		return NULL;
+	}
+
+	ref[ref_size]='\0';
+	memcpy(ref,tmp,ref_size);
+
+	return ref;
+}
+
+
+int pdf_parse_objects(struct pdfDocument * pdf){
+
+	int retcode = EXIT_SUCCESS;
+	int size, obj_size, tmp_size=0, ptr_limit=0;
+	char * obj_ptr;
+	char * endobj_ptr, *tmp_endobj;
+	char * content;
+	char * obj_ref;
+	unsigned int ref_size = 0;
+	unsigned int offset = 0;
+	struct pdfObject * obj;
+
+
+	if(pdf == NULL || pdf->content == NULL || pdf->size <= 0){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	endobj_ptr = pdf->content;
+	size = pdf->size;
+
+	while((obj_ptr = searchPattern(endobj_ptr, "obj", 3,size) ) != NULL){
+
+
+		// get the object reference
+		offset = (int)(obj_ptr - pdf->content);
+
+		obj_ref = get_ref_stepback_from_ptr(obj_ptr, size, offset);
+		if(obj_ref == NULL){
+			return ERROR_BAD_OBJ_REF_FORMAT;
+		}
+
+		// get the object real offset.
+		offset -= (strlen(obj_ref) - 3);
+
+		// get the object content.
+		size = (int)(pdf->size - (obj_ptr - pdf->content));
+		endobj_ptr = searchPattern(obj_ptr,"endobj",6,size);
+		if(endobj_ptr == NULL){
+			err_log("invalid object (%s): no endobj pattern found!\n", obj_ref);
+			free(obj_ref);
+			return ERROR_BAD_OBJ_FORMAT;
+		}
+
+		endobj_ptr += 6; // skip "endobj" string.
+
+		obj_size = (int)(endobj_ptr - obj_ptr);
+		content = (char*)calloc(obj_size+1,sizeof(char));
+		if(content == NULL){
+			free(obj_ref);
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+		content[obj_size]='\0';
+		memcpy(content, obj_ptr,obj_size);
+
+		// create object and add it in pdf struct.
+		obj = init_pdf_object(obj_ref, content, obj_size, offset);
+		if(obj == NULL){
+			free(obj_ref);
+			free(content);
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		// parse object content
+		retcode = pdf_parse_obj_content(pdf, obj);
+
+
+		// add object in doc list.
+		retcode = add_pdf_object(pdf, obj);
+		if(retcode != ERROR_SUCCESS){
+			err_log("adding object %s failed!\n");
+			return retcode;
+		}
+
+		size = (int)(pdf->size - (endobj_ptr - pdf->content));
+
+	}
+
+
+	return retcode;
+
+}
 
 /* DEPRECATED
 getPDFTrailers() :: Get pdf trailer according to PDF documentation (before version 1.5)
