@@ -1898,6 +1898,92 @@ int pdf_parse_object_dico(struct pdfObject * obj){
 }
 
 
+int pdf_parse_object_type(struct pdfObject * obj){
+
+	char * type;
+	char * start_ptr;
+	char * end_ptr;
+	int type_size = 0;
+	int tmp_size = 0;
+	int type_flag  = 0;
+	int sub = 0;
+
+
+	if (obj == NULL || obj->dico == NULL){
+		err_log("getObjectType :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	tmp_size = strlen(obj->dico);
+	start_ptr = obj->dico;
+
+	// skip first dico delimiter
+	while(start_ptr[0] == '<'){
+		start_ptr ++;
+	}
+
+	// Search /Type keyword (but outbound of a sub dictionary)
+	while(tmp_size >= 5 && type_flag == 0){
+
+		// open sub dico
+		if(strncmp(start_ptr,"<<",2 ) == 0 ){
+			sub ++;
+			start_ptr += 2;
+			tmp_size = strlen(obj->dico) - (int)(start_ptr - obj->dico);
+			continue;
+		}
+
+		// close sub dico
+		if(strncmp(start_ptr,">>",2 ) == 0 ){
+			sub --;
+			start_ptr += 2;
+			tmp_size = strlen(obj->dico) - (int)(start_ptr - obj->dico);
+			continue;
+		}
+
+		if(sub == 0 && strncmp(start_ptr,"/Type",5) == 0 && start_ptr[5] != '1' && start_ptr[5] != '2' ){
+			type_flag ++;
+			continue;
+		}
+
+		start_ptr++;
+		tmp_size = strlen(obj->dico) - (int)(start_ptr - obj->dico);
+
+	}
+
+	// if type found
+	if(type_flag > 0){
+
+		// skip /Type string and white space.
+		start_ptr += 5;
+
+		while(start_ptr[0] == ' '){
+			start_ptr ++;
+		}
+
+		end_ptr = start_ptr+1;
+
+		while( (end_ptr[0] >= 'a' && end_ptr[0] <= 'z') || (end_ptr[0] >='A' && end_ptr[0] <='Z' ) || (end_ptr[0] >='0' && end_ptr[0] <= '9') ){
+			end_ptr ++;
+			type_size ++;
+		}
+
+		if(type_size == 0)
+			return ERROR_INVALID_OBJ_TYPE;
+
+		type_size ++; // add it for '/'
+		type = (char*)calloc(type_size+1,sizeof(char));
+		type[type_size]= '\0';
+
+		memcpy(type,start_ptr,type_size);
+		obj->type = type;
+
+	}
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
@@ -1909,7 +1995,11 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 	}
 
 	retcode = pdf_parse_object_dico(obj);
-	if(retcode != ERROR_SUCCESS || retcode != ERROR_OBJ_DICO_OBFUSCATION)
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION)
+		return retcode;
+
+	retcode = pdf_parse_object_type(obj);
+	if(retcode != ERROR_SUCCESS)
 		return retcode;
 
 
