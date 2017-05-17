@@ -1800,6 +1800,35 @@ char * get_ref_stepback_from_ptr(char * obj_ptr, int ptr_size, int ptr_limit){
 }
 
 
+int pdf_parse_object_dico(struct pdfObject * obj){
+
+	char * dico;
+	char * hexa_decoded;
+	int retcode = ERROR_SUCCESS;
+
+	if(obj == NULL || obj->content == NULL || obj->content_size <= 0){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	dico = get_dico_from_data(obj->content, obj->content_size);
+	if(dico == NULL){
+		return ERROR_OBJ_DICO_NOT_FOUND;
+	}
+
+	hexa_decoded = decode_hexa_obfuscation(dico);
+
+	if(hexa_decoded != NULL){
+		free(dico);
+		obj->dico = hexa_decoded;
+		retcode = ERROR_OBJ_DICO_OBFUSCATION;
+	}else{
+		obj->dico = dico;
+	}
+
+	return retcode;
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
