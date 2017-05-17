@@ -1800,6 +1800,75 @@ char * get_ref_stepback_from_ptr(char * obj_ptr, int ptr_size, int ptr_limit){
 }
 
 
+char * decode_hexa_obfuscation(char * dico){
+
+	int size;
+	int is_space_hexa = 1;
+	char * decoded_dico = NULL;
+	char * start;
+	char * hexa;
+	char * hexa_decoded;
+	char * tmp_dico;
+
+
+	if (dico == NULL) {
+		err_log("decode_hexa_obfuscation :: invalid parameter\n");
+		return NULL;
+	}
+
+	hexa = (char*)calloc(4,sizeof(char));
+	hexa[3] = '\0';
+
+	hexa_decoded = (char*)calloc(2,sizeof(char));
+	hexa_decoded[1] = '\0';
+
+	start = dico;
+	size = strlen(dico);
+
+	tmp_dico = (char*)calloc(size+1,sizeof(char));
+	tmp_dico[size]= '\0';
+	memcpy(tmp_dico, dico, size);
+
+	while(size >= 3 && (start = getHexa(start, size)) != NULL ){
+
+		strncpy(hexa, start,3);
+
+		printf("hexa = %s\n",hexa);
+
+		// #20 = space - #2F = '/' (slash) - #E9 = é - #2C = ','
+		if(strcmp(hexa,"#20") != 0 && strcmp(hexa,"#2F") != 0 && strcmp(hexa,"#E9") != 0 && strcmp(hexa,"#2C") != 0){
+
+			is_space_hexa = 0;
+
+			os_sscanf(hexa,"#%x",&hexa_decoded[0]);
+
+			decoded_dico = replaceInString(tmp_dico,hexa,hexa_decoded);
+			printf("decoded_dico = %s\n",decoded_dico);
+
+			if(decoded_dico != NULL && decoded_dico != tmp_dico){
+				free(tmp_dico);
+				tmp_dico = decoded_dico;
+			}
+
+		}
+
+		start += 3;
+		size = strlen(dico) - (int)(start - dico);
+
+	}
+
+	if(is_space_hexa == 1){
+		free(tmp_dico);
+	}
+
+	free(hexa);
+	free(hexa_decoded);
+
+	return decoded_dico;
+
+}
+
+
 int pdf_parse_object_dico(struct pdfObject * obj){
 
 	char * dico;
