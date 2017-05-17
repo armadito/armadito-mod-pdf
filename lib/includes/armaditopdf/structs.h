@@ -139,7 +139,10 @@ struct pdfDocument{
 
 struct pdfDocument* initPDFDocument();
 struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version);
-struct pdfObject* initPDFObject();
+struct pdfObject* initPDFObject(); // deprecated
+struct pdfObject* init_pdf_object(char * ref, char * content, int obj_size, int offset);
+void free_all_pdf_objects(struct pdfObject * obj);
+int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj);
 struct pdfTrailer* initPDFTrailer();
 struct pdfTrailer * init_pdf_trailer(char * content, unsigned int size);
 

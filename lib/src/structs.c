@@ -325,7 +325,7 @@ void free_pdf_document(struct pdfDocument * pdf ){
 		pdf->testObjAnalysis = NULL;
 	}
 
-	freePDFObjectStruct(pdf->objects);
+	free_all_pdf_objects(pdf->objects);
 	free_pdf_trailer(pdf->trailers);
 
 	free(pdf);
@@ -443,13 +443,120 @@ struct pdfObject* initPDFObject(){
 	obj->next = NULL;
 	obj->stream_size = 0;
 	obj->tmp_stream_size = 0;
-	obj->content_size = 0;
+	obj->content_size = 0;		// TODO: change to obj->size
 	obj->decoded_stream_size = 0;
 	obj->errors = 0;
 	
 	return obj;
 
 }
+
+
+struct pdfObject* init_pdf_object(char * ref, char * content, int obj_size, int offset){
+
+	struct pdfObject * obj;
+
+	obj = (struct pdfObject *)calloc(1,sizeof(struct pdfObject));
+	if(obj == NULL){
+		return NULL;
+	}
+
+	obj->reference = ref;
+	obj->content = content;
+	obj->content_size = obj_size;
+	obj->offset = offset;
+
+	return obj;
+}
+
+void free_pdf_object(struct pdfObject * obj){
+
+	if(obj == NULL)
+		return;
+
+	if(obj->content != NULL){
+		free(obj->content);
+		obj->content = NULL;
+	}
+
+	if(obj->reference != NULL){
+		free(obj->reference);
+		obj->reference = NULL;
+	}
+
+	if(obj->dico != NULL){
+		free(obj->dico);
+		obj->dico = NULL;
+	}
+
+	if(obj->stream != NULL){
+		free(obj->stream);
+		obj->stream = NULL;
+	}
+
+	if(obj->type != NULL){
+		free(obj->type);
+		obj->type = NULL;
+	}
+
+	if(obj->filters != NULL){
+		free(obj->filters);
+		obj->filters = NULL;
+	}
+
+	if(obj->decoded_stream != NULL){
+		free(obj->decoded_stream);
+		obj->decoded_stream = NULL;
+	}
+
+	free(obj);
+	obj=NULL;
+
+	return;
+}
+
+void free_all_pdf_objects(struct pdfObject * obj){
+
+	struct pdfObject * tmp;
+
+	if(obj == NULL)
+		return ;
+
+	while(obj != NULL){
+		tmp = obj;
+		obj = obj->next;
+		free_pdf_object(tmp);
+	}
+
+	return;
+}
+
+int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj){
+
+	struct pdfObject * tmp;
+
+	if(pdf == NULL || obj == NULL){
+		err_log("add_pdf_object :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	if(pdf->objects == NULL){
+		pdf->objects = obj;
+		return EXIT_SUCCESS;
+	}
+
+	tmp = pdf->objects;
+
+	while(tmp->next != NULL){
+		// TODO: Check object reference collision.
+		tmp = tmp->next;
+	}
+
+	tmp->next = obj;
+
+	return EXIT_SUCCESS;
+}
+
 
 
 /* DEPRECATED
