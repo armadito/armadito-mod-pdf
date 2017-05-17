@@ -1800,6 +1800,25 @@ char * get_ref_stepback_from_ptr(char * obj_ptr, int ptr_size, int ptr_limit){
 }
 
 
+int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
+
+	char * dico;
+	int retcode = 0;
+
+	if(obj == NULL || pdf == NULL){
+		err_log("Invalid object or pdf structs\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	retcode = pdf_parse_object_dico(obj);
+	if(retcode != ERROR_SUCCESS || retcode != ERROR_OBJ_DICO_OBFUSCATION)
+		return retcode;
+
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_parse_objects(struct pdfDocument * pdf){
 
 	int retcode = EXIT_SUCCESS;
