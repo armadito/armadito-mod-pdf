@@ -2010,12 +2010,11 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 int pdf_parse_objects(struct pdfDocument * pdf){
 
 	int retcode = EXIT_SUCCESS;
-	int size, obj_size, tmp_size=0, ptr_limit=0;
+	int size, obj_size;
 	char * obj_ptr;
-	char * endobj_ptr, *tmp_endobj;
+	char * endobj_ptr;
 	char * content;
 	char * obj_ref;
-	unsigned int ref_size = 0;
 	unsigned int offset = 0;
 	struct pdfObject * obj;
 
