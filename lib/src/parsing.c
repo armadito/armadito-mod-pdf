@@ -1984,6 +1984,64 @@ int pdf_parse_object_type(struct pdfObject * obj){
 }
 
 
+int pdf_parse_object_stream(struct pdfObject * obj){
+
+
+	char * stream;
+	char * start;
+	char * end;
+	int len = 0;
+
+	if (obj == NULL || obj->content == NULL){
+		err_log("parse_obj_stream :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	// TODO: Skip dictionary if any.
+
+	start = searchPattern(obj->content,"stream",6,obj->content_size);
+	if(start == NULL){
+		return ERROR_SUCCESS;
+	}
+
+	len = obj->content_size -(int)(start - obj->content);
+
+	end = searchPattern(start,"endstream",9,len);
+	if(end == NULL){
+		return ERROR_SUCCESS;
+	}
+
+	// Remove white space after "stream" and before "endstream"
+	start += 6;
+	while(start[0] == '\n' || start[0] == '\r'){
+		start ++;
+	}
+
+	end --;
+	while(end[0] == '\n' || end[0] == '\r'){
+		end --;
+	}
+	end++;
+
+	len = (int)(end-start);
+	if(len <= 0 ){
+		warn_log("parse_obj_stream :: Empty stream content in object %s\n", obj->reference);
+		return ERROR_INVALID_OBJ_STREAM;
+	}
+
+	obj->stream_size = len;
+	obj->tmp_stream_size = obj->stream_size;
+
+	stream = (char*)calloc(len+1,sizeof(char));
+	stream[len]='\0';
+	memcpy(stream,start,len);
+
+	obj->stream = stream;
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
@@ -1999,6 +2057,10 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 		return retcode;
 
 	retcode = pdf_parse_object_type(obj);
+	if(retcode != ERROR_SUCCESS)
+		return retcode;
+
+	retcode = pdf_parse_object_stream(obj);
 	if(retcode != ERROR_SUCCESS)
 		return retcode;
 
