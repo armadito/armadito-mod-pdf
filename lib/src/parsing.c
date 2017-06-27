@@ -2042,6 +2042,48 @@ int pdf_parse_object_stream(struct pdfObject * obj){
 }
 
 
+char * obj_get_stream_filters(struct pdfObject * obj, int * retcode){
+
+	char * start;
+	int len = 0;
+	char * filters = NULL;
+
+	if (obj == NULL || obj->dico == NULL){
+		err_log("obj_get_stream_filters :: invalid parameter\n");
+		*retcode = ERROR_INVALID_PARAMETERS;
+		return NULL;
+	}
+
+	start = searchPattern(obj->dico,"/Filter",7,strlen(obj->dico));
+	if( start == NULL ){
+		*retcode = ERROR_NO_STREAM_FILTERS;
+		return NULL;
+	}
+
+	start+=7;
+
+	// skip white spaces
+	while(start[0] == ' ' || start[0] == '\n' || start[0] == '\r')
+		start++;
+
+	len = strlen(obj->dico) - (int)(start - obj->dico);
+
+	if(start[0] == '/'){
+
+		filters = get_name_object(start,len);
+
+	}else if(start[0] == '['){
+
+		filters = getDelimitedStringContent(start,"[","]",len);
+	}
+
+	if(filters == NULL)
+		*retcode = ERROR_INVALID_STREAM_FILTERS;
+
+	return filters;
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
@@ -2063,7 +2105,6 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 	retcode = pdf_parse_object_stream(obj);
 	if(retcode != ERROR_SUCCESS)
 		return retcode;
-
 
 	return ERROR_SUCCESS;
 }
@@ -2147,7 +2188,6 @@ int pdf_parse_objects(struct pdfDocument * pdf){
 
 
 	return retcode;
-
 }
 
 /* DEPRECATED
