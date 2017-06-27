@@ -2084,6 +2084,138 @@ char * obj_get_stream_filters(struct pdfObject * obj, int * retcode){
 }
 
 
+int obj_decode_stream(struct pdfObject * obj){
+
+	int retcode = ERROR_SUCCESS;
+	char * filters, *f;
+	char * start, * end;
+	char * stream, *tmp;
+	int len = 0;
+	int stream_size;
+	int filter_applied = 0;
+
+
+	if(obj == NULL || obj->stream == NULL)
+		return ERROR_INVALID_PARAMETERS;
+
+	filters = obj_get_stream_filters(obj, &retcode);
+	if(filters == NULL){
+		return retcode;
+	}
+
+	printf("filters = %s\n",filters);
+	end = filters;
+
+	stream = (char*)calloc(obj->stream_size+1,sizeof(char));
+	stream[obj->stream_size]='\0';
+	memcpy(stream, obj->stream, obj->stream_size);
+	stream_size = obj->stream_size;
+
+
+	while((start = strchr(end, '/')) != NULL && retcode == ERROR_SUCCESS){
+
+		len = strlen(filters) - (int)(start - end);
+		f = get_name_object(end,len);
+		end += strlen(f);
+
+		if( strcmp(f,"/FlateDecode") == 0 || strcmp(f,"/Fl") == 0){
+
+			tmp = FlateDecode(stream, &stream_size, obj);
+			if( tmp == NULL){
+				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
+				retcode = ERROR_STREAM_FLATEDECODE;
+			}
+
+			free(stream);
+			stream = tmp;
+			filter_applied ++;
+
+		}else if( strcmp(f,"/ASCIIHexDecode") == 0 || strcmp(f,"/AHx") == 0){
+
+			/*tmp = ASCIIHexDecode(stream,&stream_size,obj);
+			if( tmp == NULL){
+				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
+				retcode = ERROR_STREAM_ASCIIHEXDECODE;
+			}
+
+			free(stream);
+			stream = tmp;
+			filter_applied ++;
+			*/
+
+		}else if( strcmp(f,"/ASCII85Decode") == 0 || strcmp(f,"/A85") == 0){
+
+			/*tmp = ASCII85Decode(stream,&stream_size,obj);
+			if( tmp == NULL){
+				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
+				retcode = ERROR_STREAM_ASCII85DECODE;
+			}
+
+			free(stream);
+			stream = tmp;
+			filter_applied ++;
+			*/
+
+		}else if( strcmp(f,"/LZWDecode") == 0 || strcmp(f,"/LZW") == 0){
+
+			/*tmp = LZWDecode(stream,&stream_size,obj);
+			if( tmp == NULL){
+				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
+				retcode = ERROR_STREAM_LZWDECODE;
+			}
+
+			free(stream);
+			stream = tmp;
+			filter_applied ++;
+			*/
+
+		}else if( strcmp(f,"/RunLengthDecode") == 0 || strcmp(f,"/RL") == 0){
+
+			err_log("obj_decode_stream :: RunLengthDecode filter not implemented yet!\n");
+			retcode = ERROR_FILTER_NOT_IMPLEMENTED;
+
+		}else if( strcmp(f,"/CCITTFaxDecode") == 0 || strcmp(f,"/CCF") == 0){
+
+			/*tmp = CCITTFaxDecode(stream,&stream_size,obj);
+			if( tmp == NULL){
+				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
+				retcode = ERROR_STREAM_CCITTFAXDECODE;
+			}
+
+			free(stream);
+			stream = tmp;
+			filter_applied ++;
+			*/
+
+		}else{
+
+			err_log("obj_decode_stream :: %s filter not implemented!\n");
+			retcode = ERROR_FILTER_NOT_IMPLEMENTED;
+
+		}
+
+		free(f);
+
+	}
+
+	free(filters);
+
+	if(filter_applied == 0)
+		retcode = ERROR_FILTER_NOT_IMPLEMENTED;
+
+
+	if(retcode == ERROR_SUCCESS && stream != NULL){
+		obj->decoded_stream = stream ;
+		obj->decoded_stream_size = stream_size;
+	}
+	else if (stream != NULL) {
+		free(stream);
+	}
+
+	return retcode;
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
