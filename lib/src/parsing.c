@@ -975,7 +975,7 @@ char * getStreamFilters(struct pdfObject * obj){
 }
 
 
-/*
+/* DEPRECATED
 decodeObjectStream() :: decode an object stream according to the filters applied
 parameters:
 - struct pdfObject * obj (pdf object pointer)
@@ -2216,6 +2216,259 @@ int obj_decode_stream(struct pdfObject * obj){
 }
 
 
+int pdf_extract_objstm(struct pdfDocument * pdf, struct pdfObject * obj){
+
+	int retcode = ERROR_SUCCESS;
+	int first = 0, num = 0, len = 0, i = 0, check = 0;
+	int obj_off = 0, obj_ref_len = 0, obj_size = 0;
+	int stream_size = 0;
+	int * obj_offsets;
+	char * stream;
+	char * start;
+	char * obj_data_ptr;
+	char * obj_num_s;
+	char * obj_off_s;
+	char * obj_ref;
+	char * obj_content;
+
+	struct pdfObject * comp_obj;
+
+	if( pdf == NULL || obj == NULL ){
+		err_log("pdf_extract_objstm :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	retcode = obj_decode_stream(obj);
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_NO_STREAM_FILTERS)
+		return retcode;
+
+	if(retcode == ERROR_NO_STREAM_FILTERS){
+		stream = obj->stream;
+		stream_size = obj->stream_size;
+	}else{
+		stream = obj->decoded_stream;
+		stream_size = obj->decoded_stream_size;
+	}
+
+	// Get the number of object embedded in the stream => N in the dictionary
+	start = searchPattern(obj->dico, "/N", 2, strlen(obj->dico));
+	if ( start == NULL){
+		err_log("pdf_extract_objstm :: Entry /N not found in Object stream dictionary %s\n",obj->reference);
+		return ERROR_INVALID_OBJSTM_DICO;
+	}
+
+	start +=2;
+	while(start[0] == ' '){
+		start ++;
+	}
+
+	len = strlen(obj->dico) - (int)(start - obj->dico);
+	num = getNumber(start,len);
+	if(num <= 0){
+		err_log("pdf_extract_objstm :: Incorrect /N entry in object stream %s\n",obj->reference);
+		return ERROR_INVALID_OBJSTM_DICO;
+	}
+
+	// Get the byte offset of the first compressed object "/First" entry in dico
+	if ((start = searchPattern(obj->dico, "/First", 6, strlen(obj->dico))) == NULL){
+		err_log("pdf_extract_objstm :: Entry /First not found in Object stream dictionary %s\n", obj->reference);
+		return ERROR_INVALID_OBJSTM_DICO;
+	}
+
+	start +=6;
+	while (start[0] == ' ')
+		start++;
+
+	len = strlen(obj->dico) - (int)(start - obj->dico);
+	first = getNumber(start, len);
+	if (first <= 0){
+		err_log("pdf_extract_objstm :: Incorrect /First entry in object stream %s\n", obj->reference);
+		return ERROR_INVALID_OBJSTM_DICO;
+	}
+
+	start = stream;
+	len = stream_size;
+
+	obj_offsets = (int*)calloc(num, sizeof(int));
+	if ( obj_offsets == NULL){
+		return ERROR_INSUFFICENT_MEMORY;
+	}
+
+	// Get objects number and offset
+	for(i = 0 ; i< num; i++){
+
+		// check if the offset if out-of-bound
+		check = start - stream;
+		if (check >= stream_size){
+			err_log("pdf_extract_objstm :: bad offset in object stream %s\n", obj->reference);
+			free(obj_offsets);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		// Get the object number
+		obj_num_s = getNumber_s(start, len);
+		if (obj_num_s == NULL){
+			err_log("pdf_extract_objstm :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_offsets);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		len -=  strlen(obj_num_s);
+		start += strlen(obj_num_s);
+		free(obj_num_s);
+
+		// Move ptr for white space
+		while(start[0] == ' '){
+			start ++ ;
+			len--;
+		}
+
+		// Get the object offset
+		if ((obj_off_s = getNumber_s(start, len)) == NULL){
+			err_log("pdf_extract_objstm :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_offsets);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		obj_off = atoi(obj_off_s);
+		obj_offsets[i] = obj_off;
+
+		len -=  strlen(obj_off_s);
+		start += strlen(obj_off_s);
+		free(obj_off_s);
+
+		// Move ptr for white space
+		while(start[0] == ' '){
+			start ++ ;
+			len--;
+		}
+
+		// calc the length of the object according to the offset of the next object.
+	}
+
+
+	start = stream;
+	len = stream_size;
+
+	for(i = 0 ; i< num; i++){
+
+		// Get the object number
+		obj_num_s = getNumber_s(start, len);
+		if (obj_num_s == NULL){
+			err_log("pdf_extract_objstm :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_offsets);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		// Build the object reference
+		obj_ref_len = strlen(obj_num_s) + 6;
+		obj_ref = (char*)calloc(obj_ref_len+1,sizeof(char));
+		obj_ref[obj_ref_len] = '\0';
+
+		sprintf(obj_ref, "%s 0 obj", obj_num_s);
+
+		// move ptr according to the size of the scanned number.
+		len -=  strlen(obj_num_s);
+		start += strlen(obj_num_s);
+
+		// skip white space
+		while(start[0] == ' '){
+			start ++ ;
+			len--;
+		}
+
+		// Get the object offset
+		if ((obj_off_s = getNumber_s(start, len)) == NULL){
+			err_log("pdf_extract_objstm :: Can't extract object from object stream :: obj_ref = %s\n", obj->reference);
+			free(obj_offsets);
+			free(obj_num_s);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		obj_off = atoi(obj_off_s);
+		obj_offsets[i] = obj_off;
+
+		len -=  strlen(obj_off_s);
+		start += strlen(obj_off_s);
+
+		// Move ptr for white space
+		while(start[0] == ' '){
+			start ++ ;
+			len--;
+		}
+
+		/*
+		Hint:
+			- offset in stream = off + first
+			- real offset = start + off + first.
+		*/
+
+		// offset of the object content = stream ptr + ptr of the first obj + offset of the obj.
+		obj_data_ptr = stream + first + obj_off;
+
+		// check if the offset if out-of-bound
+		check = obj_data_ptr - stream;
+		if (check >= stream_size){
+			err_log("pdf_extract_objstm :: bad offset in object stream %s\n", obj->reference);
+			free(obj_offsets);
+			free(obj_num_s);
+			free(obj_off_s);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		// calc the length of the object according to the offset of the next object.
+		if( i != num-1 ){
+			obj_size  = (obj_offsets[i+1] - obj_off);
+		}else{
+			// calc according to the end of the stream
+			obj_size =  stream_size - (int)(obj_data_ptr - stream );
+		}
+
+		if (obj_size <= 0){
+			err_log("pdf_extract_objstm :: bad object length! :: obj_len = %d\n", obj_size);
+			free(obj_offsets);
+			free(obj_num_s);
+			free(obj_off_s);
+			return ERROR_INVALID_OBJSTM_FORMAT;
+		}
+
+		obj_content = (char*)calloc(obj_size + 1, sizeof(char));
+		obj_content[obj_size] = '\0';
+		memcpy(obj_content,obj_data_ptr,obj_size);
+
+		comp_obj = init_pdf_object(obj_ref, obj_content, obj_size, 0);
+		if(comp_obj == NULL){
+			free(obj_offsets);
+			free(obj_num_s);
+			free(obj_off_s);
+			return ERROR_INSUFFICENT_MEMORY;
+		}
+
+		// Continue on error.
+		retcode = pdf_parse_obj_content(pdf, comp_obj);
+		if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_NOT_FOUND){
+			warn_log("pdf_extract_objstm :: Parsing obj (%s) content failed with code: 0x%x\n",obj_ref, retcode);
+		}
+
+		retcode = add_pdf_object(pdf, comp_obj);
+		if(retcode != ERROR_SUCCESS){
+			err_log("pdf_extract_objstm :: Adding obj %s failed!\n");
+			free(obj_offsets);
+			free(obj_num_s);
+			free(obj_off_s);
+			free_pdf_object(comp_obj);
+			return retcode;
+		}
+
+		free(obj_off_s);
+		free(obj_num_s);
+
+	}
+
+	free(obj_offsets);
+}
+
+
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
 	char * dico;
@@ -2237,6 +2490,13 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 	retcode = pdf_parse_object_stream(obj);
 	if(retcode != ERROR_SUCCESS)
 		return retcode;
+
+	if( obj->type != NULL && strcmp(obj->type,"/ObjStm") == 0 ){
+
+		retcode = pdf_extract_objstm(pdf, obj);
+		if(retcode != ERROR_SUCCESS)
+			return retcode;
+	}
 
 	return ERROR_SUCCESS;
 }
