@@ -112,7 +112,7 @@ void * searchPattern(char* src, char* pat , int pat_size ,  int size){
 	
 	
 	if( size < pat_size || src == NULL || pat == NULL || pat_size == 0 || size == 0){
-		err_log("searchPattern :: invalid parameters\n");
+		//err_log("searchPattern :: invalid parameters\n");
 		//dbg_log("searchPattern :: src = %s :: pat = %s :: pat_size = %d :: size = %d\n", src, pat, pat_size, size);
 		return NULL;
 	}
@@ -645,6 +645,8 @@ char * getDelimitedStringContent(char * src, char * delimiter1, char * delimiter
 }
 
 
+
+
 /*
 getIndirectRefInString() :: search an object indirect reference in a string starting in "ptr"
 parameters:
@@ -795,6 +797,7 @@ returns: (char*)
 - the new string with the pattern replaced.
 - NULL if not found or on error.
 TODO :: replaceString :: replace all occurrences. :: in function replaceAll.
+TODO :: return NULL if no occurrence found.
 */
 char * replaceInString(char * src, char * toReplace , char * pat){
 
@@ -1078,4 +1081,34 @@ void printStream(char * stream, int size){
 	
 
 
+}
+
+
+char * get_name_object(char * data, int size){
+
+	char * nameObj = NULL;
+	char * ptr;
+	int len = 0;
+
+	if(data == NULL || size <= 0)
+		return NULL;
+
+	if(data[0] != '/')
+		return NULL;
+
+	ptr = data;
+
+	do{
+		ptr ++;
+		len ++;
+	}while(len < size && ((ptr[0] >='a' && ptr[0] <='z') || (ptr[0] >='A' && ptr[0] <='Z' ) || (ptr[0] >='0' && ptr[0] <= '9')));
+
+	nameObj = (char*)calloc(len,sizeof(char));
+	if( nameObj == NULL)
+		return NULL;
+
+	nameObj[len] = '\0';
+	memcpy(nameObj,data,len);
+
+	return nameObj;
 }
