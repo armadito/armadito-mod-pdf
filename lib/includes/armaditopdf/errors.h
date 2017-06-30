@@ -7,11 +7,11 @@
 #define ERROR_SUCCESS 0
 
 // Errors flags
-#define ERROR_ON_LOAD 				(1 << 4)	/* Errors during loading */
-#define ERROR_ON_PARSING 			(2 << 4)	/* Errors during pdf parsing */
-#define ERROR_ON_TRAILER_PARSING 	(3 << 4)	/* Errors during trailer parsing */
-#define ERROR_ON_XREF_PARSING 		(4 << 4)	/* Errors during xref parsing */
-#define ERROR_ON_OBJ_PARSING 		(5 << 4)	/* Errors during obj parsing */
+#define ERROR_ON_LOAD 				(1 << 8)	/* Errors during loading */
+#define ERROR_ON_PARSING 			(2 << 8)	/* Errors during pdf parsing */
+#define ERROR_ON_TRAILER_PARSING 	(3 << 8)	/* Errors during trailer parsing */
+#define ERROR_ON_XREF_PARSING 		(4 << 8)	/* Errors during xref parsing */
+#define ERROR_ON_OBJ_PARSING 		(5 << 8)	/* Errors during obj parsing */
 
 
 #define ERROR_INVALID_FD			1 		/* (invalid file handle or file descriptor) */
@@ -42,3 +42,8 @@
 #define ERROR_FILTER_NOT_IMPLEMENTED		24
 #define ERROR_INVALID_OBJSTM_DICO 	25
 #define ERROR_INVALID_OBJSTM_FORMAT 26
+#define ERROR_ENCRYPTED_CONTENT 	27
+
+#define ERROR_OBJ_REF_NOT_FOUND 	28
+#define ERROR_INVALID_XREF_OFFSET 	29
+#define ERROR_INVALID_XREF_FORMAT	30
