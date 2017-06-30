@@ -281,6 +281,57 @@ int pdf_check_xref(struct pdfDocument * pdf, unsigned int xref_offset){
 }
 
 
+int pdf_check_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
+
+	int retcode = ERROR_SUCCESS;
+	char * start = NULL;
+	int len = 0;
+	int xref_offset;
+
+	if(pdf == NULL || trailer == NULL){
+		err_log("check_trailer :: invalid parameters!\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	// check if the pdf is encrypted.
+	if(trailer->dico != NULL && searchPattern(trailer->dico, "/Encrypt",8,strlen(trailer->dico)) != NULL ){
+		warn_log("check_xref_obj :: Encrypted content found!\n");
+		return ERROR_ENCRYPTED_CONTENT;
+	}
+
+	// get the offset of the XRef object
+	start = searchPattern(trailer->content, "startxref", 9 , strlen(trailer->content));
+	if(start == NULL){
+		err_log("check_trailer :: XRef offset not found in trailer\n");
+		return ERROR_BAD_TRAILER_FORMAT;
+	}
+
+	start += 9;
+	while(start[0] == '\r' || start[0] == '\n' || start[0] == ' '){
+		start ++;
+	}
+
+	len = trailer->size - (int)(start - trailer->content);
+	xref_offset = getNumber(start,len);
+
+	if(xref_offset <= 0 || xref_offset > pdf->size ){
+		warn_log("check_trailer :: Bad Wrong xref object offset %d\n",xref_offset);
+		return ERROR_BAD_TRAILER_FORMAT;
+	}
+
+	// if the offset is higher than th PDF size
+	if(xref_offset > pdf->size){
+		warn_log("check_trailer :: Wrong xref object offset %d\n",xref_offset);
+		return ERROR_BAD_TRAILER_FORMAT;
+	}
+
+	// check the xref table or object offset.
+	retcode = pdf_check_xref(pdf,xref_offset);
+
+	return retcode;
+}
+
+
 /*
 documentStructureAnalysis() :: check the consitency of the Cross-reference table
 parameters:
