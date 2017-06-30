@@ -33,6 +33,7 @@ int documentStructureAnalysis(struct pdfDocument * pdf);
 int checkXRef(struct pdfDocument * pdf);
 int checkEmptyDocument(struct pdfDocument * pdf);
 int checkTrailer(struct pdfDocument * pdf);
+int pdf_check_valid_trailer(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions prototypes *****/
@@ -45,5 +46,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 int findDangerousKeywords(char * stream, struct pdfDocument * pdf, struct pdfObject * obj);
 int getURI(struct pdfDocument * pdf, struct pdfObject * obj);
 int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf);
+
+
 
 #endif

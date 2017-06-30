@@ -332,6 +332,31 @@ int pdf_check_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 }
 
 
+int pdf_check_valid_trailer(struct pdfDocument * pdf){
+
+	int retcode = ERROR_SUCCESS;
+	struct pdfTrailer * trailer;
+
+	if(pdf == NULL || pdf->trailers == NULL){
+		err_log("check_valid_trailer :: invalid parameters!\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	trailer = pdf->trailers;
+
+	while(trailer != NULL){
+
+		retcode = pdf_check_trailer(pdf, trailer);
+		if(retcode == ERROR_SUCCESS)
+			return retcode;
+
+		trailer = trailer->next;
+	}
+
+	return retcode;
+}
+
+
 /*
 documentStructureAnalysis() :: check the consitency of the Cross-reference table
 parameters:
