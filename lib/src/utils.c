@@ -1112,3 +1112,72 @@ char * get_name_object(char * data, int size){
 
 	return nameObj;
 }
+
+
+char * get_obj_ref(char * data, int size){
+
+	char * ref = NULL;
+	char * tmp;
+	int len = 0;
+	char * obj_num = NULL;
+	char * gen_num = NULL;
+
+	if (data == NULL || size <= 8) {
+		return NULL;
+	}
+
+	tmp = data;
+	len = size;
+
+	obj_num = getNumber_s(tmp, len);
+	if (obj_num == NULL)
+		return NULL;
+
+	tmp += strlen(obj_num);
+	len -=  strlen(obj_num);
+
+	if(tmp[0] != ' '){
+		free(obj_num);
+		return NULL;
+	}
+
+	// skip white space
+	tmp ++ ;
+	len --;
+
+	gen_num = getNumber_s(tmp,len);
+	if(gen_num == NULL) {
+		free(obj_num);
+		return NULL;
+	}
+
+	tmp += strlen(gen_num);
+	len -=  strlen(obj_num);
+
+	if(tmp[0] != ' '){
+		free(obj_num);
+		free(gen_num);
+		return NULL;
+	}
+
+	// skip white space
+	tmp ++ ;
+	len --;
+
+	if(strncmp(tmp,"obj",3) != 0){
+		free(obj_num);
+		free(gen_num);
+		return NULL;
+	}
+
+	len = strlen(obj_num) + strlen(gen_num) + 5;
+	ref = (char*)calloc(len+1,sizeof(char));
+	ref[len] = '\0';
+
+	sprintf(ref,"%s %s obj",obj_num,gen_num);
+
+	free(gen_num);
+	free(obj_num);
+
+	return ref;
+}
