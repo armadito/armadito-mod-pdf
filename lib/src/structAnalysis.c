@@ -216,6 +216,71 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 }
 
 
+int pdf_check_xref(struct pdfDocument * pdf, unsigned int xref_offset){
+
+	int retcode = ERROR_SUCCESS;
+	char * xref;
+	char * start;
+	int len = 0;
+
+	if(pdf == NULL || xref_offset <= 0){
+		err_log("check_xref :: invalid parameters!\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	// Goto the xref offset and check the "xref" keyword.
+	xref = (char*)calloc(5, sizeof(char));
+	xref[4] = '\0';
+
+	if(pdf->fh != NULL){
+
+		fseek(pdf->fh, 0, SEEK_SET);
+		fseek(pdf->fh, xref_offset, SEEK_SET);
+		fread(xref, 1, 4, pdf->fh);
+	}
+	else if (pdf->fd >= 0){
+
+		os_lseek(pdf->fd, 0, SEEK_SET);
+		os_lseek(pdf->fd, xref_offset, SEEK_SET);
+		os_read(pdf->fd, xref, 4);
+	}
+	else{
+		err_log(" check_xref :: invalid file handle or file descriptor\n");
+		return ERROR_INVALID_FD;
+	}
+
+	if( strcmp(xref, "xref") == 0){
+
+		free(xref);
+		// TOFIX: real offset will change if comments have been removed.
+		start = pdf->content + xref_offset;
+		len = pdf->size - (int)(start - pdf->content);
+
+		xref = getDelimitedStringContent(start, "xref" , "trailer" , len);
+		if(xref == NULL){
+			return ERROR_INVALID_XREF_FORMAT;
+		}
+
+		retcode = check_xref_table(pdf, xref, strlen(xref));
+		free(xref);
+
+	}else{
+
+		free(xref);
+		start = pdf->content + xref_offset;
+		len = pdf->size - (int)(start - pdf->content);
+
+		// get object reference at this offset.
+		xref = get_obj_ref(start,len);
+
+		retcode = check_xref_obj(pdf, xref);
+		free(xref);
+	}
+
+	return retcode;
+}
+
+
 /*
 documentStructureAnalysis() :: check the consitency of the Cross-reference table
 parameters:
