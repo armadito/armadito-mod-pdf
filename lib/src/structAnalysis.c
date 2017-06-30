@@ -62,6 +62,81 @@ int check_xref_obj(struct pdfDocument * pdf, char * xref_obj_ref){
 }
 
 
+int check_xref_table_entry(struct pdfDocument * pdf, char * entry){
+
+	int retcode = ERROR_SUCCESS;
+	int len = 0;
+	char * off_s;
+	char * gen_s;
+
+	if( pdf == NULL || entry == NULL ){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	len = strlen(entry);
+
+	off_s = getNumber_s(entry, len);
+	if (off_s == NULL || strlen(off_s) != 10){
+		err_log("check_xref_table_entry :: bad offset format in xref table! :: offset = %s :: xref = %s\n", off_s,entry);
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+	free(off_s);
+
+	// skip 10 bytes corresponding to obj offset.
+	entry += 10;
+	len -= 10;
+
+	// check white space between offset and generation number.
+	if (*entry != ' '){
+		err_log("check_xref_table_entry :: bad xref format!\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	// skip white space
+	entry++;
+	len--;
+
+	// Get generation number.
+	gen_s = getNumber_s(entry, len);
+	if(gen_s == NULL || (gen_s != NULL && strlen(gen_s) != 5) ){
+		err_log("check_xref_table_entry :: bad generation number format in xref table!\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	if (strlen(gen_s) != 5){
+		err_log("check_xref_table_entry :: bad generation number format in xref table! :: gen_number = %s\n",gen_s);
+		free(gen_s);
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+	free(gen_s);
+
+	// skip 10 bytes corresponding to obj gen number.
+	entry += 5;
+	len -= 5;
+
+	// check white space between generation number and free flag.
+	if (*entry != ' '){
+		err_log("check_xref_table_entry :: bad xref format!\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	// skip white space
+	entry++;
+	len--;
+
+	if(*entry  != 'n' && *entry != 'f'){
+		err_log("check_xref_table_entry :: bad xref format!\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	// skip flag and white space.
+	entry+=2;
+	len-=2;
+
+	return ERROR_SUCCESS;
+}
+
+
 /*
 documentStructureAnalysis() :: check the consitency of the Cross-reference table
 parameters:
