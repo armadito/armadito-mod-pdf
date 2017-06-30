@@ -26,81 +26,39 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <armaditopdf/utils.h>
 #include <armaditopdf/osdeps.h>
 #include <armaditopdf/log.h>
+#include <armaditopdf/errors.h>
 
 
-// Check the trailer content
-int checkTrailer(struct pdfDocument * pdf){
 
+int check_xref_obj(struct pdfDocument * pdf, char * xref_obj_ref){
 
-	char * start = NULL;
-	char * xref_obj_ref = NULL;
-	struct pdfTrailer * trailer = NULL;
-	int len = 0;
-	int xref_offset;
+	int retcode = ERROR_SUCCESS;
+	struct pdfObject * obj;
 
-	if(pdf->trailers == NULL){
-		err_log("checkXTrailer :: No trailer found in pdfDocument\n");		
-		return -1;
+	if(pdf == NULL || xref_obj_ref == NULL){
+		return ERROR_INVALID_PARAMETERS;
 	}
 
-	trailer = pdf->trailers;
+	obj = getPDFObjectByRef(pdf,xref_obj_ref);
+	if(obj == NULL){
+		warn_log("check_xref_obj :: obj ref %s not found!\n");
+		return ERROR_OBJ_REF_NOT_FOUND;
+	}
 
-	while(trailer != NULL){
+	if(obj->type != NULL && strcmp(obj->type,"/XRef")== 0){
 
-
-		// trailer with a dico 
-		if(trailer->dico != NULL){
-
-			// TODO
-
-		}else{
-
-			// get the offset of the XRef object
-			start = searchPattern(trailer->content, "startxref", 9 , strlen(trailer->content));
-			if(start == NULL){
-				err_log("checkTrailer :: XRef offset not found in trailer\n");				
-				return -1;
-			}
-
-			start += 9;
-
-			while(start[0] == '\r' || start[0] == '\n' || start[0] == ' '){
-				start ++;
-			}
-
-			len = strlen(trailer->content) - (int)(start - trailer->content);
-
-			xref_offset = getNumber(start,len);
-
-			dbg_log("checkTrailer :: Xref object offset = %d\n",xref_offset);
-
-			if(xref_offset <= 0){
-				trailer = trailer->next;
-				continue;
-			}
-
-			// go to xref object offset
-			//start = pdf->content + xref_offset;
-
-
-			// if the offset is higher than th PDF size
-			if(xref_offset > pdf->size){
-				warn_log("Warning :: checkTrailer :: Wrong xref object offset %d\n",xref_offset);				
-				trailer = trailer->next;
-				continue;
-			}
-
-
+		// check if the pdf is encrypted.
+		if( searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) != NULL  ){
+			warn_log("check_xref_obj :: Encrypted content found!\n");
+			retcode = ERROR_ENCRYPTED_CONTENT;
 		}
 
-		trailer = trailer->next;
+	}else{
 
-
+		retcode = ERROR_INVALID_XREF_OFFSET;
 	}
 
-
-
-	return 0; 
+	return retcode;
 }
 
 
