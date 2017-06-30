@@ -137,6 +137,85 @@ int check_xref_table_entry(struct pdfDocument * pdf, char * entry){
 }
 
 
+int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_size){
+
+	int retcode = ERROR_SUCCESS;
+	char * tmp;
+	int len = 0;
+	int i;
+	int first_obj_num, num_entries;
+	char * first_obj_num_s;
+	char * num_entries_s;
+	char entry[19] = {0};
+	int entry_len = 19;
+
+
+	if( pdf == NULL || xref == NULL || xref_size == 0){
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	// skip "xref" keyword
+	tmp =  xref + 4;
+	len = xref_size - 4;
+
+	// skip white space
+	while(tmp[0] == '\r' || tmp[0] == '\n' || tmp[0] == ' '){
+		tmp++;
+		len --;
+	}
+
+	// Get the object number of the first object described in xref table
+	first_obj_num_s = getNumber_s(tmp,len);
+	if (first_obj_num_s == NULL){
+		err_log("check_xref_table :: can't get first object number\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	// skip number + white space
+	tmp += (strlen(first_obj_num_s) +1);
+	len -= (strlen(first_obj_num_s) +1);
+
+	free(first_obj_num_s);
+
+	// Get the number of entries in the xref table
+	num_entries_s = getNumber_s(tmp,len);
+	if (num_entries_s == NULL){
+		err_log("check_xref_table :: can't get number of entries in xref table\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+	num_entries = atoi(num_entries_s);
+
+	// skip number
+	tmp += strlen(num_entries_s);
+	len -= strlen(num_entries_s);
+	free(num_entries_s);
+
+	// hint after the number of entries it should be '\r' or '\n' not a space.
+	if (*tmp != '\r' && *tmp != '\n'){
+		err_log("check_xref_table :: bad xref format!1\n");
+		return ERROR_INVALID_XREF_FORMAT;
+	}
+
+	// skip white space.
+	tmp++;
+	len--;
+
+	for(i = 0; i< num_entries ; i++){
+
+		// get entry
+		if(len >= entry_len){
+			memcpy(entry, tmp,entry_len);
+			//printf("entry = %s\n",entry);
+			retcode = check_xref_table_entry(pdf, entry);
+		}
+
+		tmp+=entry_len;
+	}
+
+	return retcode;
+}
+
+
 /*
 documentStructureAnalysis() :: check the consitency of the Cross-reference table
 parameters:
