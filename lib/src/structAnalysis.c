@@ -151,6 +151,7 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 
 
 	if( pdf == NULL || xref == NULL || xref_size == 0){
+		err_log("check_xref_table :: invalid parameters\n");
 		return ERROR_INVALID_PARAMETERS;
 	}
 
@@ -272,9 +273,13 @@ int pdf_check_xref(struct pdfDocument * pdf, unsigned int xref_offset){
 
 		// get object reference at this offset.
 		xref = get_obj_ref(start,len);
+		if(xref == NULL){
+			return ERROR_INVALID_XREF_OFFSET;
+		}
 
 		retcode = check_xref_obj(pdf, xref);
 		free(xref);
+
 	}
 
 	return retcode;
@@ -295,7 +300,7 @@ int pdf_check_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 
 	// check if the pdf is encrypted.
 	if(trailer->dico != NULL && searchPattern(trailer->dico, "/Encrypt",8,strlen(trailer->dico)) != NULL ){
-		warn_log("check_xref_obj :: Encrypted content found!\n");
+		warn_log("check_trailer :: Encrypted content found!\n");
 		return ERROR_ENCRYPTED_CONTENT;
 	}
 
