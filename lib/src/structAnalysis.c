@@ -77,7 +77,7 @@ int check_xref_table_entry(struct pdfDocument * pdf, char * entry){
 
 	off_s = getNumber_s(entry, len);
 	if (off_s == NULL || strlen(off_s) != 10){
-		err_log("check_xref_table_entry :: bad offset format in xref table! :: offset = %s :: xref = %s\n", off_s,entry);
+		err_log("check_xref_table_entry :: bad offset format in xref entry! :: offset = %s :: entry = %s\n", off_s,entry);
 		return ERROR_INVALID_XREF_FORMAT;
 	}
 	free(off_s);
@@ -147,7 +147,7 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 	char * first_obj_num_s;
 	char * num_entries_s;
 	char entry[19] = {0};
-	int entry_len = 19;
+	int entry_len = 18;
 
 
 	if( pdf == NULL || xref == NULL || xref_size == 0){
@@ -211,6 +211,12 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 		}
 
 		tmp+=entry_len;
+
+		// skip eol
+		while(tmp[0] == '\r' || tmp[0] == '\n'){
+			tmp++;
+			len --;
+		}
 	}
 
 	return retcode;
