@@ -2100,6 +2100,12 @@ int obj_decode_stream(struct pdfObject * obj){
 	if(obj == NULL || obj->stream == NULL)
 		return ERROR_INVALID_PARAMETERS;
 
+	// Check if the stream is encrypted
+	if(obj->dico != NULL && searchPattern(obj->dico,"/Encrypt",7,strlen(obj->dico)) != NULL ){
+		printf("Encrypted content! %s\n", obj->dico);
+		return ERROR_ENCRYPTED_CONTENT;
+	}
+
 	filters = obj_get_stream_filters(obj, &retcode);
 	if(filters == NULL){
 		return retcode;
