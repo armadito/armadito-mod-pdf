@@ -47,7 +47,7 @@ struct LZWdico{
 /* Functions prototypes */
 
 char * FlateDecode(char * stream, int * stream_size, struct pdfObject* obj);
-char * ASCIIHexDecode(char * stream, struct pdfObject * obj);
+char * ASCIIHexDecode(char * stream, int * stream_size, struct pdfObject * obj);
 char * LZWDecode(char* stream, struct pdfObject * obj);
 char * ASCII85Decode(char * stream, struct pdfObject * obj);
 char * CCITTFaxDecode(char* stream, struct pdfObject * obj);

@@ -1917,7 +1917,7 @@ int obj_decode_stream(struct pdfObject * obj){
 		return retcode;
 	}
 
-	printf("filters = %s\n",filters);
+	dbg_log("obj (%s) filters = %s\n",obj->reference, filters);
 
 	end = filters;
 
@@ -1929,7 +1929,7 @@ int obj_decode_stream(struct pdfObject * obj){
 	while((start = strchr(end, '/')) != NULL && retcode == ERROR_SUCCESS){
 
 		len = strlen(filters) - (int)(start - end);
-		f = get_name_object(end,len);
+		f = get_name_object(start,len);
 		end += strlen(f);
 
 		if( strcmp(f,"/FlateDecode") == 0 || strcmp(f,"/Fl") == 0){
@@ -1946,7 +1946,7 @@ int obj_decode_stream(struct pdfObject * obj){
 
 		}else if( strcmp(f,"/ASCIIHexDecode") == 0 || strcmp(f,"/AHx") == 0){
 
-			/*tmp = ASCIIHexDecode(stream,&stream_size,obj);
+			tmp = ASCIIHexDecode(stream,&stream_size,obj);
 			if( tmp == NULL){
 				err_log("obj_decode_stream :: Decoding obj (%s) stream failed!\n", obj->reference);
 				retcode = ERROR_STREAM_ASCIIHEXDECODE;
@@ -1955,8 +1955,6 @@ int obj_decode_stream(struct pdfObject * obj){
 			free(stream);
 			stream = tmp;
 			filter_applied ++;
-			*/
-
 
 		}else if( strcmp(f,"/ASCII85Decode") == 0 || strcmp(f,"/A85") == 0){
 

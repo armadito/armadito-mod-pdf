@@ -316,75 +316,76 @@ char * FlateDecode(char * stream, int * stream_size, struct pdfObject* obj){
 }
 
 
-/* Decode ASCIIHexDecode Filter */
-char * ASCIIHexDecode(char * stream, struct pdfObject * obj){
+char * ASCIIHexDecode(char * stream, int * stream_size, struct pdfObject * obj){
 
-	char * out = NULL; 
-	char* tmp = NULL; 
-	//int has_eod_marker = 0;
+	char * tmp;
+	char hex[3]={0};
+	char * out = NULL;
+	char * out_tmp;
+	int out_size = 0;
 	int len = 0;
-	int i = 0 ,j =0;
-	int flag = 0;
-	char c = 0;
-	char * end = NULL;
+	unsigned char c = 0;
 
-	if ( stream == NULL){
-		printf("Error :: ASCIIHexDecode :: Invalid parameter :: obj %s\n", obj->reference);
+	if ( stream == NULL || * stream_size <= 0 || obj == NULL ){
+		err_log("ASCIIHexDecode :: invalid parameters!\n");
 		return NULL;
 	}
 
-	len  = strlen(stream);
-
-	tmp = (char*)calloc(3,sizeof(char));
-	tmp[2]='\0';
+	len  = *stream_size;
 
 	// If has EOD marker.
-	if(stream[len-1] == '>' || (( stream[len-1] < 65 || stream[len-1] > 70 ) && (stream[len-1] <  97 || stream[len-1] > 102 ) && (stream[len-1] <  48 || stream[len-1] > 57 )) ){
-		//has_eod_marker = 1;
-		//printf("has_eod_marker = %d\n",has_eod_marker);
-		stream[len-1]='\0';
+	if(stream[len-1] == '>' || (( stream[len-1] < 'A' || stream[len-1] > 'F' ) && (stream[len-1] <  'a' || stream[len-1] > 'f' ) && (stream[len-1] <  '0' || stream[len-1] > '9' )) ){
+		stream[len-1]='\0'; //dbg_log("EOD marker removed!\n");
 		len --;
 	}
-
-
-
-	obj->tmp_stream_size = len/2;
 
 	// If the length is odd and there is an eod marker (>) padd with a zero.
 	out =  (char*)calloc(len+1,sizeof(char));
 	out[len] = '\0';
 
-	end = out;
-	
-	while( i < len-1 ){
+	out_tmp = out;
+	tmp = stream;
 
+	while(len > 1){
 
-		// Ignore white space and non hex characters
-		flag  = 0;
-		while(flag < 2 && i< len-1){
-
-			if( (stream[i]>=  65 && stream[i]<=70 ) || (stream[i] >=  97 && stream[i]<=102 ) || (stream[i] >=  48 && stream[i]<=57 ) ){ // HExa characters
-				tmp[flag] = stream[i];
-				flag ++;
-			}
-			i++;
+		// skip white space
+		while(tmp[0] == '\n' || tmp[0] == '\r' || tmp[0] == ' '){
+			tmp ++;
+			len --;
 		}
 
-		c = strtol(tmp,NULL,16);
-		memset(end,c,1);
-		j++;
-		end ++;
+		// get hex string
+		if( ((tmp[0] >= 'A' && tmp[0] <='F') || (tmp[0] >= 'a' && tmp[0] <= 'f') || (tmp[0] >= '0' && tmp[0] <= '9')) && ((tmp[1] >= 'A' && tmp[1] <='F') || (tmp[1] >= 'a' && tmp[1] <= 'f') || (tmp[1] >= '0' && tmp[1] <= '9')) ){
+
+			memcpy(hex, tmp, 2);
+			c = strtol(hex,NULL,16);
+			if(c == -1){
+				err_log("ASCIIHexDecode :: Bad stream format!\n");
+				free(out);
+				return NULL;
+			}
+
+			memset(out_tmp,c,1);
+			//dbg_log("[%s]=>%d=>[%s]\t",hex,c, out_tmp);
+
+			out_tmp++;
+			out_size ++;
+
+		}else{
+			err_log("ASCIIHexDecode :: Bad stream format!\n");
+			free(out);
+			return NULL;
+		}
+
+		tmp +=2;
+		len -=2;
 
 	}
 
-	obj->tmp_stream_size = j;
-	obj->decoded_stream_size = j;
-
-	free(tmp);
+	*stream_size = out_size;
+	//dbg_log("decoded_stream = %s\n",out);
 
 	return out;
-
-
 }
 
 
