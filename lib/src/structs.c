@@ -276,6 +276,80 @@ struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct(){
 }
 
 
+void free_active_contents(struct pdfActiveContent * ac){
+
+	struct pdfActiveContent * tmp = NULL;
+
+	while(ac!= NULL){
+
+		tmp = ac;
+		ac = ac->next;
+
+		free(tmp->src);
+		free(tmp->data);
+		free(tmp);
+		tmp = NULL;
+
+	}
+
+	return;
+}
+
+
+struct pdfActiveContent * init_active_content(enum acType type, char * src, char * data, unsigned int size){
+
+	struct pdfActiveContent * ac;
+
+	ac = (struct pdfActiveContent *)calloc(1,sizeof(struct pdfActiveContent));
+	if( ac == NULL){
+		return NULL;
+	}
+
+	ac->type = type;
+	ac->src = strdup(src);
+	ac->size = size;
+	ac->data = (char*)calloc(size,sizeof(char));
+	memcpy(ac->data,data, size);
+
+	ac->next = NULL;
+
+	return ac;
+}
+
+
+int add_pdf_active_content(struct pdfDocument * pdf, enum acType type, char * src, char * data, unsigned int size){
+
+	struct pdfActiveContent * ac;
+	struct pdfActiveContent * tmp;
+
+	if(pdf == NULL || data == NULL || size == 0){
+		err_log("add_active_content :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	ac = init_active_content(type, src, data, size);
+	if(ac == NULL){
+		err_log("add_active_content :: can't allocate memory!\n");
+		return ERROR_INSUFFICENT_MEMORY;
+	}
+
+	if(pdf->activeContents == NULL){
+		pdf->activeContents = ac;
+		return ERROR_SUCCESS;
+	}
+
+	tmp = pdf->activeContents;
+
+	while(tmp->next != NULL){
+		tmp = tmp->next;
+	}
+
+	tmp->next = ac;
+
+	return ERROR_SUCCESS;
+}
+
+
 struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version){
 
 	struct pdfDocument * pdf;
@@ -327,6 +401,7 @@ void free_pdf_document(struct pdfDocument * pdf ){
 
 	free_all_pdf_objects(pdf->objects);
 	free_pdf_trailer(pdf->trailers);
+	free_active_contents(pdf->activeContents);
 
 	free(pdf);
 	pdf = NULL;

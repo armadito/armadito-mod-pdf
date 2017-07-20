@@ -112,6 +112,18 @@ struct testsPDFObjAnalysis{
 
 };
 
+enum acType {AC_LAUNCH, AC_JAVASCRIPT, AC_EMBEDDED_FILE, AC_URI};
+
+struct pdfActiveContent{
+
+	enum acType type; // the type of active content (action, js, ef, uri, etc).
+	char * src; // src obj reference
+	char * data;
+	unsigned int size;
+	struct activeContent * next;
+
+};
+
 
 // PDF Document structure
 struct pdfDocument{
@@ -130,6 +142,7 @@ struct pdfDocument{
 	struct testsPDFObjAnalysis * testObjAnalysis;
 	double scan_time; // time elapsed in second for parse or scan.
 	int errors; // treatment errors
+	struct pdfActiveContent * activeContents;
 
 };
 
@@ -157,6 +170,8 @@ void free_pdf_document(struct pdfDocument * pdf);
 
 int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
 int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer);
+
+int add_pdf_active_content(struct pdfDocument * pdf, enum acType type, char * src, char * data, unsigned int size);
 
 
 #endif
