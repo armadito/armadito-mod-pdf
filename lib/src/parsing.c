@@ -1061,6 +1061,7 @@ int decodeObjectStream(struct pdfObject * obj){
 			stream  = tmp;
 			filter_applied ++;
 
+
 		}else if((strncmp(filter,"/ASCIIHexDecode",15) == 0 && strncmp(filter,"/ASCIIHexDecode",strlen(filter)) == 0) || (strncmp(filter,"/AHx",4) == 0 && strncmp(filter,"/AHx",strlen(filter)) == 0)){
 
 
@@ -1077,6 +1078,7 @@ int decodeObjectStream(struct pdfObject * obj){
 			free(stream);
 			stream  = tmp;
 			filter_applied ++;
+
 		
 		}else if ((strncmp(filter, "/ASCII85Decode", 14) == 0 && strncmp(filter, "/ASCII85Decode", strlen(filter)) == 0) || (strncmp(filter, "/A85", 4) == 0 && strncmp(filter, "/A85", strlen(filter)) == 0)){
 
@@ -2104,13 +2106,13 @@ int obj_decode_stream(struct pdfObject * obj){
 	}
 
 	printf("filters = %s\n",filters);
+
 	end = filters;
 
 	stream = (char*)calloc(obj->stream_size+1,sizeof(char));
 	stream[obj->stream_size]='\0';
 	memcpy(stream, obj->stream, obj->stream_size);
 	stream_size = obj->stream_size;
-
 
 	while((start = strchr(end, '/')) != NULL && retcode == ERROR_SUCCESS){
 
@@ -2142,6 +2144,7 @@ int obj_decode_stream(struct pdfObject * obj){
 			stream = tmp;
 			filter_applied ++;
 			*/
+
 
 		}else if( strcmp(f,"/ASCII85Decode") == 0 || strcmp(f,"/A85") == 0){
 
@@ -2480,6 +2483,11 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 	}
 
 	retcode = pdf_parse_object_dico(obj);
+
+	if(retcode == ERROR_OBJ_DICO_NOT_FOUND){
+		return ERROR_SUCCESS;
+	}
+
 	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION)
 		return retcode;
 
@@ -2565,7 +2573,9 @@ int pdf_parse_objects(struct pdfDocument * pdf){
 
 		// parse object content
 		retcode = pdf_parse_obj_content(pdf, obj);
-
+		if(retcode != ERROR_SUCCESS){
+			err_log("Parsing obj (%s) content failed!\n", obj->reference);
+		}
 
 		// add object in doc list.
 		retcode = add_pdf_object(pdf, obj);
