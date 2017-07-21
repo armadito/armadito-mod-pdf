@@ -27,54 +27,48 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <armaditopdf/utils.h>
 #include <armaditopdf/log.h>
 #include <armaditopdf/osdeps.h>
+#include <armaditopdf/errors.h>
 #include <time.h>
 
 
 
 /*
-getJavaScript() ::  Get Javascript content in the document.
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-returns: (int)
-- 1 if js content is found
-- 0 if no active content.
-- an error code (<0) on error.
+pdf_get_JavaScript() ::  Get Javascript content in the document.
 */
-int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
+int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
 
-	char * js = NULL;
+	char * js;
 	char * js_obj_ref = NULL;
 	char * start = NULL;
 	int len = 0;
-	int ret = 0;
+	int retcode = ERROR_SUCCESS;
 	struct pdfObject * js_obj = NULL;
-	
+
 
 	if (pdf == NULL || obj == NULL){
-		err_log("getJavaScript :: invalid parameters\n");
-		return -1;
+		err_log("get_JavaScript :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
-	if( obj->dico == NULL){		
-		return 0;
+	if( obj->dico == NULL){
+		return ERROR_SUCCESS;
 	}
 
 	if ((start = searchPattern(obj->dico, "/JS", 3, strlen(obj->dico))) == NULL){
-		return 0;
+		return retcode;
 	}
 
-	//dbg_log("getJavaScript :: JavaScript Entry in dictionary detected in object %s\n", obj->reference);
+	dbg_log("getJavaScript :: JavaScript Entry in dictionary detected in object %s\n", obj->reference);
 	//dbg_log("getJavaScript :: dictionary = %s\n", obj->dico);
-
 
 	start += 3; // 3 => /JS
 
 	// skip space
-	if(start[0] == ' '){
+	while(start[0] == '\n' || start[0] == '\r' || start[0] == ' '){
 		start ++;
 	}
 
-	len = strlen(obj->dico) - (int)(start - obj->dico);	
+	len = strlen(obj->dico) - (int)(start - obj->dico);
 
 	// get an indirect reference object containing of js content.
 	js_obj_ref = getIndirectRef(start,len);
@@ -82,53 +76,40 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 	// Get javascript
 	if(js_obj_ref != NULL){
 
-		if ((js_obj = getPDFObjectByRef(pdf, js_obj_ref)) == NULL){
-			err_log("getJavaScript :: Object %s not found\n",js_obj_ref);
+		js_obj = getPDFObjectByRef(pdf, js_obj_ref);
+
+		if (js_obj == NULL){
+			err_log("get_JavaScript :: Object %s not found\n",js_obj_ref);
 			pdf->errors++;
 			free(js_obj_ref);
-			return -1;
-		}
-
-		// Decode object stream
-		if (js_obj->filters != NULL){
-			if (decodeObjectStream(js_obj) < 0){
-				err_log("getJavaScript :: decode object stream failed!\n");
-				// if decoding object stream failed then exit.
-				pdf->errors++;
-				free(js_obj_ref);
-				return -2;
-			}
-		}
-
-		if( js_obj->decoded_stream != NULL){
-			js = js_obj->decoded_stream;
-		}else{
-			js = js_obj->stream;
+			return ERROR_OBJ_REF_NOT_FOUND;
 		}
 
 		free(js_obj_ref);
 
-		if (js != NULL){
-			dbg_log("getJavaScript :: Found JS content in object %s\n", js_obj->reference);
-			pdf->testObjAnalysis->active_content++;
-			pdf->testObjAnalysis->js++;
-
-			// Launch js content analysis			
-			if (unknownPatternRepetition(js, strlen(js), pdf, js_obj) < 0){
-				err_log("getJavaScript :: get pattern high repetition failed!\n");
-				return -1;
-			}
-			
-			if (findDangerousKeywords(js, pdf, js_obj) < 0){
-				err_log("getJavaScript :: get dangerous keywords failed!\n");
-				return -1;
-			}
+		retcode = obj_decode_stream(js_obj);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: decode obj (%s) stream failed!\n",js_obj->reference);
+			return retcode;
 		}
-		else{
+
+		if(js_obj->decoded_stream != NULL){
+			js = js_obj->decoded_stream;
+			len = js_obj->decoded_stream_size;
+		}
+		else if(js_obj->stream != NULL){
+			js = js_obj->stream;
+			len = js_obj->stream_size;
+		}else{
+			js = NULL;
+			len = 0;
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
-
+		retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, len);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: Add active content failed!\n");
+		}
 
 	}else{
 
@@ -139,22 +120,10 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 			dbg_log("getJavaScript :: Found JS content in object %s\n", obj->reference);
 
-			pdf->testObjAnalysis->active_content++;
-			pdf->testObjAnalysis->js++;
-
-			// Launch js content analysis
-			if (unknownPatternRepetition(js, strlen(js), pdf, obj) < 0){
-				err_log("getJavaScript :: get pattern high repetition failed!\n");
-				free(js);
-				return -1;
+			retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, strlen(js));
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_JavaScript :: Add active content failed!\n");
 			}
-			
-			if (findDangerousKeywords(js, pdf, obj) < 0){
-				err_log("getJavaScript :: get dangerous keywords failed!\n");
-				free(js);
-				return -1;
-			}
-
 			free(js);
 
 		}
@@ -165,8 +134,7 @@ int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj){
 	}
 
 
-	return ret;
-
+	return retcode;
 }
 
 
@@ -1271,15 +1239,16 @@ int getDangerousContent(struct pdfDocument* pdf){
 
 		dbg_log("getDangerousContent :: Analysing object %s\n",obj->reference);
 
-		if (getActions(pdf, obj) < 0){
+		/*if (getActions(pdf, obj) < 0){
 			err_log("getDangerousContent :: get dangerous actions failed!\n");
 			return -1;
 		}
 
-		if (getJavaScript(pdf, obj) < 0){
+		/*if (getJavaScript(pdf, obj) < 0){
 			err_log("getDangerousContent :: get javascript content failed!\n");
 			return -1;
 		}
+		*/
 
 		if (getXFA(pdf, obj) < 0){
 			err_log("getDangerousContent :: get xfa content failed!\n");

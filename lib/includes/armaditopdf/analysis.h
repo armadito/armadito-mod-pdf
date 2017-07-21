@@ -37,8 +37,9 @@ int pdf_check_valid_trailer(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions prototypes *****/
+int pdf_obj_analysis(struct pdfDocument * pdf);
 int getDangerousContent(struct pdfDocument* pdf);
-int getJavaScript(struct pdfDocument * pdf, struct pdfObject* obj);
+int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj);
 int getXFA(struct pdfDocument * pdf, struct pdfObject* obj);
 int getEmbeddedFile(struct pdfDocument * pdf, struct pdfObject* obj);
 int getInfoObject(struct pdfDocument * pdf);
