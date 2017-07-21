@@ -1181,3 +1181,26 @@ char * get_obj_ref(char * data, int size){
 
 	return ref;
 }
+
+
+void print_actives_contents(struct pdfDocument * pdf){
+
+	struct pdfActiveContent * ac;
+
+	if(pdf == NULL || pdf->activeContents == NULL)
+		return;
+
+	ac = pdf->activeContents;
+
+	while(ac != NULL){
+
+		printf("__ACTIVE_CONTENT__\n" );
+		printf("src: %s\n",ac->src);
+		printf("type: %d\n",ac->type);
+		printf("data: %s\n",ac->data);
+
+		ac = ac->next;
+	}
+
+	return;
+}

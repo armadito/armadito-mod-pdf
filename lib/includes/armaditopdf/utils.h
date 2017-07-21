@@ -49,6 +49,7 @@ char * toBinary(char * stream, int size);
 char * binarytoChar(char * binary, int size, int * returned_size);
 void printStream(char * stream, int size);
 void debugPrint(char * stream, int len); // print in a debug file
+void print_actives_contents(struct pdfDocument * pdf);
 
 
 
