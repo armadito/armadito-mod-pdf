@@ -12,6 +12,8 @@
 #define ERROR_ON_TRAILER_PARSING 	(3 << 8)	/* Errors during trailer parsing */
 #define ERROR_ON_XREF_PARSING 		(4 << 8)	/* Errors during xref parsing */
 #define ERROR_ON_OBJ_PARSING 		(5 << 8)	/* Errors during obj parsing */
+#define ERROR_ON_STRUCT_ANALYSIS	(6 << 8)	/* Errors during struct parsing */
+#define ERROR_ON_OBJ_ANALYSIS 		(7 << 8)	/* Errors during obj analysis */
 
 
 #define ERROR_INVALID_FD			1 		/* (invalid file handle or file descriptor) */
