@@ -139,331 +139,252 @@ int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 
 /*
-getJSContentInXFA() :: Get and analyze JavaScript content in XFA form description (xml).
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-- struct pdfObject* obj
-returns: (int)
-- 1 if found
-- 0 if not found
-- an error code (<0) on error.
-TODO :: getJSContentInXFA :: Check the keyword javascript
+get_js_from_data() :: Get and analyze JavaScript content in XFA form description (xml).
+TODO :: getJSContentInXFA :: Check the keyword javascript in script tag
 */
-int getJSContentInXFA(char * stream, int size, struct pdfObject * obj, struct pdfDocument * pdf){
+int get_js_from_data(char * data, int data_size, struct pdfObject * obj, struct pdfDocument * pdf){
 	
 	
-	int len = 0;
-	int rest = 0;
-	int found = 0;
+	int len_tmp = 0;
+	int js_size = 0;
+	int retcode= ERROR_SUCCESS;
 	char * start = NULL;
 	char * end = NULL;
 	char * js_content = NULL;
-	char * script_balise = NULL;	
 	char * tmp = NULL;
-	
 
-	if (stream == NULL || size <= 0 || obj == NULL || pdf == NULL){
-		err_log("getJSContentInXFA :: invalid parameter\n");
-		return -1;
+
+	if (data == NULL || data_size <= 0 || obj == NULL || pdf == NULL){
+		err_log("get_js_from_data :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
-	end = stream;
-	rest = size;
+	end = data;
+	len_tmp = data_size;
 
-	while((start = searchPattern(end,"<script",7,rest)) != NULL && rest > 0){
+	while((start = searchPattern(end,"<script",7,len_tmp)) != NULL && len_tmp > 0){
 
-		
-		dbg_log("getJSContentInXFA :: javascript content found in %s\n",obj->reference);
-		
+		dbg_log("get_js_from_data :: javascript content found in %s\n",obj->reference);
 
-		rest = (int)(start-stream);
-		rest = size - rest;
-		end = start;
-		len = 0;
-		while(end[0] != '>' && len<=rest ){
-			end ++;		
-			len ++;
+		tmp = start; // save the script start ptr
+		end = start+7;
+		len_tmp = data_size - (int)(end-data);
+
+		// case: <script....>
+		// skip white space
+		while(end[0] != '>' && len_tmp>0 ){
+			end ++;
+			len_tmp --;
 		}
-
-		script_balise = (char*)calloc(len+1,sizeof(char));
-		script_balise[len]= '\0';
-		if(len > 0)
-			memcpy(script_balise,start,len);
-		//dbg_log("getJSContentInXFA :: script_balise = %s\n",script_balise);
-
-		// save the script start ptr
-		tmp = start;
 
 		// search the </script> balise
-		rest = (int)(end-stream);
-		rest = size - rest;
-
-		start = searchPattern(end,"</script",8,rest);
-
+		start = searchPattern(end,"</script",8,len_tmp);
 		if(start == NULL){
-			free(script_balise);
-			return -1;
+			dbg_log("get_js_from_data :: End of js script balise not found... continue\n");
+			continue;
 		}
 
-		rest = (int)(start-stream);
-		rest = size - rest;
-
-		end = start;
-		len = 0;
-		while(end[0] != '>' && len<=rest ){
+		end = start+8;
+		len_tmp = data_size - (int)(end-data);
+		while(end[0] != '>' && len_tmp>0 ){
 			end ++;		
-			len ++;
+			len_tmp --;
 		}
 
-		len = (int)(end - tmp);
-		len ++;
+		js_size = (int)(end - tmp)+1;
+		js_content = (char*)calloc(js_size+1, sizeof(char));
+		js_content[js_size]='\0';
+		memcpy(js_content,tmp,js_size);
 
+		//dbg_log("get_js_from_data :: js_content = %s\n",js_content);
 
-		js_content = (char*)calloc(len+1, sizeof(char));
-		js_content[len]='\0';
-
-		memcpy(js_content,tmp,len);
-
-		//dbg_log("getJSContentInXFA :: js_content = %s\n",js_content);
-		found = 1;
-		
-		// Launch js content analysis
-		if (unknownPatternRepetition(js_content, len, pdf, obj) < 0){
-			err_log("getJSContentInXFA :: get pattern high repetition failed!\n");
-			free(script_balise);
-			free(js_content);
-			return -1;
+		retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js_content, js_size);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: Add active content failed!\n");
+			return retcode;
 		}
 
-		if (findDangerousKeywords(js_content, pdf, obj) < 0){
-			err_log("getJSContentInXFA :: get dangerous keywords failed!\n");
-			free(script_balise);
-			free(js_content);
-			return -1;
-		}
-	
-		rest = (int)(start-stream);
-		rest = size - rest;
-
-
-		free(script_balise);
 		free(js_content);
 
 	}
 
-	if(found == 1){
-		pdf->testObjAnalysis->js ++;
-	}
-
-
-	return found;
+	return retcode;
 }
 
 
 /*
-getXFA() ::  Get XFA form in the document.
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-- struct pdfObject* obj
-returns: (int)
-- 1 if found
-- 0 if not found
-- an error code (<0) on error.
+pdf_get_xfa() ::  Get XFA form in the document.
+TODO: treat the case when dico is
+	/XFA [(xdp:xdp) 10 0 R
+			(template) 11 0 R
+			(datasets) 12 0 R
+			(config) 13 0 R
+			(/xdp:xdp) 14 0 R ]
+
 */
-int getXFA(struct pdfDocument * pdf, struct pdfObject* obj){
+int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 
 	char * xfa = NULL;
 	char * xfa_obj_ref = NULL;
 	char * start = NULL;
 	char * end = NULL;
+	char * tmp = NULL;
 	char * obj_list = NULL;	
 	int len = 0;
 	int len2 = 0;
 	int ret = 0;
+	int retcode = ERROR_SUCCESS;
 	struct pdfObject * xfa_obj = NULL;
 
 	if (pdf == NULL || obj == NULL){
-		err_log("getXFA :: invalid parameters\n");
-		return -1;
+		err_log("get_xfa :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
 	if( obj->dico == NULL ){
-		//dbg_log("getXFA :: No dictionary in object %s\n",obj->reference);
-		return 0;
+		return ERROR_NO_XFA_FOUND;
 	}
 
 	start = searchPattern(obj->dico, "/XFA" , 4 , strlen(obj->dico));
-
 	if(start == NULL){
-		//dbg_log("getXFA :: No XFA entry detected in object dictionary %s\n",obj->reference);
-		return 0;
+		return ERROR_NO_XFA_FOUND;
 	}
 
-	dbg_log("getXFA :: XFA Entry in dictionary detected in object %s\n", obj->reference);
-	//dbg_log("getXFA :: dictionary = %s\n", obj->dico);
+	dbg_log("get_xfa :: XFA Entry in dictionary detected in object %s\n", obj->reference);
 
 	start += 4;
 
-	// If there is a space // todo put a while
-	if(start[0] == ' '){
+	// skip white space
+	while(start[0] == ' ' || start[0]=='\n' || start[0]=='\r'){
 		start ++;
 	}
 
 	len = strlen(obj->dico) - (int)(start - obj->dico);
-	
-	// Get xfa object references
 
 	// If its a list get the content
 	if(start[0] == '['){
 
-		obj_list =  getDelimitedStringContent(start,"[", "]", len); 
-
+		obj_list =  getDelimitedStringContent(start,"[", "]", len);
 		if(obj_list == NULL){
-			err_log("getXFA :: Can't get object list in dictionary\n");
+			err_log("get_xfa :: Can't get object list in dictionary\n");
 			return -1;
 		}
 		
 		end = obj_list;
 		len2 = strlen(obj_list);
 
-
 		// get XFA object reference in array ::
 		while( (xfa_obj_ref = getIndirectRefInString(end, len2)) ){
 
-			//dbg_log("getXFA :: xfa_obj_ref = %s\n",xfa_obj_ref);
+			//dbg_log("get_xfa :: xfa_obj_ref = %s\n",xfa_obj_ref);
 
-			end = searchPattern(end, xfa_obj_ref , 4 , len2); // change value 4
-			end += strlen(xfa_obj_ref) - 2;
+			end = searchPattern(end, xfa_obj_ref , strlen(xfa_obj_ref)-4 , len2);
+			if(end == NULL){
+				err_log("get_xfa :: unexpected error !!\n");
+				free(obj_list);
+				return ERROR_NO_XFA_FOUND;
+			}
 
-			len2 = (int)(end - obj_list);
-			len2 = strlen(obj_list) - len2;
+			end += strlen(xfa_obj_ref)-2;
+			len2 = strlen(obj_list) - (int)(end - obj_list);
 
-			// get xfa object 
+
+			// get xfa object
 			xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
-			if(xfa_obj == NULL){				
-				err_log("getXFA :: Object %s containing xfa not found\n",xfa_obj_ref);
+			if(xfa_obj == NULL){
+				err_log("get_xfa :: Object %s containing xfa not found\n",xfa_obj_ref);
 				free(xfa_obj_ref);
 				continue;
 			}
 
-			// Decode object stream
-			if (xfa_obj->filters != NULL){
-				if (decodeObjectStream(xfa_obj) < 0){
-					err_log("getXFA :: decode object stream failed!\n");
-					// if decoding object stream failed then continue.
-					pdf->errors++;
-					free(xfa_obj_ref);
-					continue;
-				}
-			}
-		
-
-			// get xfa content
-			if(xfa_obj->decoded_stream != NULL ){
-				xfa = xfa_obj->decoded_stream;
-			}else{
-				xfa = xfa_obj->stream;
-			}
-
-			if(xfa != NULL){
-
-				// dbg_log("getXFA :: xfa content = %s\n",xfa);
-
-				pdf->testObjAnalysis->active_content ++;
-				pdf->testObjAnalysis->xfa ++;
-				ret++;
-
-				if (getJSContentInXFA(xfa, strlen(xfa), xfa_obj, pdf) < 0){
-					err_log("getXFA :: get js content in xfa failed!\n");
-				}
-
-				dbg_log("getXFA :: Found XFA content in object %s\n",xfa_obj_ref);
-				
-				// Analyze xfa content 
-				/* This part is commented because only js content in XFA form will be analyzed.*/
-				//unknownPatternRepetition(xfa, strlen(xfa),pdf, xfa_obj);
-				//findDangerousKeywords(xfa,pdf,xfa_obj);
-				
-			}else{
-				
-				warn_log("getXFA :: Empty XFA content in object %s\n",xfa_obj_ref);				
-			}
-
-
 			free(xfa_obj_ref);
+
+			retcode = obj_decode_stream(xfa_obj);
+			if(retcode != ERROR_SUCCESS && retcode != ERROR_NO_STREAM_FILTERS){
+				err_log("get_xfa :: decode obj (%s) stream failed!\n",xfa_obj->reference);
+				continue;
+			}
+
+			if(xfa_obj->decoded_stream != NULL){
+				xfa = xfa_obj->decoded_stream;
+				len = xfa_obj->decoded_stream_size;
+			}
+			else if(xfa_obj->stream != NULL){
+				xfa = xfa_obj->stream;
+				len = xfa_obj->stream_size;
+			}else{
+				xfa = NULL;
+				len = 0;
+				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
+			}
+
+			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_xfa :: Get javascript from xfa content failed!\n");
+				free(obj_list);
+				return retcode;
+			}
+
+			/*retcode = add_pdf_active_content(pdf,AC_XFA,obj->reference, xfa, len);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_JavaScript :: Add active content failed!\n");
+				return retcode;
+			}*/
 
 		}
 
 		free(obj_list);
 
-
 	}else{
-				
-		len2 = (int)(start - obj->dico);
-		len2 = strlen(obj->dico) - len2;
 
+		len2 = strlen(obj->dico) -(int)(start - obj->dico);
 
 		xfa_obj_ref = getIndirectRefInString(start, len2);
 		if(xfa_obj_ref == NULL){
-			err_log("getXFA :: get xfa object indirect reference failed\n");			
-			return -1;
+			err_log("get_xfa :: get xfa object indirect reference failed\n");
+			return ERROR_INVALID_DICO;
 		}
 
-		//dbg_log("getXFA :: xfa_obj_ref = %s\n",xfa_obj_ref);
-
+		// get xfa object 
 		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
 		if(xfa_obj == NULL){
-			err_log("getXFA :: Object %s not found\n",xfa_obj_ref);
+			err_log("get_xfa :: Object %s containing xfa not found\n",xfa_obj_ref);
 			free(xfa_obj_ref);
-			return -1;
-		}
-
-		// Decode object stream
-		if (xfa_obj->filters != NULL){
-			if (decodeObjectStream(xfa_obj) < 0){
-				err_log("getXFA :: decode object stream failed!\n");
-				// if decoding object stream failed then continue.
-				pdf->errors++;
-				free(xfa_obj_ref);
-				return -1;
-			}
-		}
-
-		// get xfa content
-		if(xfa_obj->decoded_stream != NULL ){
-			xfa = xfa_obj->decoded_stream;
-		}else{
-			xfa = xfa_obj->stream;
-		}
-
-		if(xfa != NULL){
-
-			dbg_log("Found XFA content in object %s\n",xfa_obj_ref);
-			ret++;
-			//dbg_log("getXFA :: xfa content = %s\n",xfa);
-
-			pdf->testObjAnalysis->active_content++;
-			pdf->testObjAnalysis->xfa++;
-			
-			if (getJSContentInXFA(xfa, strlen(xfa), xfa_obj, pdf) < 0){
-				err_log("getXFA :: get js content in xfa failed!\n");
-			}
-
-			// Analyze xfa content
-			/* This part is commented because only js content in XFA form will be analyzed.*/
-			//unknownPatternRepetition(xfa, strlen(xfa), pdf, xfa_obj);
-			//findDangerousKeywords(xfa,pdf,xfa_obj);
-			
-		}else{
-			warn_log("getXFA :: Empty XFA content in object %s\n",xfa_obj_ref);			
+			return ERROR_OBJ_REF_NOT_FOUND;
 		}
 
 		free(xfa_obj_ref);
 
+		retcode = obj_decode_stream(xfa_obj);
+		if(retcode == ERROR_SUCCESS || retcode == ERROR_NO_STREAM_FILTERS){
+
+			if(xfa_obj->decoded_stream != NULL){
+				xfa = xfa_obj->decoded_stream;
+				len = xfa_obj->decoded_stream_size;
+			}
+			else if(xfa_obj->stream != NULL){
+				xfa = xfa_obj->stream;
+				len = xfa_obj->stream_size;
+			}else{
+				xfa = NULL;
+				len = 0;
+				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
+			}
+
+			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_xfa :: Get javascript from xfa content failed!\n");
+				return retcode;
+			}
+			
+		}else{
+
+			err_log("get_xfa :: decode obj (%s) stream failed!\n",xfa_obj->reference);
+			// TODO: treat error code.
+		}
 	}
 	
-	return ret;
-
+	return ERROR_SUCCESS;
 }
 
 
@@ -1248,12 +1169,12 @@ int getDangerousContent(struct pdfDocument* pdf){
 			err_log("getDangerousContent :: get javascript content failed!\n");
 			return -1;
 		}
-		*/
 
 		if (getXFA(pdf, obj) < 0){
 			err_log("getDangerousContent :: get xfa content failed!\n");
 			return -1;
 		}
+		*/
 
 		if (getEmbeddedFile(pdf, obj) < 0){
 			err_log("getDangerousContent :: get embedded file failed!\n");
