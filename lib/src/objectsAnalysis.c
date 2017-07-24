@@ -51,11 +51,11 @@ int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
 	}
 
 	if( obj->dico == NULL){
-		return ERROR_SUCCESS;
+		return ERROR_NO_JS_FOUND;
 	}
 
 	if ((start = searchPattern(obj->dico, "/JS", 3, strlen(obj->dico))) == NULL){
-		return retcode;
+		return ERROR_NO_JS_FOUND;
 	}
 
 	dbg_log("getJavaScript :: JavaScript Entry in dictionary detected in object %s\n", obj->reference);
@@ -267,7 +267,7 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 		obj_list =  getDelimitedStringContent(start,"[", "]", len);
 		if(obj_list == NULL){
 			err_log("get_xfa :: Can't get object list in dictionary\n");
-			return -1;
+			return ERROR_INVALID_DICO;
 		}
 		
 		end = obj_list;
