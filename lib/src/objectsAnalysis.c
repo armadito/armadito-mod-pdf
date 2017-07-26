@@ -566,30 +566,24 @@ int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
 
 /*
-getEmbeddedFile() ::  Get the URI defined in the object and analyze it
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-- struct pdfObject* obj
-returns: (int)
-- 1 if found
-- 0 if not found
-- an error code (<0) on error.
+getEmbeddedFile() ::  Get the URI defined in the object
 */
-int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
+int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj){
 
 
-	char * start = NULL;
-	char * end = NULL;
-	char * uri = NULL;
+	char * start;
+	char * end;
+	char * uri;
 	int len = 0;
+	int retcode = ERROR_SUCCESS;
 
 	if(obj == NULL || pdf == NULL){
-		err_log("getURI :: invalid parameter\n");		
-		return -1;
+		err_log("get_uri :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
 	if(obj->dico == NULL){
-		return 0;
+		return ERROR_NO_URI_FOUND;
 	}
 
 	// get the URI entry in the dico
@@ -601,7 +595,7 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 		start += 4;
 
 		// skip white spaces
-		while(start[0] == ' '){
+		while(start[0] == ' ' || start[0] == '\n' || start[0] == '\r' ){
 			start ++;
 		}
 
@@ -611,22 +605,23 @@ int getURI(struct pdfDocument * pdf, struct pdfObject * obj){
 			continue;
 		}
 
-
-		len = (int)(start - obj->dico);
-		len = strlen(obj->dico) - len;
-
+		len = strlen(obj->dico) -(int)(start - obj->dico);
 		uri = getDelimitedStringContent(start,"(",")", len);
 
-		// Analyze uri
 		if (uri != NULL) {
-			analyzeURI(uri, pdf, obj);
+
+			retcode = add_pdf_active_content(pdf,AC_URI,obj->reference, uri, strlen(uri));
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_uri :: Add active content failed!\n");
+				free(uri);
+				return retcode;
+			}
+
 			free(uri);
 		}
-		
-
 	}
 
-	return 1;
+	return ERROR_SUCCESS;
 }
 
 
@@ -1015,12 +1010,12 @@ int getDangerousContent(struct pdfDocument* pdf){
 		if (getEmbeddedFile(pdf, obj) < 0){
 			err_log("getDangerousContent :: get embedded file failed!\n");
 			return -1;
-		}*/
+		}
 		
 		if (getURI(pdf, obj) < 0){
 			err_log("getDangerousContent :: get uri failed!\n");
 			return -1;
-		}
+		}*/
 
 		// next object
 		obj = obj->next;
