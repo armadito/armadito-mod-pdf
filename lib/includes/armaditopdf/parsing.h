@@ -27,36 +27,20 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <armaditopdf/structs.h>
 
-
 #define LARGE_FILE_SIZE 1500000
 
-
-/***** pdf Parsing functions prototypes *****/
+/***** PDF Parsing functions prototypes *****/
 
 int pdf_parse(struct pdfDocument * pdf);
-int checkMagicNumber(struct pdfDocument * pdf);
-int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
-int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf);
-int getPDFObjects(struct pdfDocument * pdf);
-int getPDFTrailers(struct pdfDocument * pdf);
-int getPDFTrailers_2(struct pdfDocument * pdf);
-int decodeObjectStream(struct pdfObject * obj);
-int removeComments(struct pdfDocument * pdf);
-char * getObjectDictionary(struct pdfObject * obj, struct pdfDocument * pdf);
-char * getObjectType(struct pdfObject * obj);
-char * getObjectStream(struct pdfObject * obj);
-char * getStreamFilters(struct pdfObject * obj);
-char * hexaObfuscationDecode(char * dico);
-char *removeCommentLine(char * src, int size, int * ret_len);
-
-
 char * pdf_get_version_from_data(char * data, unsigned int data_size);
 char * pdf_get_version_from_fd(int fd, int * retcode);
 int pdf_get_content(struct pdfDocument * pdf);
 int pdf_get_trailers(struct pdfDocument * pdf);
 int pdf_parse_objects(struct pdfDocument * pdf);
-
 char * get_dico_from_data(char *data, unsigned int data_size);
 
+// TO RE-IMPLEMENT
+int removeComments(struct pdfDocument * pdf);
+char *removeCommentLine(char * src, int size, int * ret_len);
 
 #endif
