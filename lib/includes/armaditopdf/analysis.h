@@ -41,7 +41,7 @@ int pdf_get_active_contents(struct pdfDocument * pdf);
 int getDangerousContent(struct pdfDocument* pdf);
 int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj);
 int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj);
-int getEmbeddedFile(struct pdfDocument * pdf, struct pdfObject* obj);
+int pdf_get_embedded_file(struct pdfDocument * pdf, struct pdfObject* obj);
 int getInfoObject(struct pdfDocument * pdf);
 int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, struct pdfObject * obj);
 int findDangerousKeywords(char * stream, struct pdfDocument * pdf, struct pdfObject * obj);

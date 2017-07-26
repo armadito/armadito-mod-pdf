@@ -389,214 +389,51 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 
 
 /*
-getEmbeddedFile() ::  Get Embedded file content and analyze it.
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-- struct pdfObject* obj
-returns: (int)
-- 1 if found
-- 0 if not found
-- an error code (<0) on error.
+pdf_get_embedded_file() ::  Get Embedded file content
 */
-int getEmbeddedFile(struct pdfDocument * pdf , struct pdfObject* obj){
+int pdf_get_embedded_file(struct pdfDocument * pdf , struct pdfObject* obj){
 
 	char * ef = NULL;
-	struct pdfObject * ef_obj = NULL;
-	char * ef_obj_ref = NULL;
-	char * start = NULL;
-	//char * subdir = NULL;
-	int len = 0;
-	int ret = 0;
+	int ef_size = 0;
+	int retcode = ERROR_SUCCESS;
 
 	//dbg_log("getEmbeddedFile :: Analysing object :: %s\n",obj->reference);
 	if (pdf == NULL || obj == NULL){
-		err_log("getEmbeddedFile :: invalid parameter\n");
-		return -1;
+		err_log("get_embedded_file :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 	
 	if(obj->dico == NULL || obj->type == NULL){
-		return 0;
+		return ERROR_NO_EF_FOUND;
 	}
 
 	// Get by Type or by Filespec (EF entry)
-
+	/* TOIMPROVE: Type value is optional (see pdf reference 1.7 table 3.42 p.185) */
 	if( strncmp(obj->type,"/EmbeddedFile",13) == 0){
 
-
-		// Decode object stream	
-		if (obj->filters != NULL){
-
-			if (decodeObjectStream(obj) < 0){
-				err_log("getEmbeddedFile :: decode object stream failed!\n");
-				// if decoding object stream failed then exit.
-				pdf->errors++;
-				return -2;
-			}
+		// decode embedded file stream
+		retcode = obj_decode_stream(obj);
+		if(retcode != ERROR_SUCCESS && retcode != ERROR_NO_STREAM_FILTERS){
+			err_log("get_embedded_file :: decode obj (%s) stream failed!\n",obj->reference);
+			return retcode;
 		}
 
 		if(obj->decoded_stream != NULL ){
 			ef = obj->decoded_stream;
+			ef_size = obj->decoded_stream_size;
 		}else{
 			ef = obj->stream;
+			ef_size = obj->stream_size;
 		}
 
-		if(ef != NULL){
-			dbg_log("getEmbeddedFile :: Found EmbeddedFile object %s\n",obj->reference);			
-			//dbg_log("getEmbeddedFile :: ef content = %s\n",ef);
-			// TODO Process to ef stream content analysis.
-			//unknownPatternRepetition(ef, strlen(xfa), pdf, xfa_obj);
-			//findDangerousKeywords(xfa,pdf,obj);
-			
-		}else{
-			warn_log("getEmbeddedFile :: Empty EF stream content in object %s\n",obj->reference);			
+		retcode = add_pdf_active_content(pdf,AC_EMBEDDED_FILE,obj->reference, ef, ef_size);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_embedded_file :: Add active content failed!\n");
+			return retcode;
 		}
-
-
 	}
 
-
-	// looking for Filespec object is not always necessary for Embedded file detection
-	/*if( strncmp(obj->type,"/Filespec",9) == 0){
-
-		// Get EF entry in dico
-		start = searchPattern(obj->dico, "/EF" , 3 , strlen(obj->dico));
-
-		if(start == NULL){
-			//dbg_log("getEmbeddedFile :: No EF detected in object %s\n",obj->reference);
-			return 0;
-		}
-
-		dbg_log("getEmbeddedFile :: Found EmbeddedFile in file specification %s\n",obj->reference);
-		
-
-		start += 3;
-
-		// For white spaces
-		while(start[0] == ' '){
-			start ++;
-		}
-
-
-		// The case <</EF <</F 3 0 R>>
-		if(start[0] == '<' && start[1] == '<'){
-
-			//printf("Debug:: start = %s\n", start);
-
-			len = (int)(start - obj->dico);
-			len = strlen(obj->dico) - len;
-
-			// get Embedded file sub dictionary
-			if( (subdir = getDelimitedStringContent(start, "<<", ">>", len)) == NULL){
-				warn_log("getEmbeddedFile :: get EF subdirectory failed!\n");
-				ef_obj= NULL;
-				ef_obj_ref = NULL;
-			}
-
-			//printf("Debug :: subdir = %s\n", subdir);
-
-
-			ef_obj_ref = obj->reference;
-			ef_obj = obj;
-
-			free(subdir);
-			subdir=NULL;
-
-		}else{
-
-			len = (int)(start - obj->dico);
-			len = strlen(obj->dico) - len;
-			// get indirect ref of the 
-			ef_obj_ref = getIndirectRef(start,len);
-			//dbg_log("getEmbeddedFile :: ef_obj_ref = %s\n",ef_obj_ref);
-			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
-
-
-
-		}
-
-
-		if(ef_obj != NULL){
-
-
-			if(ef_obj->dico == NULL){
-				warn_log("getEmbeddedFile :: No dictionary found in object %s\n",ef_obj_ref);				
-				return -1;
-			}
-			// Get the /F entry in the dico
-			start = searchPattern(ef_obj->dico, "/F" , 2 , strlen(ef_obj->dico));
-
-			//printf("Debug :: start = %s :: dico_len = %d\n",start, strlen(ef_obj->dico));
-
-			if(start == NULL){
-				dbg_log("No EF detected in object %s\n",obj->reference);
-				return 0;
-			}
-
-			start += 2;
-
-			// For white spaces
-			while(start[0] == ' '){
-				start ++;
-			}
-
-			len = (int)(start - ef_obj->dico);
-			len = strlen(ef_obj->dico) - len;
-
-			
-
-			ef_obj_ref = getIndirectRef(start,len);
-			dbg_log("getEmbeddedFile :: EF_obj_ref = %s\n",ef_obj_ref);
-
-			ef_obj = getPDFObjectByRef(pdf,ef_obj_ref);
-
-			if(ef_obj != NULL){
-
-				// Decode object stream
-				if (ef_obj->filters != NULL){
-					if (decodeObjectStream(ef_obj) < 0){
-						err_log("getEmbeddedFile :: decode object stream failed!\n");
-						// if decoding object stream failed then exit.
-						pdf->errors++;
-						return -2;
-					}
-				}
-
-				if(ef_obj->decoded_stream != NULL ){
-					ef = ef_obj->decoded_stream;
-				}else{
-					ef = ef_obj->stream;
-				}
-
-				if( ef != NULL){
-					dbg_log("getEmbeddedFile :: Found EmbeddedFile object %s\n",ef_obj_ref);					
-					dbg_log("getEmbeddedFile :: ef content = %s\n",ef);
-					// TODO Process to ef stream content analysis.
-				}else{
-					warn_log("getEmbeddedFile :: Empty EF stream content in object %s\n",obj->reference);					
-				}
-
-			}else{
-				warn_log("getEmbeddedFile :: object not found %s\n",ef_obj_ref);				
-			}
-
-
-
-		}else{
-			warn_log("getEmbeddedFile :: object not found %s\n",ef_obj_ref);			
-		}
-		
-
-	}*/
-
-	if(ef != NULL){
-
-		pdf->testObjAnalysis->active_content ++;
-		pdf->testObjAnalysis->ef ++;
-
-		// TODO :: launch ef content analysis.
-	}
-
-	return ret;
+	return ERROR_SUCCESS;
 }
 
 
@@ -1174,12 +1011,11 @@ int getDangerousContent(struct pdfDocument* pdf){
 			err_log("getDangerousContent :: get xfa content failed!\n");
 			return -1;
 		}
-		*/
 
 		if (getEmbeddedFile(pdf, obj) < 0){
 			err_log("getDangerousContent :: get embedded file failed!\n");
 			return -1;
-		}
+		}*/
 		
 		if (getURI(pdf, obj) < 0){
 			err_log("getDangerousContent :: get uri failed!\n");
@@ -1198,5 +1034,4 @@ int getDangerousContent(struct pdfDocument* pdf){
 	
 
 	return res;
-
 }
