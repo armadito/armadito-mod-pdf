@@ -1733,6 +1733,60 @@ int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
+int pdf_get_active_contents(struct pdfDocument * pdf){
+
+	int retcode = ERROR_SUCCESS;
+	struct pdfObject * obj;
+
+	if(pdf == NULL || pdf->objects == NULL){
+		err_log("get_active_contents :: invalid parameter\n");
+		retcode = ERROR_INVALID_PARAMETERS;
+		return retcode;
+	}
+
+	obj = pdf->objects;
+
+	while(obj != NULL){
+
+		retcode = pdf_get_javascript(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_JS_FOUND){
+			err_log("get_active_contents :: get javascript in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+			// TODO: treat errors.
+		}
+
+		retcode = pdf_get_xfa(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_XFA_FOUND){
+			err_log("get_active_contents :: get xfa in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+			// TODO: treat errors.
+		}
+
+		retcode = pdf_get_embedded_file(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_EF_FOUND){
+			err_log("get_active_contents :: get embedded file in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+			// TODO: treat errors.
+		}
+
+		retcode = pdf_get_uri(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_URI_FOUND){
+			err_log("get_active_contents :: get uri in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+			// TODO: treat errors.
+		}
+
+		/*retcode = pdf_get_actions(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_URI_FOUND){
+			err_log("get_active_contents :: get uri in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+			// TODO: treat errors.
+		}*/
+
+		obj = obj->next;
+	}
+
+	//print_actives_contents(pdf);
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_parse(struct pdfDocument * pdf){
 
 	int retcode = EXIT_SUCCESS;
