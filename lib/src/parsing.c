@@ -1281,6 +1281,458 @@ int pdf_parse_objects(struct pdfDocument * pdf){
 }
 
 
+int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
+
+	char * js;
+	char * js_obj_ref = NULL;
+	char * start = NULL;
+	int len = 0;
+	int retcode = ERROR_SUCCESS;
+	struct pdfObject * js_obj = NULL;
+
+
+	if (pdf == NULL || obj == NULL){
+		err_log("get_JavaScript :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	if( obj->dico == NULL){
+		return ERROR_NO_JS_FOUND;
+	}
+
+	if ((start = searchPattern(obj->dico, "/JS", 3, strlen(obj->dico))) == NULL){
+		return ERROR_NO_JS_FOUND;
+	}
+
+	dbg_log("getJavaScript :: JavaScript Entry in dictionary detected in object %s\n", obj->reference);
+	//dbg_log("getJavaScript :: dictionary = %s\n", obj->dico);
+
+	start += 3; // 3 => /JS
+
+	// skip space
+	while(start[0] == '\n' || start[0] == '\r' || start[0] == ' '){
+		start ++;
+	}
+
+	len = strlen(obj->dico) - (int)(start - obj->dico);
+
+	// get an indirect reference object containing of js content.
+	js_obj_ref = getIndirectRef(start,len);
+
+	// Get javascript
+	if(js_obj_ref != NULL){
+
+		js_obj = getPDFObjectByRef(pdf, js_obj_ref);
+
+		if (js_obj == NULL){
+			err_log("get_JavaScript :: Object %s not found\n",js_obj_ref);
+			pdf->errors++;
+			free(js_obj_ref);
+			return ERROR_OBJ_REF_NOT_FOUND;
+		}
+
+		free(js_obj_ref);
+
+		retcode = obj_decode_stream(js_obj);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: decode obj (%s) stream failed!\n",js_obj->reference);
+			return retcode;
+		}
+
+		if(js_obj->decoded_stream != NULL){
+			js = js_obj->decoded_stream;
+			len = js_obj->decoded_stream_size;
+		}
+		else if(js_obj->stream != NULL){
+			js = js_obj->stream;
+			len = js_obj->stream_size;
+		}else{
+			js = NULL;
+			len = 0;
+			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
+		}
+
+		retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, len);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: Add active content failed!\n");
+		}
+
+	}else{
+
+		// get js content in dictionary string.
+		js = getDelimitedStringContent(start,"(",")",len);
+
+		if (js != NULL){
+
+			dbg_log("getJavaScript :: Found JS content in object %s\n", obj->reference);
+
+			retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, strlen(js));
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_JavaScript :: Add active content failed!\n");
+			}
+			free(js);
+
+		}
+		else{
+			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
+		}
+	
+	}
+
+
+	return retcode;
+}
+
+
+/*
+get_js_from_data() :: Get JavaScript content in XFA form description (xml).
+TODO :: getJSContentInXFA :: Check the keyword javascript in script tag
+*/
+int get_js_from_data(char * data, int data_size, struct pdfObject * obj, struct pdfDocument * pdf){
+	
+	
+	int len_tmp = 0;
+	int js_size = 0;
+	int retcode= ERROR_SUCCESS;
+	char * start = NULL;
+	char * end = NULL;
+	char * js_content = NULL;
+	char * tmp = NULL;
+
+
+	if (data == NULL || data_size <= 0 || obj == NULL || pdf == NULL){
+		err_log("get_js_from_data :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	end = data;
+	len_tmp = data_size;
+
+	while((start = searchPattern(end,"<script",7,len_tmp)) != NULL && len_tmp > 0){
+
+		dbg_log("get_js_from_data :: javascript content found in %s\n",obj->reference);
+
+		tmp = start; // save the script start ptr
+		end = start+7;
+		len_tmp = data_size - (int)(end-data);
+
+		// case: <script....>
+		// skip white space
+		while(end[0] != '>' && len_tmp>0 ){
+			end ++;
+			len_tmp --;
+		}
+
+		// search the </script> balise
+		start = searchPattern(end,"</script",8,len_tmp);
+		if(start == NULL){
+			dbg_log("get_js_from_data :: End of js script balise not found... continue\n");
+			continue;
+		}
+
+		end = start+8;
+		len_tmp = data_size - (int)(end-data);
+		while(end[0] != '>' && len_tmp>0 ){
+			end ++;		
+			len_tmp --;
+		}
+
+		js_size = (int)(end - tmp)+1;
+		js_content = (char*)calloc(js_size+1, sizeof(char));
+		js_content[js_size]='\0';
+		memcpy(js_content,tmp,js_size);
+
+		//dbg_log("get_js_from_data :: js_content = %s\n",js_content);
+
+		retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js_content, js_size);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_JavaScript :: Add active content failed!\n");
+			return retcode;
+		}
+
+		free(js_content);
+
+	}
+
+	return retcode;
+}
+
+
+int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
+
+	char * xfa = NULL;
+	char * xfa_obj_ref = NULL;
+	char * start = NULL;
+	char * end = NULL;
+	char * tmp = NULL;
+	char * obj_list = NULL;	
+	int len = 0;
+	int len2 = 0;
+	int ret = 0;
+	int retcode = ERROR_SUCCESS;
+	struct pdfObject * xfa_obj = NULL;
+
+	if (pdf == NULL || obj == NULL){
+		err_log("get_xfa :: invalid parameters\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	if( obj->dico == NULL ){
+		return ERROR_NO_XFA_FOUND;
+	}
+
+	start = searchPattern(obj->dico, "/XFA" , 4 , strlen(obj->dico));
+	if(start == NULL){
+		return ERROR_NO_XFA_FOUND;
+	}
+
+	dbg_log("get_xfa :: XFA Entry in dictionary detected in object %s\n", obj->reference);
+
+	start += 4;
+
+	// skip white space
+	while(start[0] == ' ' || start[0]=='\n' || start[0]=='\r'){
+		start ++;
+	}
+
+	len = strlen(obj->dico) - (int)(start - obj->dico);
+
+	// If its a list get the content
+	if(start[0] == '['){
+
+		obj_list =  getDelimitedStringContent(start,"[", "]", len);
+		if(obj_list == NULL){
+			err_log("get_xfa :: Can't get object list in dictionary\n");
+			return ERROR_INVALID_DICO;
+		}
+		
+		end = obj_list;
+		len2 = strlen(obj_list);
+
+		// get XFA object reference in array ::
+		while( (xfa_obj_ref = getIndirectRefInString(end, len2)) ){
+
+			//dbg_log("get_xfa :: xfa_obj_ref = %s\n",xfa_obj_ref);
+
+			end = searchPattern(end, xfa_obj_ref , strlen(xfa_obj_ref)-4 , len2);
+			if(end == NULL){
+				err_log("get_xfa :: unexpected error !!\n");
+				free(obj_list);
+				return ERROR_NO_XFA_FOUND;
+			}
+
+			end += strlen(xfa_obj_ref)-2;
+			len2 = strlen(obj_list) - (int)(end - obj_list);
+
+
+			// get xfa object
+			xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
+			if(xfa_obj == NULL){
+				err_log("get_xfa :: Object %s containing xfa not found\n",xfa_obj_ref);
+				free(xfa_obj_ref);
+				continue;
+			}
+
+			free(xfa_obj_ref);
+
+			retcode = obj_decode_stream(xfa_obj);
+			if(retcode != ERROR_SUCCESS && retcode != ERROR_NO_STREAM_FILTERS){
+				err_log("get_xfa :: decode obj (%s) stream failed!\n",xfa_obj->reference);
+				continue;
+			}
+
+			if(xfa_obj->decoded_stream != NULL){
+				xfa = xfa_obj->decoded_stream;
+				len = xfa_obj->decoded_stream_size;
+			}
+			else if(xfa_obj->stream != NULL){
+				xfa = xfa_obj->stream;
+				len = xfa_obj->stream_size;
+			}else{
+				xfa = NULL;
+				len = 0;
+				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
+			}
+
+			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_xfa :: Get javascript from xfa content failed!\n");
+				free(obj_list);
+				return retcode;
+			}
+
+			/*retcode = add_pdf_active_content(pdf,AC_XFA,obj->reference, xfa, len);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_JavaScript :: Add active content failed!\n");
+				return retcode;
+			}*/
+
+		}
+
+		free(obj_list);
+
+	}else{
+
+		len2 = strlen(obj->dico) -(int)(start - obj->dico);
+
+		xfa_obj_ref = getIndirectRefInString(start, len2);
+		if(xfa_obj_ref == NULL){
+			err_log("get_xfa :: get xfa object indirect reference failed\n");
+			return ERROR_INVALID_DICO;
+		}
+
+		// get xfa object 
+		xfa_obj =  getPDFObjectByRef(pdf, xfa_obj_ref);
+		if(xfa_obj == NULL){
+			err_log("get_xfa :: Object %s containing xfa not found\n",xfa_obj_ref);
+			free(xfa_obj_ref);
+			return ERROR_OBJ_REF_NOT_FOUND;
+		}
+
+		free(xfa_obj_ref);
+
+		retcode = obj_decode_stream(xfa_obj);
+		if(retcode == ERROR_SUCCESS || retcode == ERROR_NO_STREAM_FILTERS){
+
+			if(xfa_obj->decoded_stream != NULL){
+				xfa = xfa_obj->decoded_stream;
+				len = xfa_obj->decoded_stream_size;
+			}
+			else if(xfa_obj->stream != NULL){
+				xfa = xfa_obj->stream;
+				len = xfa_obj->stream_size;
+			}else{
+				xfa = NULL;
+				len = 0;
+				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
+			}
+
+			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_xfa :: Get javascript from xfa content failed!\n");
+				return retcode;
+			}
+			
+		}else{
+
+			err_log("get_xfa :: decode obj (%s) stream failed!\n",xfa_obj->reference);
+			// TODO: treat error code.
+		}
+	}
+	
+	return ERROR_SUCCESS;
+}
+
+
+/*
+pdf_get_embedded_file() ::  Get Embedded file content
+*/
+int pdf_get_embedded_file(struct pdfDocument * pdf , struct pdfObject* obj){
+
+	char * ef = NULL;
+	int ef_size = 0;
+	int retcode = ERROR_SUCCESS;
+
+	//dbg_log("getEmbeddedFile :: Analysing object :: %s\n",obj->reference);
+	if (pdf == NULL || obj == NULL){
+		err_log("get_embedded_file :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+	
+	if(obj->dico == NULL || obj->type == NULL){
+		return ERROR_NO_EF_FOUND;
+	}
+
+	// Get by Type or by Filespec (EF entry)
+	/* TOIMPROVE: Type value is optional (see pdf reference 1.7 table 3.42 p.185) */
+	if( strncmp(obj->type,"/EmbeddedFile",13) == 0){
+
+		// decode embedded file stream
+		retcode = obj_decode_stream(obj);
+		if(retcode != ERROR_SUCCESS && retcode != ERROR_NO_STREAM_FILTERS){
+			err_log("get_embedded_file :: decode obj (%s) stream failed!\n",obj->reference);
+			return retcode;
+		}
+
+		if(obj->decoded_stream != NULL ){
+			ef = obj->decoded_stream;
+			ef_size = obj->decoded_stream_size;
+		}else{
+			ef = obj->stream;
+			ef_size = obj->stream_size;
+		}
+
+		retcode = add_pdf_active_content(pdf,AC_EMBEDDED_FILE,obj->reference, ef, ef_size);
+		if(retcode != ERROR_SUCCESS){
+			err_log("get_embedded_file :: Add active content failed!\n");
+			return retcode;
+		}
+	}
+
+	return ERROR_SUCCESS;
+}
+
+
+/*
+getEmbeddedFile() ::  Get the URI defined in the object
+*/
+int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj){
+
+
+	char * start;
+	char * end;
+	char * uri;
+	int len = 0;
+	int retcode = ERROR_SUCCESS;
+
+	if(obj == NULL || pdf == NULL){
+		err_log("get_uri :: invalid parameter\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	if(obj->dico == NULL){
+		return ERROR_NO_URI_FOUND;
+	}
+
+	// get the URI entry in the dico
+	end= obj->dico;
+	len = strlen(obj->dico);
+
+	while( (start = searchPattern(end,"/URI",4,len)) != NULL ){
+
+		start += 4;
+
+		// skip white spaces
+		while(start[0] == ' ' || start[0] == '\n' || start[0] == '\r' ){
+			start ++;
+		}
+
+		end = start;
+
+		if(start[0] != '('){
+			continue;
+		}
+
+		len = strlen(obj->dico) -(int)(start - obj->dico);
+		uri = getDelimitedStringContent(start,"(",")", len);
+
+		if (uri != NULL) {
+
+			retcode = add_pdf_active_content(pdf,AC_URI,obj->reference, uri, strlen(uri));
+			if(retcode != ERROR_SUCCESS){
+				err_log("get_uri :: Add active content failed!\n");
+				free(uri);
+				return retcode;
+			}
+
+			free(uri);
+		}
+	}
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_parse(struct pdfDocument * pdf){
 
 	int retcode = EXIT_SUCCESS;

@@ -38,6 +38,11 @@ int pdf_get_content(struct pdfDocument * pdf);
 int pdf_get_trailers(struct pdfDocument * pdf);
 int pdf_parse_objects(struct pdfDocument * pdf);
 char * get_dico_from_data(char *data, unsigned int data_size);
+int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj);
+int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj);
+int pdf_get_embedded_file(struct pdfDocument * pdf, struct pdfObject* obj);
+int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj);
+int pdf_get_active_contents(struct pdfDocument * pdf);
 
 // TO RE-IMPLEMENT
 int removeComments(struct pdfDocument * pdf);
