@@ -33,7 +33,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 /***** pdf Parsing functions prototypes *****/
 
-int parsePDF(struct pdfDocument * pdf);
+int pdf_parse(struct pdfDocument * pdf);
 int checkMagicNumber(struct pdfDocument * pdf);
 int extractObjectFromObjStream(struct pdfDocument * pdf, struct pdfObject *obj);
 int getObjectInfos(struct pdfObject * obj, struct pdfDocument * pdf);

@@ -2560,83 +2560,47 @@ int getPDFTrailers_ex(struct pdfDocument * pdf){
 }
 
 
+/* Parse a PDF Document */
+int pdf_parse(struct pdfDocument * pdf){
 
-
-
-/* DEPRECATED
-parsePDF() :: parse the PDF document (extract objects, trailers and xref).
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-returns: (int)
-- 0 on success.
-- an error code (<0) on error.
-*/
-int parsePDF(struct pdfDocument * pdf){
-
-	int ret = 0;
+	int retcode = EXIT_SUCCESS;
 
 	if(pdf == NULL){
-		err_log("parsePDF :: Invalid parameter!\n");
-		return -1;
-	}
-	
-	// Check the magic number of the file
-	// return -1 if unexpected error or -2 if bad header.
-	if ((ret = checkMagicNumber(pdf)) < 0){
-		err_log("parsePDF :: invalid header for file %s\n", pdf->fname);
-		return ret;
+		err_log("pdf_parse :: invalid parameter\n");
+		retcode = ERROR_ON_PARSING | ERROR_INVALID_PARAMETERS;
+		return retcode;
 	}
 
-
-	// Get the content of the document
-	if (pdf_get_content(pdf) <= 0) {
-		err_log("parsePDF :: get PDF content failed!\n");
-		return -1;
+	retcode = pdf_get_content(pdf);
+	if(retcode != EXIT_SUCCESS){
+		retcode |= ERROR_ON_PARSING;
+		return retcode;
 	}
 
-	// TOFIX: remove PostScript comments for a better parsing. (to fix :: improve comment removing).
-	/*
-	if (removeComments(pdf) < 0) {
-		err_log("parsePDF :: removing comments failed!\n");
-		return -1;
-	}
-	*/
-
-	
-	// Get Trailers (before version 1.5)
-	if (getPDFTrailers(pdf) < 0) {
-		err_log("parsePDF :: getting PDF trailer v1 failed!\n");
-		return -1;
-	}
-	
-	// Get Trailers extension function (from version 1.5)
-	if (pdf->trailers == NULL){		
-		if (getPDFTrailers_ex(pdf) < 0) {
-			err_log("parsePDF :: getting PDF trailer v2 failed!\n");
-			return -1;
-		}
+	retcode = pdf_get_trailers(pdf);
+	if(retcode != EXIT_SUCCESS){
+		retcode |= ERROR_ON_TRAILER_PARSING;
+		return retcode;
 	}
 
-	// if no trailer found in the document.
-	if(pdf->trailers == NULL){
-		warn_log("parsePDF :: no trailer found in the document!\n");
-		pdf->testStruct->bad_trailer++;
-	}
-	
-		
-	// if the document is encrypted
-	if( pdf->testStruct->encrypted > 0){		
-		return -2;
+	retcode = pdf_parse_objects(pdf);
+	if(retcode != EXIT_SUCCESS){
+		retcode |= ERROR_ON_OBJ_PARSING;
+		return retcode;
 	}
 
-	// Get all objects defined in pdf document
-	if (getPDFObjects(pdf) < 0) {
-		// malformed PDF.
-		err_log("parsePDF :: get PDF object failed!\n");
-		return -1;
+	retcode = pdf_check_valid_trailer(pdf);
+	if(retcode != EXIT_SUCCESS){
+		retcode |= ERROR_ON_OBJ_PARSING;
+		return retcode;
 	}
-	
 
-	return 0;
+	retcode = pdf_get_active_contents(pdf);
+	if(retcode != ERROR_SUCCESS){
+		return EXIT_FAILURE;
+	}
+	//printPDFObjects(pdf);
+
+	return retcode;
 
 }

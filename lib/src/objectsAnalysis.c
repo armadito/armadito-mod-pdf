@@ -567,6 +567,10 @@ int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 
 /*
 getEmbeddedFile() ::  Get the URI defined in the object
+TODO: URL specification:
+	Ex: << /FS /URL
+		/F ( ftp://www.beatles.com/Movies/AbbeyRoad.mov ) >>
+see pdf reference 1.7 URL specification p.188
 */
 int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj){
 
