@@ -112,7 +112,7 @@ struct testsPDFObjAnalysis{
 
 };
 
-enum acType {AC_LAUNCH, AC_JAVASCRIPT, AC_EMBEDDED_FILE, AC_URI};
+enum acType {AC_LAUNCH, AC_JAVASCRIPT, AC_XFA, AC_EMBEDDED_FILE, AC_URI};
 
 struct pdfActiveContent{
 
