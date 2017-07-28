@@ -139,16 +139,6 @@ void freePDFDocumentStruct(struct pdfDocument * pdf){
 		pdf->content = NULL;
 	}
 
-	if (pdf->testStruct != NULL){
-		free(pdf->testStruct);
-		pdf->testStruct = NULL;
-	}
-
-	if (pdf->testObjAnalysis != NULL){
-		free(pdf->testObjAnalysis);
-		pdf->testObjAnalysis = NULL;
-	}
-
 	
 	free(pdf);
 	pdf = NULL;
@@ -387,16 +377,6 @@ void free_pdf_document(struct pdfDocument * pdf ){
 	if (pdf->content != NULL){
 		free(pdf->content);
 		pdf->content = NULL;
-	}
-
-	if (pdf->testStruct != NULL){
-		free(pdf->testStruct);
-		pdf->testStruct = NULL;
-	}
-
-	if (pdf->testObjAnalysis != NULL){
-		free(pdf->testObjAnalysis);
-		pdf->testObjAnalysis = NULL;
 	}
 
 	free_all_pdf_objects(pdf->objects);

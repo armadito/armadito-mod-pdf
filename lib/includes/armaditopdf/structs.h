@@ -75,6 +75,29 @@ struct pdfXRef{
 };
 
 
+enum pdf_flags {
+
+	/* struct */
+	BAD_PDF_HEADER = 1 << 0,
+	BAD_PDF_TRAILER = 1 << 1,
+	BAD_XREF_OFFSET = 1 << 2,
+	BAD_XREF_FORMAT = 1 << 3,
+	BAD_OBJ_OFFSET = 1 << 4,
+	OBJECT_COLLISION = 1 << 5,
+
+	/* obj */
+	OBFUSCATED_OBJ = 1 << 6,
+	MULTIPLE_HEADERS = 1 << 7,
+	POSTSCIPT_COMMENTS = 1 << 8,
+	MALICIOUS_COMMENTS = 1 << 9,
+	ACTIVE_CONTENTS = 1 << 10,
+	DANG_KEY_HIGH = 1 << 11,
+	DANG_KEY_MED = 1 << 12,
+	DANG_KEY_LOW = 1 << 13,
+
+};
+
+
 // Suit of tests according to the PDF structure specifications.
 struct testsPDFStruct{
 
@@ -138,12 +161,10 @@ struct pdfDocument{
 	char * version;	// PDF specification version
 	struct pdfTrailer* trailers;
 	struct pdfXRef* xref;
-	struct testsPDFStruct * testStruct;
-	struct testsPDFObjAnalysis * testObjAnalysis;
+	unsigned int flags;
 	double scan_time; // time elapsed in second for parse or scan.
 	int errors; // treatment errors
 	struct pdfActiveContent * activeContents;
-
 };
 
 
