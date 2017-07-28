@@ -46,10 +46,7 @@ struct pdfObject{
 	int decoded_stream_size;	// Size in byte of the object's decoded stream
 	int content_size;	// size in byte of the object's content
 	int errors;		// errors in parsing
-	
 	struct pdfObject* next;	// next object in the list.
-
-	
 };
 
 
@@ -61,7 +58,6 @@ struct pdfTrailer{
 	int size;
 	char * dico;
 	struct pdfTrailer* next;	// next trailer in the document
-	
 };
 
 
@@ -71,7 +67,6 @@ struct pdfXRef{
 	int offset;	// offset in the document
 	char * content; // content of the XRef
 	struct pdfXRef* next;	// next trailer in the document
-	
 };
 
 
@@ -94,7 +89,6 @@ enum pdf_flags {
 	DANG_KEY_HIGH = 1 << 11,
 	DANG_KEY_MED = 1 << 12,
 	DANG_KEY_LOW = 1 << 13,
-
 };
 
 
@@ -113,7 +107,6 @@ struct testsPDFStruct{
 	int large_file;
 	int comments;	// If PostScript comments are found in pdf.
 	int malicious_comments; // Malicious comments found (potentially defeat pdf parsers).
-
 };
 
 
@@ -136,6 +129,7 @@ struct testsPDFObjAnalysis{
 };
 
 enum acType {AC_LAUNCH, AC_JAVASCRIPT, AC_XFA, AC_EMBEDDED_FILE, AC_URI};
+
 
 struct pdfActiveContent{
 
@@ -171,27 +165,14 @@ struct pdfDocument{
 
 /* pdf structures functions prototypes */
 
-struct pdfDocument* initPDFDocument();
 struct pdfDocument * init_pdf_document(int fd, FILE * fh, char * filename, char * version);
-struct pdfObject* initPDFObject(); // deprecated
 struct pdfObject* init_pdf_object(char * ref, char * content, int obj_size, int offset);
 void free_all_pdf_objects(struct pdfObject * obj);
 int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj);
-struct pdfTrailer* initPDFTrailer();
 struct pdfTrailer * init_pdf_trailer(char * content, unsigned int size);
-
-struct testsPDFStruct * initTestsPDFStruct();
-struct testsPDFObjAnalysis * initTestsPDFObjAnalysisStruct();
-
-void freePDFDocumentStruct(struct pdfDocument * pdf);
-void freePDFObjectStruct(struct pdfObject * obj);
-void freePDFTrailerStruct(struct pdfTrailer * trailer);
 void free_pdf_trailer(struct pdfTrailer * trailer);
 void free_pdf_document(struct pdfDocument * pdf);
-
-int addObjectInList(struct pdfObject* obj, struct pdfDocument* pdf);
 int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer);
-
 int add_pdf_active_content(struct pdfDocument * pdf, enum acType type, char * src, char * data, unsigned int size);
 
 
