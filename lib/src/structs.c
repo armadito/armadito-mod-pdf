@@ -603,8 +603,14 @@ int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj){
 	tmp = pdf->objects;
 
 	while(tmp->next != NULL){
-		// TODO: Check object reference collision.
+
 		tmp = tmp->next;
+
+		// obj ref collision detection
+		if(strcmp(tmp->reference,obj->reference) == 0){
+			warn_log("add_pdf_object :: Object reference collision :: %s\n", obj->reference);
+			pdf->flags |= OBJECT_COLLISION;
+		}
 	}
 
 	tmp->next = obj;
