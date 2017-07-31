@@ -627,7 +627,7 @@ int pdf_parse_object_type(struct pdfObject * obj){
 			continue;
 		}
 
-		if(sub == 0 && strncmp(start_ptr,"/Type",5) == 0 && start_ptr[5] != '1' && start_ptr[5] != '2' ){
+		if(sub == 0 && strncmp(start_ptr,"/Type",5) == 0 && start_ptr[5] != '0' && start_ptr[5] != '1' && start_ptr[5] != '2' ){
 			type_flag ++;
 			continue;
 		}
@@ -1262,7 +1262,7 @@ int pdf_parse_objects(struct pdfDocument * pdf){
 		// parse object content
 		retcode = pdf_parse_obj_content(pdf, obj);
 		if(retcode != ERROR_SUCCESS){
-			err_log("Parsing obj (%s) content failed!\n", obj->reference);
+			err_log("Parsing obj (%s) content failed with code: %d\n", obj->reference,retcode);
 		}
 
 		// add object in doc list.
