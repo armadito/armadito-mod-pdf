@@ -292,7 +292,7 @@ int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj){
 		// obj ref collision detection
 		if(strcmp(tmp->reference,obj->reference) == 0){
 			warn_log("add_pdf_object :: Object reference collision :: %s\n", obj->reference);
-			pdf->flags |= OBJECT_COLLISION;
+			pdf->flags |= FLAG_OBJECT_COLLISION;
 		}
 	}
 

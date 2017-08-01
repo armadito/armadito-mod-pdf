@@ -520,17 +520,16 @@ char * decode_hexa_obfuscation(char * dico){
 
 		strncpy(hexa, start,3);
 
-		printf("hexa = %s\n",hexa);
-
 		// #20 = space - #2F = '/' (slash) - #E9 = é - #2C = ','
 		if(strcmp(hexa,"#20") != 0 && strcmp(hexa,"#2F") != 0 && strcmp(hexa,"#E9") != 0 && strcmp(hexa,"#2C") != 0){
 
+			printf("hexa = %s\n",hexa);
 			is_space_hexa = 0;
 
 			os_sscanf(hexa,"#%x",&hexa_decoded[0]);
 
 			decoded_dico = replaceInString(tmp_dico,hexa,hexa_decoded);
-			printf("decoded_dico = %s\n",decoded_dico);
+			//printf("decoded_dico = %s\n",decoded_dico);
 
 			if(decoded_dico != NULL && decoded_dico != tmp_dico){
 				free(tmp_dico);
@@ -1176,8 +1175,11 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 		return ERROR_SUCCESS;
 	}
 
-	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION)
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION){
+		if(retcode == ERROR_OBJ_DICO_OBFUSCATION)
+			pdf->flags |= FLAG_OBFUSCATED_OBJ;
 		return retcode;
+	}
 
 	retcode = pdf_parse_object_type(obj);
 	if(retcode != ERROR_SUCCESS)
@@ -1817,7 +1819,6 @@ int pdf_parse(struct pdfDocument * pdf){
 
 	retcode = pdf_check_document_struct(pdf);
 	if(retcode != ERROR_SUCCESS){
-		printf("retcode = %d\n",retcode);
 		retcode |= ERROR_ON_STRUCT_ANALYSIS;
 		return retcode;
 	}
