@@ -40,7 +40,7 @@ returns:
 - none.
 */
 // TODO :: printAnalysisReport :: filter report informations by log level.
-void printAnalysisReport(struct pdfDocument * pdf){
+void pdf_print_report(struct pdfDocument * pdf){
 
 
 	if (!print_report || pdf == NULL){
@@ -48,186 +48,108 @@ void printAnalysisReport(struct pdfDocument * pdf){
 	}
 
 	printf("\n\n");
-	printf("----------------------------------\n");
-	printf("-- ARMADITO PDF ANALYZER REPORT --\n");
-	printf("----------------------------------\n\n");
+	printf("=========================\n");
+	printf("== ARMADITO PDF REPORT ==\n");
+	printf("=========================\n");
+
 
 	printf("Filename = %s\n",pdf->fname);
-	if (pdf->version)
-		printf("PDF version = %s\n",pdf->version);
-
+	printf("PDF version = %s\n",pdf->version);
 	printf("size = %d bytes\n", pdf->size);
-	
-	printf("\n\n");
-	printf("::: PDF Document Structure Tests :::\n\n");
-
-
-	printf("bad_header  = %d\n", pdf->testStruct->bad_header);
-	printf("encrypted  = %d\n", pdf->testStruct->encrypted);
-	printf("empty_page_content  = %d\n", pdf->testStruct->empty_page_content);
-	printf("object_collision  = %d\n", pdf->testStruct->object_collision);
-	printf("bad_trailer  = %d\n", pdf->testStruct->bad_trailer);
-	printf("bad_xref_offset  = %d\n", pdf->testStruct->bad_xref_offset);
-	printf("bad_obj_offset  = %d\n", pdf->testStruct->bad_obj_offset);
-	printf("obfuscated_object  = %d\n", pdf->testStruct->obfuscated_object);
-	printf("multiple_headers  = %d\n", pdf->testStruct->multiple_headers);
-	printf("postscript_comments = %d\n", pdf->testStruct->comments);
-	printf("malicious_comments = %d\n", pdf->testStruct->malicious_comments);
-
-	printf("\n\n");
-	printf("::: PDF Object Analysis Tests :::\n\n");
-
-	printf("active_content = %d\n", pdf->testObjAnalysis->active_content);
-		printf(" - js content = %d\n", pdf->testObjAnalysis->js);
-		printf(" - xfa content = %d\n", pdf->testObjAnalysis->xfa);
-		printf(" - ef content = %d\n", pdf->testObjAnalysis->ef);
-	printf("shellcode = %d\n", pdf->testObjAnalysis->shellcode); 
-	printf("pattern_high_repetition = %d\n", pdf->testObjAnalysis->pattern_high_repetition); 
-	printf("dangerous_keyword_high = %d\n", pdf->testObjAnalysis->dangerous_keyword_high); 
-	printf("dangerous_keyword_medium = %d\n", pdf->testObjAnalysis->dangerous_keyword_medium); 
-	printf("dangerous_keyword_low = %d\n", pdf->testObjAnalysis->dangerous_keyword_low); 
-	printf("time_exceeded = %d\n", pdf->testObjAnalysis->time_exceeded);
-
-
-	printf("\n\n");
-	printf("::: Suspicious Coefficient :::\n\n");
-	printf("errors = %d\n", pdf->errors);
-
-	if(pdf->testStruct->bad_header > 0)
-		printf("Coef = BAD_HEADER\n");
-	else
-		if(pdf->testStruct->large_file > 0)
-			printf("Coef = %d (LARGE_FILE)\n",pdf->coef);
-		else
-			if(pdf->testStruct->encrypted > 0)
-				printf("Coef = Encrypted_PDF\n");
-			else
-				printf("Coef = %d\n",pdf->coef);
-
-
-	printf("-------------------------------------------------------\n");
-	//printf("-------------------------------------------------------\n");
 	printf("Execution time : %.2lf sec \n",pdf->scan_time);
-	printf("-------------------------------------------------------\n");
-	printf("-------------------------------------------------------\n\n");
+
+	// PDF Document Structure Tests
+	printf("-----------------------------\n");
+	printf("encrypted = %s\n",(pdf->flags & FLAG_ENCRYPTED_CONTENT ? "yes":"no"));
+	printf("object_collision  = %s\n", (pdf->flags & FLAG_OBJECT_COLLISION ? "yes":"no"));
+	printf("bad_trailer  = %s\n", (pdf->flags & FLAG_BAD_PDF_TRAILER ? "yes":"no"));
+	printf("bad_xref_offset  = %s\n", (pdf->flags & FLAG_BAD_XREF_OFFSET ? "yes":"no"));
+	printf("bad_obj_offset  = %s\n", (pdf->flags & FLAG_BAD_OBJ_OFFSET ? "yes":"no"));
+	//printf("multiple_headers  = %s\n", (pdf->flags & FLAG_MULTIPLE_HEADERS ? "yes":"no"));
+
+	// PDF Object Analysis Tests
+	printf("------------------------------\n");
+	printf("obfuscated_object  = %s\n", (pdf->flags & FLAG_OBFUSCATED_OBJ ? "yes":"no"));
+	printf("postscript_comments = %s\n", (pdf->flags & FLAG_POSTSCRIPT_COMMENTS ? "yes":"no"));
+	//printf("malicious_comments = %s\n", (pdf->flags & FLAG_MALICIOUS_COMMENTS ? "yes":"no"));
+	printf("active_content = %s\n", (pdf->flags & FLAG_ACTIVE_CONTENTS? "yes":"no"));
+		//printf(" - js content = %d\n", pdf->testObjAnalysis->js);
+		//printf(" - xfa content = %d\n", pdf->testObjAnalysis->xfa);
+		//printf(" - ef content = %d\n", pdf->testObjAnalysis->ef);
+	//printf("pattern_high_repetition = %d\n", pdf->testObjAnalysis->pattern_high_repetition);
+	printf("dangerous_keyword_high = %s\n", (pdf->flags & FLAG_DANG_KEY_HIGH? "yes":"no"));
+	printf("dangerous_keyword_medium = %s\n", (pdf->flags & FLAG_DANG_KEY_MED ? "yes":"no"));
+	printf("dangerous_keyword_low = %s\n", (pdf->flags & FLAG_DANG_KEY_LOW ? "yes":"no"));
+
+	printf("------------------------------\n");
+	printf("Coef = %d\n",pdf->coef);
+	printf("------------------------------\n");
+	printf("------------------------------\n");
 
 	return;
-
 }
 
 
 // This function calc the suspicious coefficient according to the tests results
 // TODO Improve  this fucntion by calc the coef with the operation coef += test_result * test_coef
-int calcSuspiciousCoefficient(struct pdfDocument * pdf){
+int calc_suspicious_coef(struct pdfDocument * pdf){
 
-	// check parameters
 	if(pdf == NULL){
-		return -1;
+		pdf->coef = -1;
+		err_log("calc_coef :: invalid parameters!\n");
+		return ERROR_INVALID_PARAMETERS;
 	}
 
 	// PDF Document Structure tests
-	/*
-	EMPTY_PAGE_CONTENT 99
-	OBJECT_COLLISION 10
-	BAD_TRAILER 40
-	BAD_XREF_OFFSET 30
-	BAD_OBJ_OFFSET 20
-	OBFUSCATED_OBJECT 50 
-	MULTIPLE_HEADERS 50
-	*/
-
 	pdf->coef = 0;
 
-	if(pdf->testStruct->encrypted > 0 ){
+	if( pdf->flags & FLAG_ENCRYPTED_CONTENT ){
 		pdf->coef = -2;
-		return -2;
+		return ERROR_ENCRYPTED_CONTENT;
 	}
 
-	if(pdf->testStruct->empty_page_content > 0){
-		pdf->coef = EMPTY_PAGE_CONTENT;
-		return 0;
+	if( pdf->flags & FLAG_OBJECT_COLLISION){
+		pdf->coef += OBJECT_COLLISION;
 	}
 
-	if(pdf->testStruct->object_collision > 0 && ( pdf->testStruct->bad_obj_offset > 0 || pdf->testStruct->bad_xref_offset > 0 )){
-		pdf->coef += OBJECT_COLLISION_AND_BAD_XREF;
-	}else{
-
-		if(pdf->testStruct->object_collision > 0){
-			pdf->coef += OBJECT_COLLISION;
-		}
-
-		if(pdf->testStruct->bad_obj_offset > 0){
-			pdf->coef += BAD_OBJ_OFFSET;
-		}
-
-		if( pdf->testStruct->bad_xref_offset > 0){
-			pdf->coef += BAD_XREF_OFFSET;
-		}
-	}
-
-	if(pdf->testStruct->bad_trailer > 0){
+	if( pdf->flags & FLAG_BAD_PDF_TRAILER ){
 		pdf->coef += BAD_TRAILER;
 	}
 
-	if(pdf->testStruct->multiple_headers > 0){
-		pdf->coef += MULTIPLE_HEADERS;
+	if( pdf->flags & FLAG_BAD_XREF_OFFSET ){
+		pdf->coef += BAD_XREF_OFFSET;
 	}
 
-	if(pdf->testStruct->obfuscated_object > 0){
+	// PDF Objects Analysis tests
+
+	if( pdf->flags & FLAG_OBFUSCATED_OBJ ){
 		pdf->coef += OBFUSCATED_OBJECT;
 	}
 
-	if(pdf->testStruct->malicious_comments > 0){
+	if( pdf->flags & FLAG_POSTSCRIPT_COMMENTS ){
 		pdf->coef += MALICIOUS_COMMENTS;
 	}
 
-
-	// PDF Objects Analysis tests
-	/*
-	ACTIVE_CONTENT 40
-	SHELLCODE 40
-	PATTERN_HIGH_REPETITION 40
-	DANGEROUS_KEYWORD_HIGH 90
-	DANGEROUS_KEYWORD_MEDIUM 40
-	DANGEROUS_KEYWORD_LOW 20
-	TIME_EXCEEDED 20
-	*/
-
-
-	if(pdf->testObjAnalysis->active_content > 0){
+	if( pdf->flags & FLAG_ACTIVE_CONTENTS ){
 		pdf->coef += ACTIVE_CONTENT;
 	}
 
-	if(pdf->testObjAnalysis->shellcode > 0){
-		pdf->coef += SHELLCODE;
-	}
-
-	if(pdf->testObjAnalysis->pattern_high_repetition > 0){
-		pdf->coef += PATTERN_HIGH_REPETITION;
-	}
-
-	if(pdf->testObjAnalysis->dangerous_keyword_high > 0){
+	if( pdf->flags & FLAG_DANG_KEY_HIGH ){
 		pdf->coef += DANGEROUS_KEYWORD_HIGH;
 	}
 
-	if(pdf->testObjAnalysis->dangerous_keyword_medium > 0){
+	if( pdf->flags & FLAG_DANG_KEY_MED ){
 		pdf->coef += DANGEROUS_KEYWORD_MEDIUM;
 	}
 
-	if(pdf->testObjAnalysis->dangerous_keyword_low > 0){
+	if( pdf->flags & FLAG_DANG_KEY_LOW ){
 		pdf->coef += DANGEROUS_KEYWORD_LOW;
 	}
 
-	if(pdf->testObjAnalysis->time_exceeded > 0){
-		pdf->coef += TIME_EXCEEDED;
-	}
-
-	
-	return 0;
-
+	return ERROR_SUCCESS;
 }
 
-
+#if 0
 /* 
 	analyzePDF_ex() :: Analyze pdf extension function 
 	parameters: 
@@ -330,7 +252,7 @@ clean:
 
 
 }
-
+#endif
 
 
 int pdf_initialize(void){
@@ -355,7 +277,7 @@ struct pdfDocument * pdf_load_fd(int fd, char * filename, int * retcode){
 		return NULL;
 	}
 
-	version = pdf_get_version_from_fd(fd, &retcode);
+	version = pdf_get_version_from_fd(fd, retcode);
 	if(version == NULL){
 		*retcode |= ERROR_ON_LOAD;
 		return NULL;
@@ -376,5 +298,4 @@ void pdf_unload(struct pdfDocument * pdf){
 	free_pdf_document(pdf);
 
 	return;
-
 }
