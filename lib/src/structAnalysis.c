@@ -360,8 +360,12 @@ int pdf_check_valid_trailer(struct pdfDocument * pdf){
 	while(trailer != NULL){
 
 		retcode = pdf_check_trailer(pdf, trailer);
-		if(retcode == ERROR_SUCCESS)
+		if(retcode == ERROR_SUCCESS){
+			// if valid trailer found clear flags errors
+			pdf->flags &= ~(FLAG_BAD_PDF_TRAILER);
+			pdf->flags &= ~(FLAG_BAD_XREF_OFFSET);
 			return retcode;
+		}
 
 		trailer = trailer->next;
 	}
