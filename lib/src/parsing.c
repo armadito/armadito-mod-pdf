@@ -1175,10 +1175,11 @@ int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 		return ERROR_SUCCESS;
 	}
 
-	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION){
-		if(retcode == ERROR_OBJ_DICO_OBFUSCATION)
-			pdf->flags |= FLAG_OBFUSCATED_OBJ;
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_OBJ_DICO_OBFUSCATION)
 		return retcode;
+
+	if(retcode == ERROR_OBJ_DICO_OBFUSCATION){
+		pdf->flags |= FLAG_OBFUSCATED_OBJ;
 	}
 
 	retcode = pdf_parse_object_type(obj);
