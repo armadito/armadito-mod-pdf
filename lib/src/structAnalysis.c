@@ -688,3 +688,20 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 }
 
 
+//TODO: Add more struct checking. (multiples headers, etc )
+int pdf_check_document_struct(struct pdfDocument * pdf){
+
+	int retcode = ERROR_SUCCESS;
+
+	if(pdf == NULL){
+		err_log("check_document_struct :: Invalid parameters!");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	retcode = pdf_check_valid_trailer(pdf);
+	if(retcode != ERROR_SUCCESS ){
+		warn_log("check_valid_trailer :: failed with error code = %02x\n",retcode);
+	}
+
+	return ERROR_SUCCESS;
+}

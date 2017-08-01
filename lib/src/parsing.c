@@ -1815,7 +1815,7 @@ int pdf_parse(struct pdfDocument * pdf){
 		return retcode;
 	}
 
-	retcode = pdf_check_valid_trailer(pdf);
+	retcode = pdf_check_document_struct(pdf);
 	if(retcode != ERROR_SUCCESS){
 		printf("retcode = %d\n",retcode);
 		retcode |= ERROR_ON_STRUCT_ANALYSIS;
