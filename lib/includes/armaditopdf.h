@@ -34,9 +34,6 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // Tests Coefficients
-
-//#define bad_header 
-//#define encrypted
 #define EMPTY_PAGE_CONTENT 99
 #define OBJECT_COLLISION 10
 #define OBJECT_COLLISION_AND_BAD_XREF 60
@@ -56,21 +53,6 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #define TIME_EXCEEDED 20
 
 //#define LARGE_FILE_SIZE 1500000
-
-
-enum err_code {
-
-	unexpected_error = -1 << 0,
-	bad_pdf_version = -1 << 1,
-	bad_pdf_header = -1 << 2,
-	unsupported_file = -1 << 3,
-	bad_xref_format = -1 << 4,
-	bad_trailer_format = -1 << 5,
-	bad_object_format = -1 << 6,
-	stream_not_decoded = -1 << 7
-
-};
-
 
 /* Functions */
 char * getVersion();
