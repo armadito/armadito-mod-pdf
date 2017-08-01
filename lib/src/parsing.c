@@ -1789,7 +1789,7 @@ int pdf_get_active_contents(struct pdfDocument * pdf){
 
 int pdf_parse(struct pdfDocument * pdf){
 
-	int retcode = EXIT_SUCCESS;
+	int retcode = ERROR_SUCCESS;
 
 	if(pdf == NULL){
 		err_log("pdf_parse :: invalid parameter\n");
@@ -1798,34 +1798,35 @@ int pdf_parse(struct pdfDocument * pdf){
 	}
 
 	retcode = pdf_get_content(pdf);
-	if(retcode != EXIT_SUCCESS){
+	if(retcode != ERROR_SUCCESS){
 		retcode |= ERROR_ON_PARSING;
 		return retcode;
 	}
 
 	retcode = pdf_get_trailers(pdf);
-	if(retcode != EXIT_SUCCESS){
+	if(retcode != ERROR_SUCCESS){
 		retcode |= ERROR_ON_TRAILER_PARSING;
 		return retcode;
 	}
 
 	retcode = pdf_parse_objects(pdf);
-	if(retcode != EXIT_SUCCESS){
+	if(retcode != ERROR_SUCCESS){
 		retcode |= ERROR_ON_OBJ_PARSING;
 		return retcode;
 	}
 
 	retcode = pdf_check_valid_trailer(pdf);
-	if(retcode != EXIT_SUCCESS){
-		retcode |= ERROR_ON_OBJ_PARSING;
+	if(retcode != ERROR_SUCCESS){
+		printf("retcode = %d\n",retcode);
+		retcode |= ERROR_ON_STRUCT_ANALYSIS;
 		return retcode;
 	}
 
 	retcode = pdf_get_active_contents(pdf);
 	if(retcode != ERROR_SUCCESS){
-		return EXIT_FAILURE;
+		retcode |= ERROR_ON_OBJ_PARSING;
+		return retcode;
 	}
 	//printPDFObjects(pdf);
-
 	return retcode;
 }
