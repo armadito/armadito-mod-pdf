@@ -42,6 +42,7 @@ int check_xref_obj(struct pdfDocument * pdf, char * xref_obj_ref){
 	obj = getPDFObjectByRef(pdf,xref_obj_ref);
 	if(obj == NULL){
 		warn_log("check_xref_obj :: obj ref %s not found!\n");
+		pdf->flags |= BAD_XREF_OFFSET;
 		return ERROR_OBJ_REF_NOT_FOUND;
 	}
 
@@ -50,11 +51,12 @@ int check_xref_obj(struct pdfDocument * pdf, char * xref_obj_ref){
 		// check if the pdf is encrypted.
 		if( searchPattern(obj->dico, "/Encrypt",8,strlen(obj->dico)) != NULL  ){
 			warn_log("check_xref_obj :: Encrypted content found!\n");
+			pdf->flags |= ENCRYPTED_CONTENT;
 			retcode = ERROR_ENCRYPTED_CONTENT;
 		}
 
 	}else{
-
+		pdf->flags |= BAD_XREF_OFFSET;
 		retcode = ERROR_INVALID_XREF_OFFSET;
 	}
 
@@ -192,13 +194,13 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 	free(num_entries_s);
 
 	// hint after the number of entries it should be '\r' or '\n' not a space.
-	if (*tmp != '\r' && *tmp != '\n'){
+	if (tmp[0] != '\r' && tmp[0] != '\n' && tmp[0] != ' '){
 		err_log("check_xref_table :: bad xref format!1\n");
 		return ERROR_INVALID_XREF_FORMAT;
 	}
 
 	// skip white space.
-	while(tmp[0] == '\r' || tmp[0] == '\n'){
+	while(tmp[0] == '\r' || tmp[0] == '\n' || tmp[0] == ' '){
 		tmp++;
 		len--;
 	}
@@ -267,6 +269,7 @@ int pdf_check_xref(struct pdfDocument * pdf, unsigned int xref_offset){
 
 		xref = getDelimitedStringContent(start, "xref" , "trailer" , len);
 		if(xref == NULL){
+			pdf->flags |= BAD_XREF_FORMAT;
 			return ERROR_INVALID_XREF_FORMAT;
 		}
 
@@ -282,6 +285,7 @@ int pdf_check_xref(struct pdfDocument * pdf, unsigned int xref_offset){
 		// get object reference at this offset.
 		xref = get_obj_ref(start,len);
 		if(xref == NULL){
+			pdf->flags |= BAD_XREF_OFFSET;
 			return ERROR_INVALID_XREF_OFFSET;
 		}
 
@@ -309,13 +313,14 @@ int pdf_check_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 	// check if the pdf is encrypted.
 	if(trailer->dico != NULL && searchPattern(trailer->dico, "/Encrypt",8,strlen(trailer->dico)) != NULL ){
 		warn_log("check_trailer :: Encrypted content found!\n");
-		return ERROR_ENCRYPTED_CONTENT;
+		pdf->flags |= ENCRYPTED_CONTENT;
 	}
 
 	// get the offset of the XRef object
 	start = searchPattern(trailer->content, "startxref", 9 , strlen(trailer->content));
 	if(start == NULL){
 		err_log("check_trailer :: XRef offset not found in trailer\n");
+		pdf->flags |= BAD_PDF_TRAILER;
 		return ERROR_BAD_TRAILER_FORMAT;
 	}
 
@@ -328,13 +333,8 @@ int pdf_check_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer){
 	xref_offset = getNumber(start,len);
 
 	if(xref_offset <= 0 || xref_offset > pdf->size ){
-		warn_log("check_trailer :: Bad Wrong xref object offset %d\n",xref_offset);
-		return ERROR_BAD_TRAILER_FORMAT;
-	}
-
-	// if the offset is higher than th PDF size
-	if(xref_offset > pdf->size){
-		warn_log("check_trailer :: Wrong xref object offset %d\n",xref_offset);
+		warn_log("check_trailer :: invalid xref object offset %d\n",xref_offset);
+		pdf->flags |= BAD_PDF_TRAILER;
 		return ERROR_BAD_TRAILER_FORMAT;
 	}
 
@@ -686,3 +686,5 @@ int checkEmptyDocument(struct pdfDocument * pdf){
 	return ret;
 
 }
+
+
