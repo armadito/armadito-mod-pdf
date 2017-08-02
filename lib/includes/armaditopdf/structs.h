@@ -138,7 +138,7 @@ struct pdfActiveContent{
 	char * src; // src obj reference
 	char * data;
 	unsigned int size;
-	struct activeContent * next;
+	struct pdfActiveContent * next;
 
 };
 
