@@ -42,7 +42,6 @@ returns:
 // TODO :: printAnalysisReport :: filter report informations by log level.
 void pdf_print_report(struct pdfDocument * pdf){
 
-
 	if (!print_report || pdf == NULL){
 		return;
 	}
@@ -73,9 +72,9 @@ void pdf_print_report(struct pdfDocument * pdf){
 	printf("postscript_comments = %s\n", (pdf->flags & FLAG_POSTSCRIPT_COMMENTS ? "yes":"no"));
 	//printf("malicious_comments = %s\n", (pdf->flags & FLAG_MALICIOUS_COMMENTS ? "yes":"no"));
 	printf("active_content = %s\n", (pdf->flags & FLAG_ACTIVE_CONTENTS? "yes":"no"));
-		//printf(" - js content = %d\n", pdf->testObjAnalysis->js);
-		//printf(" - xfa content = %d\n", pdf->testObjAnalysis->xfa);
-		//printf(" - ef content = %d\n", pdf->testObjAnalysis->ef);
+		printf(" - js = %d\n", (pdf->flags & FLAG_ACTIVE_CONTENTS ? count_active_contents_by_type(pdf->activeContents, AC_JAVASCRIPT):0));
+		printf(" - xfa = %d\n", (pdf->flags & FLAG_ACTIVE_CONTENTS ? count_active_contents_by_type(pdf->activeContents, AC_XFA):0));
+		printf(" - ef = %d\n", (pdf->flags & FLAG_ACTIVE_CONTENTS ? count_active_contents_by_type(pdf->activeContents, AC_EMBEDDED_FILE):0));
 	//printf("pattern_high_repetition = %d\n", pdf->testObjAnalysis->pattern_high_repetition);
 	printf("dangerous_keyword_high = %s\n", (pdf->flags & FLAG_DANG_KEY_HIGH? "yes":"no"));
 	printf("dangerous_keyword_medium = %s\n", (pdf->flags & FLAG_DANG_KEY_MED ? "yes":"no"));
@@ -85,6 +84,7 @@ void pdf_print_report(struct pdfDocument * pdf){
 	printf("Coef = %d\n",pdf->coef);
 	printf("------------------------------\n");
 	printf("------------------------------\n");
+
 
 	return;
 }
