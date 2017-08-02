@@ -66,7 +66,6 @@ int check_xref_obj(struct pdfDocument * pdf, char * xref_obj_ref){
 
 int check_xref_table_entry(struct pdfDocument * pdf, char * entry){
 
-	int retcode = ERROR_SUCCESS;
 	int len = 0;
 	char * off_s;
 	char * gen_s;
@@ -145,7 +144,7 @@ int check_xref_table(struct pdfDocument * pdf, char * xref, unsigned int xref_si
 	char * tmp;
 	int len = 0;
 	int i;
-	int first_obj_num, num_entries;
+	int num_entries;
 	char * first_obj_num_s;
 	char * num_entries_s;
 	char entry[19] = {0};
@@ -364,6 +363,7 @@ int pdf_check_valid_trailer(struct pdfDocument * pdf){
 			// if valid trailer found clear flags errors
 			pdf->flags &= ~(FLAG_BAD_PDF_TRAILER);
 			pdf->flags &= ~(FLAG_BAD_XREF_OFFSET);
+			pdf->flags &= ~(FLAG_BAD_XREF_FORMAT);
 			return retcode;
 		}
 

@@ -172,6 +172,7 @@ void free_all_pdf_objects(struct pdfObject * obj);
 int add_pdf_object(struct pdfDocument * pdf, struct pdfObject * obj);
 struct pdfTrailer * init_pdf_trailer(char * content, unsigned int size);
 void free_pdf_trailer(struct pdfTrailer * trailer);
+void free_pdf_object(struct pdfObject * obj);
 void free_pdf_document(struct pdfDocument * pdf);
 int add_pdf_trailer(struct pdfDocument * pdf, struct pdfTrailer * trailer);
 int add_pdf_active_content(struct pdfDocument * pdf, enum acType type, char * src, char * data, unsigned int size);

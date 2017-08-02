@@ -26,6 +26,7 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include <armaditopdf/log.h>
 #include <armaditopdf/filters.h>
 #include <armaditopdf/errors.h>
+#include <armaditopdf/analysis.h>
 
 
 char * pdf_get_version_from_data(char * data, unsigned int data_size){
@@ -1156,12 +1157,13 @@ int pdf_extract_objstm(struct pdfDocument * pdf, struct pdfObject * obj){
 	}
 
 	free(obj_offsets);
+
+	return ERROR_SUCCESS;
 }
 
 
 int pdf_parse_obj_content(struct pdfDocument * pdf, struct pdfObject * obj){
 
-	char * dico;
 	int retcode = 0;
 
 	if(obj == NULL || pdf == NULL){
@@ -1469,11 +1471,9 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 	char * xfa_obj_ref = NULL;
 	char * start = NULL;
 	char * end = NULL;
-	char * tmp = NULL;
 	char * obj_list = NULL;	
 	int len = 0;
 	int len2 = 0;
-	int ret = 0;
 	int retcode = ERROR_SUCCESS;
 	struct pdfObject * xfa_obj = NULL;
 

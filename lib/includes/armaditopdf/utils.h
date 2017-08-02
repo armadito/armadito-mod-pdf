@@ -49,6 +49,8 @@ char * toBinary(char * stream, int size);
 char * binarytoChar(char * binary, int size, int * returned_size);
 void printStream(char * stream, int size);
 void debugPrint(char * stream, int len); // print in a debug file
+char * get_obj_ref(char * data, int size);
+char * get_name_object(char * data, int size);
 void print_actives_contents(struct pdfDocument * pdf);
 int count_active_contents_by_type(struct pdfActiveContent * ac, enum acType type);
 

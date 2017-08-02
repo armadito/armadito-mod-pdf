@@ -28,6 +28,8 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 #include "armaditopdf/errors.h"
 #include "armaditopdf/log.h"
 #include "armaditopdf/osdeps.h"
+#include <armaditopdf/utils.h>
+#include <armaditopdf/parsing.h>
 
 
 #define a6o_pdf_ver "0.12.6"
@@ -59,8 +61,8 @@ char * getVersion();
 int analyzePDF(char * filename);
 int analyzePDF_fd(int fd, char * filename);
 int analyzePDF_ex(int fd, char * filename);
-int calcSuspiciousCoefficient(struct pdfDocument * pdf);
-void printAnalysisReport(struct pdfDocument * pdf);
+int calc_suspicious_coef(struct pdfDocument * pdf);
+void pdf_print_report(struct pdfDocument * pdf);
 
 // C API functions
 int pdf_initialize();
