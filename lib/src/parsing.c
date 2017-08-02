@@ -1355,6 +1355,7 @@ int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
 			warn_log("getJavaScript :: Empty js content in object %s\n", obj->reference);
 		}
 
+		pdf->flags |= FLAG_ACTIVE_CONTENTS;
 		retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, len);
 		if(retcode != ERROR_SUCCESS){
 			err_log("get_JavaScript :: Add active content failed!\n");
@@ -1369,6 +1370,7 @@ int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj){
 
 			dbg_log("getJavaScript :: Found JS content in object %s\n", obj->reference);
 
+			pdf->flags |= FLAG_ACTIVE_CONTENTS;
 			retcode = add_pdf_active_content(pdf,AC_JAVASCRIPT,obj->reference, js, strlen(js));
 			if(retcode != ERROR_SUCCESS){
 				err_log("get_JavaScript :: Add active content failed!\n");
@@ -1557,6 +1559,7 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
 			}
 
+			pdf->flags |= FLAG_ACTIVE_CONTENTS;
 			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
 			if(retcode != ERROR_SUCCESS){
 				err_log("get_xfa :: Get javascript from xfa content failed!\n");
@@ -1564,11 +1567,11 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 				return retcode;
 			}
 
-			/*retcode = add_pdf_active_content(pdf,AC_XFA,obj->reference, xfa, len);
+			retcode = add_pdf_active_content(pdf,AC_XFA,obj->reference, xfa, len);
 			if(retcode != ERROR_SUCCESS){
 				err_log("get_JavaScript :: Add active content failed!\n");
 				return retcode;
-			}*/
+			}
 
 		}
 
@@ -1610,6 +1613,7 @@ int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj){
 				warn_log("get_xfa :: Empty xfa content in object %s\n", obj->reference);
 			}
 
+			pdf->flags |= FLAG_ACTIVE_CONTENTS;
 			retcode = get_js_from_data(xfa, len, xfa_obj, pdf);
 			if(retcode != ERROR_SUCCESS){
 				err_log("get_xfa :: Get javascript from xfa content failed!\n");
@@ -1665,6 +1669,7 @@ int pdf_get_embedded_file(struct pdfDocument * pdf , struct pdfObject* obj){
 			ef_size = obj->stream_size;
 		}
 
+		pdf->flags |= FLAG_ACTIVE_CONTENTS;
 		retcode = add_pdf_active_content(pdf,AC_EMBEDDED_FILE,obj->reference, ef, ef_size);
 		if(retcode != ERROR_SUCCESS){
 			err_log("get_embedded_file :: Add active content failed!\n");
