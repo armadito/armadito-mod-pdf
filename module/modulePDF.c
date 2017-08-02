@@ -55,26 +55,42 @@ static enum a6o_update_status modulePDF_info(struct a6o_module *module, struct a
 static enum a6o_file_status modulePDF_scan(struct a6o_module *module, int fd, const char *path, const char *mime_type, char **pmod_report) {
 
 	enum a6o_file_status status = A6O_FILE_CLEAN;
-	int ret = 0;
+	int retcode = EXIT_SUCCESS;
+	struct pdfDocument * pdf;
 
 
-	// launch analysis
-	ret = analyzePDF_ex(fd,path);
-
-	if (ret == -1) {
-		status = A6O_FILE_IERROR;
+	pdf = pdf_load_fd(fd,path,&retcode);
+	if(pdf == NULL){
+		err_log("File loading failed with err code (0x%x)\n",retcode);
+		return A6O_FILE_IERROR;;
 	}
-	else if (ret == -2) {
+
+	retcode = pdf_parse(pdf);
+	if(retcode != ERROR_SUCCESS){
+		err_log("Parsing failed with err code (0x%x)\n",retcode);
+		pdf_unload(pdf);
+		return A6O_FILE_IERROR;
+	}
+
+	retcode = calc_suspicious_coef(pdf);
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_ENCRYPTED_CONTENT){
+		err_log("Analysis failed with err code (%d)\n",retcode);
+		pdf_unload(pdf);
+		return A6O_FILE_IERROR;
+	}
+
+	if (pdf->coef == -2) {
 		status = A6O_FILE_UNDECIDED; // Not supported files (encrypted contents or bad header).
 	}
-	else if (ret < MALICIOUS_COEF) {
+	else if (pdf->coef < MALICIOUS_COEF) {
 		status = A6O_FILE_CLEAN;
 	}
-	else if (ret >= MALICIOUS_COEF) {
+	else if (pdf->coef >= MALICIOUS_COEF) {
 		status = A6O_FILE_SUSPICIOUS;
-
 		*pmod_report = os_strdup("ModulePDF!SuspiciousPDF");
 	}
+
+	pdf_unload(pdf);
 
 	return status;
 }
