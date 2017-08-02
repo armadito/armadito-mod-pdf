@@ -9,25 +9,26 @@ libarmadito_pdf_la_SOURCES = \
 $(top_srcdir)/lib/src/armaditopdf.c \
 $(top_srcdir)/lib/src/filters.c \
 $(top_srcdir)/lib/src/log.c \
+$(top_srcdir)/lib/src/objectsAnalysis.c \
 $(top_srcdir)/lib/src/osdeps.c \
-$(top_srcdir)/lib/src/pdfObjectsAnalysis.c \
-$(top_srcdir)/lib/src/pdfParsing.c \
-$(top_srcdir)/lib/src/pdfStructAnalysis.c \
-$(top_srcdir)/lib/src/pdfStructs.c \
+$(top_srcdir)/lib/src/parsing.c \
+$(top_srcdir)/lib/src/structAnalysis.c \
+$(top_srcdir)/lib/src/structs.c \
 $(top_srcdir)/lib/src/utils.c
 
 armadito_pdfincludedir=$(includedir)/libarmadito-pdf
 
 armadito_pdfinclude_HEADERS =\
 $(top_srcdir)/lib/includes/armaditopdf.h \
-$(top_srcdir)/lib/includes/filters.h \
-$(top_srcdir)/lib/includes/log.h \
-$(top_srcdir)/lib/includes/miniz.c \
-$(top_srcdir)/lib/includes/osdeps.h \
-$(top_srcdir)/lib/includes/pdfAnalysis.h \
-$(top_srcdir)/lib/includes/pdfParsing.h \
-$(top_srcdir)/lib/includes/pdfStructs.h \
-$(top_srcdir)/lib/includes/utils.h
+$(top_srcdir)/lib/includes/armaditopdf/analysis.h \
+$(top_srcdir)/lib/includes/armaditopdf/errors.h \
+$(top_srcdir)/lib/includes/armaditopdf/filters.h \
+$(top_srcdir)/lib/includes/armaditopdf/log.h \
+$(top_srcdir)/lib/includes/armaditopdf/miniz.c \
+$(top_srcdir)/lib/includes/armaditopdf/osdeps.h \
+$(top_srcdir)/lib/includes/armaditopdf/parsing.h \
+$(top_srcdir)/lib/includes/armaditopdf/structs.h \
+$(top_srcdir)/lib/includes/armaditopdf/utils.h
 
 
 pkgconfigdir = $(libdir)/pkgconfig
