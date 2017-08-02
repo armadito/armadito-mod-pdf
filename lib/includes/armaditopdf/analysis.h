@@ -29,9 +29,9 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /***** pdf Structure analysis functions prototypes *****/
-int documentStructureAnalysis(struct pdfDocument * pdf);
 int checkEmptyDocument(struct pdfDocument * pdf);
 int pdf_check_valid_trailer(struct pdfDocument * pdf);
+int pdf_check_document_struct(struct pdfDocument * pdf);
 
 
 /***** pdf Objects analysis functions prototypes *****/
