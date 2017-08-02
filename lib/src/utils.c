@@ -1204,3 +1204,24 @@ void print_actives_contents(struct pdfDocument * pdf){
 
 	return;
 }
+
+
+int count_active_contents_by_type(struct pdfActiveContent * ac, enum acType type){
+
+	struct pdfActiveContent * tmp;
+	int count = 0;
+
+	if(ac == NULL)
+		return 0;
+
+	tmp = ac;
+
+	while(tmp){
+		if(tmp->type == type)
+			count++;
+
+		tmp = tmp->next;
+	}
+
+	return count;
+}
