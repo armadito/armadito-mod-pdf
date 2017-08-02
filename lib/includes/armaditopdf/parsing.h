@@ -42,6 +42,7 @@ int pdf_get_javascript(struct pdfDocument * pdf, struct pdfObject* obj);
 int pdf_get_xfa(struct pdfDocument * pdf, struct pdfObject* obj);
 int pdf_get_embedded_file(struct pdfDocument * pdf, struct pdfObject* obj);
 int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj);
+int pdf_get_actions(struct pdfDocument * pdf, struct pdfObject * obj);
 int pdf_get_active_contents(struct pdfDocument * pdf);
 
 // TO RE-IMPLEMENT

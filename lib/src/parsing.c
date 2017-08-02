@@ -1741,6 +1741,32 @@ int pdf_get_uri(struct pdfDocument * pdf, struct pdfObject * obj){
 }
 
 
+/*TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)*/
+int pdf_get_actions(struct pdfDocument * pdf, struct pdfObject * obj){
+
+	char * start = NULL;
+
+	if(pdf == NULL || obj == NULL){
+		err_log("get_actions :: invalid parameters!\n");
+		return ERROR_INVALID_PARAMETERS;
+	}
+
+	if(obj->dico == NULL){
+		return ERROR_SUCCESS;
+	}
+
+	// get Launch actions
+	start = searchPattern(obj->dico,"/Launch",7,strlen(obj->dico));
+	if(start != NULL){
+		warn_log("get_actions :: Found /Launch action in object %s\n",obj->reference);
+		pdf->flags |= FLAG_DANG_KEY_HIGH;
+		return ERROR_SUCCESS;
+	}
+
+	return ERROR_SUCCESS;
+}
+
+
 int pdf_get_active_contents(struct pdfDocument * pdf){
 
 	int retcode = ERROR_SUCCESS;
@@ -1780,11 +1806,11 @@ int pdf_get_active_contents(struct pdfDocument * pdf){
 			// TODO: treat errors.
 		}
 
-		/*retcode = pdf_get_actions(pdf, obj);
-		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_URI_FOUND){
-			err_log("get_active_contents :: get uri in obj (%s) failed with error: %02x\n",obj->reference, retcode);
+		retcode = pdf_get_actions(pdf, obj);
+		if(retcode != EXIT_SUCCESS && retcode != ERROR_NO_ACTION_FOUND){
+			err_log("get_active_contents :: get actions in obj (%s) failed with error: %02x\n",obj->reference, retcode);
 			// TODO: treat errors.
-		}*/
+		}
 
 		obj = obj->next;
 	}

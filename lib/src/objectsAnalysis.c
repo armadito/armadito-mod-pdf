@@ -118,7 +118,7 @@ int getInfoObject(struct pdfDocument * pdf){
 
 			}else if (res > 0){
 				warn_log("getInfoObject :: found potentially malicious /Info object %s\n", info_ref);
-				pdf->testObjAnalysis->dangerous_keyword_high++; // TODO set another variable for this test :: MALICIOUS_INFO_OBJ
+				//pdf->testObjAnalysis->dangerous_keyword_high++; // TODO set another variable for this test :: MALICIOUS_INFO_OBJ
 			}
 
 			res = findDangerousKeywords(info, pdf, info_obj);
@@ -127,7 +127,7 @@ int getInfoObject(struct pdfDocument * pdf){
 
 			}else if(res > 0){
 				warn_log("Warning :: getInfoObject :: found potentially malicious /Info object %s\n",info_ref);				
-				pdf->testObjAnalysis->dangerous_keyword_high ++;
+				//pdf->testObjAnalysis->dangerous_keyword_high ++;
 			}
 
 		}else{
@@ -164,48 +164,6 @@ int analyzeURI(char * uri, struct pdfDocument * pdf, struct pdfObject * obj){
 	if(pdf == NULL || obj == NULL)
 		return -1;
 
-
-	return 0;
-}
-
-
-
-
-
-/*
-getActions() ::  Get Suspicious actions in the document.
-parameters:
-- struct pdfDocument * pdf (pdf document pointer)
-returns: (int)
-- 1 if dangerous content is found
-- 0 if no active content.
-- an error code (<0) on error.
-TODO :: getActions :: get other potentially dangerous actions (OpenActions - GoToE - GoToR - etc.)
-*/
-int getActions(struct pdfDocument * pdf, struct pdfObject * obj){
-
-	char * start = NULL;
-	int dico_len = 0;
-
-	// Check parameters
-	if(pdf == NULL || obj == NULL){
-		err_log("getActions :: invalid parameters!\n");
-		return -1;
-	}
-
-	if(obj->dico == NULL){
-		return 0;
-	}
-
-	dico_len = strlen(obj->dico);
-
-	// get Launch actions
-	start = searchPattern(obj->dico,"/Launch",7,dico_len);
-	if(start != NULL){
-		warn_log("getActions :: Found /Launch action in object %s\n",obj->reference);
-		pdf->testObjAnalysis->dangerous_keyword_high ++;
-		return 1;
-	}
 
 	return 0;
 }
@@ -352,7 +310,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 			if(rep > lim_rep){
 				
 				warn_log("unknownPatternRepetition :: Found pattern repetition in object %s :: pattern = %s\n",obj->reference,pattern);							
-				pdf->testObjAnalysis->pattern_high_repetition ++;
+				//pdf->testObjAnalysis->pattern_high_repetition ++;
 				free(whithout_space);
 				free(pattern);
 				free(tmp);
@@ -372,7 +330,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 				
 				warn_log("unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n",obj->reference);
 				
-				pdf->testObjAnalysis->time_exceeded++;
+				//pdf->testObjAnalysis->time_exceeded++;
 				free(whithout_space);
 				free(tmp);
 				free(pattern);
@@ -394,7 +352,7 @@ int unknownPatternRepetition(char * stream, int size, struct pdfDocument * pdf, 
 		if (time_elapsed > time_exceeded){
 			warn_log("unknownPatternRepetition :: Time Exceeded while analyzing object %s content\n", obj->reference);
 
-			pdf->testObjAnalysis->time_exceeded++;
+			//pdf->testObjAnalysis->time_exceeded++;
 			free(whithout_space);
 			free(pattern);
 			return 0;
@@ -447,8 +405,8 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 	for(i = 0; i< num_high ; i++){
 
 		if(searchPattern(stream,high_keywords[i],strlen(high_keywords[i]),strlen(stream)) != NULL ){			
-			warn_log("findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);			
-			pdf->testObjAnalysis->dangerous_keyword_high ++;
+			warn_log("findDangerousKeywords :: High dangerous keyword (%s) found in object %s\n",high_keywords[i], obj->reference);
+			//pdf->testObjAnalysis->dangerous_keyword_high ++;
 			ret = 3;
 		}
 
@@ -465,7 +423,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 		memcpy(unicode, start, 6);
 
-		warn_log("findDangerousKeywords :: Found unicode string %s in object %s\n", unicode, obj->reference);		
+		warn_log("findDangerousKeywords :: Found unicode string %s in object %s\n", unicode, obj->reference);
 
 		unicode_count ++ ;
 		start ++;
@@ -477,8 +435,8 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 
 	if(unicode_count > 10){
 
-		warn_log("findDangerousKeywords :: Unicode string found in object %s\n", obj->reference);		
-		pdf->testObjAnalysis->dangerous_keyword_high ++;
+		warn_log("findDangerousKeywords :: Unicode string found in object %s\n", obj->reference);
+		//pdf->testObjAnalysis->dangerous_keyword_high ++;
 		ret = 3;
 	}
 
@@ -487,7 +445,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 		if(  searchPattern(stream,medium_keywords[i],strlen(medium_keywords[i]),strlen(stream)) != NULL ){
 
 			warn_log("findDangerousKeywords :: Medium dangerous keyword (%s) found in object %s\n", medium_keywords[i], obj->reference);			
-			pdf->testObjAnalysis->dangerous_keyword_medium ++;			
+			//pdf->testObjAnalysis->dangerous_keyword_medium ++;
 			ret=  2;
 		}
 
@@ -499,7 +457,7 @@ int findDangerousKeywords(char * stream , struct pdfDocument * pdf, struct pdfOb
 		if(  searchPattern(stream,low_keywords[i],strlen(low_keywords[i]),strlen(stream)) != NULL ){
 		
 			warn_log("findDangerousKeywords :: Low dangerous keyword (%s) found in object %s\n", low_keywords[i], obj->reference);			
-			pdf->testObjAnalysis->dangerous_keyword_low ++;			
+			//pdf->testObjAnalysis->dangerous_keyword_low ++;
 			ret = 1;
 		}
 
@@ -538,31 +496,6 @@ int getDangerousContent(struct pdfDocument* pdf){
 	while(obj != NULL){
 
 		dbg_log("getDangerousContent :: Analysing object %s\n",obj->reference);
-
-		/*if (getActions(pdf, obj) < 0){
-			err_log("getDangerousContent :: get dangerous actions failed!\n");
-			return -1;
-		}
-
-		/*if (getJavaScript(pdf, obj) < 0){
-			err_log("getDangerousContent :: get javascript content failed!\n");
-			return -1;
-		}
-
-		if (getXFA(pdf, obj) < 0){
-			err_log("getDangerousContent :: get xfa content failed!\n");
-			return -1;
-		}
-
-		if (getEmbeddedFile(pdf, obj) < 0){
-			err_log("getDangerousContent :: get embedded file failed!\n");
-			return -1;
-		}
-		
-		if (getURI(pdf, obj) < 0){
-			err_log("getDangerousContent :: get uri failed!\n");
-			return -1;
-		}*/
 
 		// next object
 		obj = obj->next;
