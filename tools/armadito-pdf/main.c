@@ -21,8 +21,10 @@ along with Armadito module PDF.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include "libarmadito-pdf/armaditopdf.h"
-#include "libarmadito-pdf/osdeps.h"
-#include "libarmadito-pdf/log.h"
+#include "libarmadito-pdf/armaditopdf/osdeps.h"
+#include "libarmadito-pdf/armaditopdf/log.h"
+#include "libarmadito-pdf/armaditopdf/errors.h"
+#include "libarmadito-pdf/armaditopdf/parsing.h"
 #include "getopt.h"
 
 #define TOOL_VERSION "0.13.2"
@@ -130,9 +132,11 @@ int parse_options(int argc, char ** argv, struct scan_options * opts){
 // Launch a scan directory
 int do_scan(struct scan_options * opts){
 
-	int ret;
+	int retcode = ERROR_SUCCESS;
+	int coef = 0;
 	FILE * f = NULL;
 	int fd = -1;
+	struct pdfDocument * pdf;
 
 	// analysis with opened file descriptor.	
 	if(!(f = os_fopen(opts->path_to_scan,"rb"))){
@@ -141,10 +145,35 @@ int do_scan(struct scan_options * opts){
 	}
 
 	fd = os_fileno(f);
-	ret = analyzePDF_ex(fd, opts->path_to_scan);
+
+	pdf = pdf_load_fd(fd,opts->path_to_scan,&retcode);
+	if(pdf == NULL){
+		err_log("File loading failed with err code (0x%x)\n",retcode);
+		return -1;
+	}
+
+	retcode = pdf_parse(pdf);
+	if(retcode != ERROR_SUCCESS){
+		err_log("Parsing failed with err code (0x%x)\n",retcode);
+		pdf_unload(pdf);
+		return -1;
+	}
+
+	retcode = calc_suspicious_coef(pdf);
+	if(retcode != ERROR_SUCCESS && retcode != ERROR_ENCRYPTED_CONTENT){
+		err_log("Analysis failed with err code (%d)\n",retcode);
+		pdf_unload(pdf);
+		return -1;
+	}
+
+	pdf_print_report(pdf);
+
+	coef = pdf->coef;
+
+	pdf_unload(pdf);
 	fclose(f);
 
-	return ret;
+	return coef;
 }
 
 
@@ -191,5 +220,4 @@ int main (int argc, char ** argv){
 	opts = NULL;
 
 	return ret;
-	
 }
