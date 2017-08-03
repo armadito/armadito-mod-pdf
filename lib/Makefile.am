@@ -16,10 +16,12 @@ $(top_srcdir)/lib/src/structAnalysis.c \
 $(top_srcdir)/lib/src/structs.c \
 $(top_srcdir)/lib/src/utils.c
 
-armadito_pdfincludedir=$(includedir)/libarmadito-pdf
+libarmadito_pdfincludedir=$(includedir)/libarmadito-pdf
+libarmadito_pdfinclude_HEADERS = $(top_srcdir)/lib/includes/armaditopdf.h
+
+armadito_pdfincludedir=$(includedir)/libarmadito-pdf/armaditopdf
 
 armadito_pdfinclude_HEADERS =\
-$(top_srcdir)/lib/includes/armaditopdf.h \
 $(top_srcdir)/lib/includes/armaditopdf/analysis.h \
 $(top_srcdir)/lib/includes/armaditopdf/errors.h \
 $(top_srcdir)/lib/includes/armaditopdf/filters.h \
